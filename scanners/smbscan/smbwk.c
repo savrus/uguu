@@ -60,6 +60,15 @@ static void smbwk_url_suspend(char *url)
         *c = 0;
 }
 
+/* undo the last suspend of file/dir from nll-terminated url string */
+static void smbwk_url_suspend_undo(char *url)
+{
+    char *c;
+    int n = strnlen(c, SMB_URL_LEN);
+    if (n < SMB_URL_LEN)
+        c[n] = '/';
+}
+
 void smbwk_auth(const char *srv, 
                 const char *shr,
                 char *wg, int wglen, 
@@ -171,11 +180,16 @@ static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
             if (smbwk_url_append(c->url, SMB_URL_LEN, name) == 0){
                 fprintf(stderr, "%s: smbwk_url_append returned error\n",
                         __func__);
+                smbwk_url_suspend_undo(c->url);
                 return -1;
             }
             break;
         case SMBSCAN_GO_CHILD:
-            smbwk_url_append(c->url, SMB_URL_LEN, name);
+            if (smbwk_url_append(c->url, SMB_URL_LEN, name) == 0){
+                fprintf(stderr, "%s: smbwk_url_append returned error\n",
+                        __func__);
+                return -1;
+            }
             break;
         default:
             fprintf(stderr, "%s: unknown smbwk_go_type %d\n", __func__, type);
