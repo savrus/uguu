@@ -63,10 +63,9 @@ static void smbwk_url_suspend(char *url)
 /* undo the last suspend of file/dir from nll-terminated url string */
 static void smbwk_url_suspend_undo(char *url)
 {
-    char *c;
-    int n = strnlen(c, SMB_URL_LEN);
+    int n = strnlen(url, SMB_URL_LEN);
     if (n < SMB_URL_LEN)
-        c[n] = '/';
+        url[n] = '/';
 }
 
 void smbwk_auth(const char *srv, 
