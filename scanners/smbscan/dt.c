@@ -29,10 +29,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "dt.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "dt.h"
+#include "log.h"
 
 static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir)
 {
@@ -118,7 +120,7 @@ void dt_mktree(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     struct dt_dentry *d, *dc;
 
     if ((root == NULL) || (wk == NULL)) {
-        fprintf(stderr, "%s: bad arguments\n", __func__);
+        LOG_ERR("bad arguments\n");
         return;
     }
 
@@ -149,30 +151,11 @@ void dt_mktree(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
             } else {
                 d->stamp = 0;
             }
-            d = dt_go_sibling_or_parent(wk, d, curdir);
-        }
-
-        wk->fini(curdir);
-
-        d = dt_find_dir_child(root);
-        
-        // invariants:
-        // d->type == DT_DIR
-        // if v->stamp = 1 then descendants of v are processed
-        while (d != root) {
-            if (d->stamp == 0) {
-                if ((dc = dt_find_dir_child(d)) != NULL) {
-                    d->stamp = 1;
-                    d = dc;
-                    continue;
-                }
-            } else {
-                d->stamp = 0;
-            }
             for (dc = d->child; dc != NULL; dc = dc->sibling)
                 d->size += dc->size;
-            d = dt_next_sibling_or_parent(d);
+            d = dt_go_sibling_or_parent(wk, d, curdir);
         }
+        wk->fini(curdir);
     }
     for (dc = root->child; dc != NULL; dc = dc->sibling)
         root->size += dc->size;
@@ -197,7 +180,7 @@ static void dt_printdir(struct dt_dentry *d, char *prefix)
     printf("%s", prefix);
     for (dc = d->child; dc != NULL; dc = dc->sibling) {
         dt_printpath(dc);
-        printf("%s %zu\n", (dc->type == DT_DIR) ? "/" : "", dc->size);
+        printf("%s %llu\n", (dc->type == DT_DIR) ? "/" : "", dc->size);
     }
 }
     
@@ -207,10 +190,11 @@ void dt_printtree(struct dt_dentry *root)
     struct dt_dentry *d, *dc;
 
     if (root == NULL) {
-        fprintf(stderr, "%s: bad arguments\n", __func__);
+        LOG_ERR("bad arguments\n");
         return;
     }
 
+    printf("%s%s %llu\n", root->name, "/", root->size);
     dt_printdir(root, "");
     
     d = dt_find_dir_child(root);
@@ -249,7 +233,7 @@ void dt_free(struct dt_dentry *root)
     struct dt_dentry *d, *dc;
 
     if (root == NULL) {
-        fprintf(stderr, "%s: bad arguments\n", __func__);
+        LOG_ERR("bad arguments\n");
         return;
     }
     

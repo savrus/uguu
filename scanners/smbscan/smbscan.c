@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     struct smbwk_dir curdir;
 
     if (argc < 2) {
-        printf("Usage: %s host\n", argv[0]);
+        fprintf(stderr, "Usage: %s host\n", argv[0]);
         exit(EXIT_FAILURE);
     }
     
