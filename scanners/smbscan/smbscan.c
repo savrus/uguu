@@ -46,8 +46,9 @@ int main(int argc, char **argv)
     
     dt_mktree(&smbwk_walker, &d, &curdir);
     dt_printtree(&d);
-    
     dt_free(&d);
+
+    smbwk_fini_curdir(&curdir);
 
     return 0;
 }

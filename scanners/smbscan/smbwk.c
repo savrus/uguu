@@ -70,23 +70,15 @@ static void smbwk_url_suspend_undo(char *url)
         url[n] = '/';
 }
 
-/* reallocate null-terminated url string to have size new_len. new_len must exceed strlen(url) */
+/* reallocate null-terminated url string to have length new_len. new_len must exceed strlen(url) */
 /* returns 0 if failed, 1 otherwise */
 static int smbwk_url_realloc(char **url, size_t new_len)
 {
-    char *p = (char *) realloc(*url, new_len);
-    if (p != NULL) {
-        *url = p;
-        return 1;
-    }
-    /* FIXME: is malloc() relevant here? realloc() has already failed */
-    p = (char *) malloc(new_len);
+    char *p = (char *) realloc(*url, new_len * sizeof(char));
     if (p == NULL) {
-        LOG_ERR("realloc and malloc both returned NULL\n");
+        LOG_ERR("realloc() returned NULL\n");
         return 0;
     }
-    strcpy(p, *url);
-    free(*url);
     *url = p;
     return 1;
 }
