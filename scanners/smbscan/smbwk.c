@@ -65,9 +65,30 @@ static void smbwk_url_suspend(char *url)
 /* undo the last suspend of file/dir from nll-terminated url string */
 static void smbwk_url_suspend_undo(char *url)
 {
-    int n = strnlen(url, SMB_URL_LEN);
-    if (n < SMB_URL_LEN - 1)
+    int n = strnlen(url, SMBWK_PATH_MAX_LEN);
+    if (n < SMBWK_PATH_MAX_LEN - 1)
         url[n] = '/';
+}
+
+/* reallocate null-terminated url string to have size new_len. new_len must exceed strlen(url) */
+/* returns 0 if failed, 1 otherwise */
+static int smbwk_url_realloc(char **url, size_t new_len)
+{
+    char *p = (char *) realloc(*url, new_len);
+    if (p != NULL) {
+        *url = p;
+        return 1;
+    }
+    /* FIXME: is malloc() relevant here? realloc() has already failed */
+    p = (char *) malloc(new_len);
+    if (p == NULL) {
+        LOG_ERR("realloc and malloc both returned NULL\n");
+        return 0;
+    }
+    strcpy(p, *url);
+    free(*url);
+    *url = p;
+    return 1;
 }
 
 void smbwk_auth(const char *srv, 
@@ -125,6 +146,7 @@ struct dt_dentry * smbwk_readdir(void *curdir)
     struct smbc_dirent *de;
     struct dt_dentry *d;
     struct stat s;
+    int skip = 0;
     
     while ((de = smbc_readdir(c->fd)) != NULL) {
         if (!strcmp(de->name,".") || !strcmp(de->name,".."))
@@ -150,7 +172,15 @@ struct dt_dentry * smbwk_readdir(void *curdir)
             break;
         case SMBC_FILE:
             d->type = DT_FILE;
-            if (smbwk_url_append(c->url, SMB_URL_LEN, de->name) != 0) {
+            while (smbwk_url_append(c->url, c->url_len, de->name) == 0) {
+                if (smbwk_url_realloc(&(c->url), c->url_len + SMBWK_FILENAME_LEN) == 1)
+                    c->url_len += SMBWK_FILENAME_LEN;
+                else {
+                    skip = 1;
+                    break;
+                }
+            }
+            if (skip == 0) {
                 if (smbc_stat(c->url, &s) == 0)
                     d->size = s.st_size;
                 smbwk_url_suspend(c->url);
@@ -178,7 +208,7 @@ static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
             break;
         case SMBWK_GO_SIBLING:
             smbwk_url_suspend(c->url);
-            if (smbwk_url_append(c->url, SMB_URL_LEN, name) == 0){
+            if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
                 LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
                         c->url, name, type);
                 smbwk_url_suspend_undo(c->url);
@@ -186,7 +216,7 @@ static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
             }
             break;
         case SMBWK_GO_CHILD:
-            if (smbwk_url_append(c->url, SMB_URL_LEN, name) == 0){
+            if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
                 LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
                         c->url, name, type);
                 return -1;
@@ -242,7 +272,23 @@ struct dt_walker smbwk_walker = {
 
 int smbwk_init_curdir(struct smbwk_dir *c, char *host)
 {
+    c->url = (char *) malloc((SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN) * sizeof(char));
+    if(c->url == NULL) {
+        LOG_ERR("malloc() reutrned NULL\n");
+        return -1;
+    }
+    c->url_len = SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN;
+    if (strnlen(host, SMBWK_PATH_MAX_LEN) > SMBWK_PATH_MAX_LEN - 10) {
+        LOG_ERR("bad argument. host is too long\n");
+        return -1;
+    }
     sprintf(c->url, "smb://%s", host);
+    return 1;
+}
+
+int smbwk_fini_curdir(struct smbwk_dir *c)
+{
+    free(c->url);
     return 1;
 }
 
