@@ -36,6 +36,8 @@
 
 #include "dt.h"
 #include "smbwk.h"
+#include "log.h"
+
 
 /* appends to null-terminated url string new file/dir
  * return 0 if name is too long, 1 otherwise */
@@ -64,7 +66,7 @@ static void smbwk_url_suspend(char *url)
 static void smbwk_url_suspend_undo(char *url)
 {
     int n = strnlen(url, SMB_URL_LEN);
-    if (n < SMB_URL_LEN)
+    if (n < SMB_URL_LEN - 1)
         url[n] = '/';
 }
 
@@ -84,17 +86,17 @@ int smbwk_init(void *curdir)
     smbc_option_set(c->ctx, "user", "guest");
 
     if (smbc_init_context(c->ctx) != c->ctx) {
-        fprintf(stderr, "%s: smbc_init_context failed\n", __func__);
+        LOG_ERR("smbc_init_context() failed\n");
         return -1;
     }
 
     if (smbc_init(smbwk_auth, 0) != 0) {
-        fprintf(stderr, "%s: smbc_init failed\n", __func__);
+        LOG_ERR("smbc_init() failed\n");
         return -1;
     }
 
     if ((c->fd = smbc_opendir(c->url)) < 0) {
-        fprintf(stderr, "%s: smbc_opendir failed\n", __func__);
+        LOG_ERR("smbc_opendir() failed\n");
         return -1;
     }
 
@@ -105,12 +107,12 @@ int smbwk_fini(void *curdir)
 {
     struct smbwk_dir *c = (struct smbwk_dir*) curdir;
     int ret = 1;    
-    if (smbc_closedir(c->fd) < 0) {
-        fprintf(stderr, "%s: smbc_closedir failed\n", __func__);
-        ret = -1;
-    }
+    
+    /* do not check for errors because we don't really know if c->fd points to an opened dir */
+    smbc_closedir(c->fd);
+    
     if (smbc_free_context(c->ctx, 1) == 1) {
-        fprintf(stderr, "%s: smbc_free_context failed\n", __func__);
+        LOG_ERR("smbc_free_context() failed\n");
         ret = -1;
     }
 
@@ -137,7 +139,7 @@ struct dt_dentry * smbwk_readdir(void *curdir)
 
     d = (struct dt_dentry *) calloc(1, sizeof(struct dt_dentry));
     if (d == NULL) {
-        fprintf(stderr, "%s: calloc() returned NULL\n", __func__);
+        LOG_ERR("calloc() returned NULL\n");
         return NULL;
     }
     d->name = strdup(de->name);
@@ -160,9 +162,9 @@ struct dt_dentry * smbwk_readdir(void *curdir)
 }
 
 typedef enum {
-    SMBSCAN_GO_PARENT = 0,
-    SMBSCAN_GO_SIBLING,
-    SMBSCAN_GO_CHILD,
+    SMBWK_GO_PARENT = 0,
+    SMBWK_GO_SIBLING,
+    SMBWK_GO_CHILD,
 } smbwk_go_type;
 
 static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
@@ -171,60 +173,62 @@ static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
     int fd;
 
     switch (type) {
-        case SMBSCAN_GO_PARENT:
+        case SMBWK_GO_PARENT:
             smbwk_url_suspend(c->url);
             break;
-        case SMBSCAN_GO_SIBLING:
+        case SMBWK_GO_SIBLING:
             smbwk_url_suspend(c->url);
             if (smbwk_url_append(c->url, SMB_URL_LEN, name) == 0){
-                fprintf(stderr, "%s: smbwk_url_append returned error\n",
-                        __func__);
+                LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
+                        c->url, name, type);
                 smbwk_url_suspend_undo(c->url);
                 return -1;
             }
             break;
-        case SMBSCAN_GO_CHILD:
+        case SMBWK_GO_CHILD:
             if (smbwk_url_append(c->url, SMB_URL_LEN, name) == 0){
-                fprintf(stderr, "%s: smbwk_url_append returned error\n",
-                        __func__);
+                LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
+                        c->url, name, type);
                 return -1;
             }
             break;
         default:
-            fprintf(stderr, "%s: unknown smbwk_go_type %d\n", __func__, type);
+            LOG_ERR("unknown smbwk_go_type %d, url: %s\n", type, c->url);
             return -1;
     }
-    
-    if ((fd = smbc_opendir(c->url)) < 0) {
-        fprintf(stderr,
-                "%s: smbc_opendir() returned error. url: %s, go_type %d\n",
-                __func__, c->url, type);
-        if (type == SMBSCAN_GO_CHILD)
-            smbwk_url_suspend(c->url);
-        return -1;
+   
+    if (type != SMBWK_GO_PARENT) {
+        /* 'dir tree' engine won't request readdir afrer go_parent, so we don't
+         * have to call smbc_opendir() in such a case. This will cause redundant
+         * smbc_closedir() calls but we bear with it */
+        if ((fd = smbc_opendir(c->url)) < 0) {
+            LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n", c->url, type);
+            if (type == SMBWK_GO_CHILD)
+                smbwk_url_suspend(c->url);
+            return -1;
+        }
     }
+
+    /* do not check for errors because we don't really know if c->fd points to an opened dir */
+    smbc_closedir(c->fd);
     
-    if (smbc_closedir(c->fd) < 0)
-        fprintf(stderr,
-                "%s: smbc_closedir() returned error. url: %s, go_type %d\n",
-                __func__, c->url, type);
     c->fd = fd;
     return 1;
 }
 
 int smbwk_goparent(void *curdir)
 {
-    return smbwk_go(NULL, curdir, SMBSCAN_GO_PARENT);
+    return smbwk_go(NULL, curdir, SMBWK_GO_PARENT);
 }
 
 int smbwk_gosibling(char *name, void *curdir)
 {
-    return smbwk_go(name, curdir, SMBSCAN_GO_SIBLING);
+    return smbwk_go(name, curdir, SMBWK_GO_SIBLING);
 }
 
 int smbwk_gochild(char *name, void *curdir)
 {
-    return smbwk_go(name, curdir, SMBSCAN_GO_CHILD);
+    return smbwk_go(name, curdir, SMBWK_GO_CHILD);
 }
 
 struct dt_walker smbwk_walker = {
