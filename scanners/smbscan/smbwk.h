@@ -32,16 +32,22 @@
 #include <libsmbclient.h>
 #include "dt.h"
 
-#define SMB_URL_LEN 1024
+/* we omit paths which length exceeds this. */
+#define SMBWK_PATH_MAX_LEN 1024
+/* assume most filenames don't exceed this. */
+#define SMBWK_FILENAME_LEN 256
 
 struct smbwk_dir {
     SMBCCTX *ctx;
-    char url[SMB_URL_LEN];
+    char *url;
+    size_t url_len;
     int fd;
 };
 
 /* initialize curdir with respect to host */
 int smbwk_init_curdir(struct smbwk_dir *c, char *host);
+
+int smbwk_fini_curdir(struct smbwk_dir *c);
 
 /* smb walker for 'dir tree' engine */
 extern struct dt_walker smbwk_walker;
