@@ -30,6 +30,7 @@
 #define LOG_H
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #define LOG_ERR(...) \
 do { \
@@ -37,6 +38,15 @@ do { \
     fprintf(stderr, __VA_ARGS__); \
 } while (0)
 
-
+#define LOG_ASSERT(expr, ...) \
+do { \
+    if (!(expr)) { \
+        fprintf(stderr, "Assertion failed in file %s, func %s, line %d: ", \
+                __FILE__, __func__, __LINE__); \
+        fprintf(stderr, __VA_ARGS__); \
+        abort(); \
+    } \
+} while(0)
+        
 #endif /* LOG_H */
 
