@@ -28,24 +28,54 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "dt.h"
 #include "smbwk.h"
+
+static void usage(char *binname, int err)
+{
+    fprintf(stderr, "Usage: %s [-f out] host\n", binname);
+    fprintf(stderr, "out:\n");
+    fprintf(stderr, "\tfull - print full paths\n");
+    fprintf(stderr, "\tsimplified - print only id of a path\n");
+    fprintf(stderr, "\tfilesfirst - simplified with filis printed first\n");
+    exit(err);
+}
 
 int main(int argc, char **argv)
 {
     struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0};
     struct smbwk_dir curdir;
+    int out = DT_OUT_SIMPLIFIED;
+    char *host;
 
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s host\n", argv[0]);
-        exit(EXIT_FAILURE);
+    if (argc < 2)
+        usage(argv[0], EXIT_FAILURE);
+    
+    host = argv[1];
+
+    if (strcmp(argv[1], "-f") == 0) {
+        if (argc < 4)
+            usage(argv[0], EXIT_FAILURE);
+
+        host = argv[3];
+        if (strcmp(argv[2], "full") == 0)
+            out = DT_OUT_FULL;
+        else if (strcmp(argv[2], "simplified") == 0)
+            out = DT_OUT_SIMPLIFIED;
+        else if (strcmp(argv[2], "filesfirst") == 0)
+            out = DT_OUT_FILESFIRST;
+        else {
+            fprintf(stderr, "Unknown output format\n");
+            usage(argv[0], EXIT_FAILURE);
+        }
     }
+
+    smbwk_init_curdir(&curdir, host);
     
-    smbwk_init_curdir(&curdir, argv[1]);
-    
-    dt_mktree(&smbwk_walker, &d, &curdir);
-    dt_printtree(&d);
+    dt_mktree(&smbwk_walker, &d, &curdir, out);
+    dt_printtree(&d, out);
     dt_free(&d);
 
     smbwk_fini_curdir(&curdir);

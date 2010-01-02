@@ -192,7 +192,7 @@ typedef enum {
 static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
 {
     struct smbwk_dir *c = (struct smbwk_dir*) curdir;
-    int fd;
+    int fd = c->fd;
 
     switch (type) {
         case SMBWK_GO_PARENT:
