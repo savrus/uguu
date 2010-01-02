@@ -82,6 +82,7 @@ struct dt_walker {
 void dt_mktree(struct dt_walker *wk, struct dt_dentry *root, void *curdir, dt_out out);
 void dt_printtree(struct dt_dentry *root, dt_out out);
 void dt_free(struct dt_dentry *root);
+void dt_singlewalk(struct dt_walker *wk, struct dt_dentry *root, void *curdir, dt_out out);
 
 
 #endif /* DT_H */

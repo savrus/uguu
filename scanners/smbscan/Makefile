@@ -1,4 +1,4 @@
-CFLAGS += -Wall -O3
+CFLAGS += -Wall -g
 LDFLAGS += -lsmbclient
 
 smbscan: dt.o smbwk.o smbscan.o
