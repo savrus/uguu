@@ -60,7 +60,7 @@ static struct dt_dentry * dt_linkchild(struct dt_dentry *d, struct dt_dentry *dp
                 dp->sibling = dn;
             return dn;
             break;
-        case DT_OUT_FILESFIRST:
+        case DT_OUT_REVERSE:
             if (dn->type == DT_DIR) {
                 if (dp == NULL)
                     d->child = dn;
@@ -216,7 +216,7 @@ static void dt_printfile(struct dt_dentry *d, dt_out out)
             printf("%s %llu\n", (d->type == DT_DIR) ? "/" : "", d->size);
             break;
         case DT_OUT_SIMPLIFIED:
-        case DT_OUT_FILESFIRST:
+        case DT_OUT_REVERSE:
             printf("%u %u %llu %s\n",
                     (d->parent != NULL) ? d->parent->id : 0,
                     (d->type == DT_DIR) ? d->id : 0,
@@ -238,7 +238,7 @@ static void dt_printdir(struct dt_dentry *d, dt_out out)
             }
             break;
         case DT_OUT_SIMPLIFIED:
-        case DT_OUT_FILESFIRST:
+        case DT_OUT_REVERSE:
             for (dc = d->child; dc != NULL; dc = dc->sibling) {
                 dt_printfile(dc, out);
             }
