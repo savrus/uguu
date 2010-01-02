@@ -39,7 +39,7 @@ typedef enum {
 typedef enum {
     DT_OUT_SIMPLIFIED,
     DT_OUT_FULL,
-    DT_OUT_FILESFIRST
+    DT_OUT_REVERSE
 } dt_out;
 
 struct dt_dentry {

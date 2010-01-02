@@ -64,8 +64,8 @@ int main(int argc, char **argv)
             out = DT_OUT_FULL;
         else if (strcmp(argv[2], "simplified") == 0)
             out = DT_OUT_SIMPLIFIED;
-        else if (strcmp(argv[2], "filesfirst") == 0)
-            out = DT_OUT_FILESFIRST;
+        else if (strcmp(argv[2], "reverse") == 0)
+            out = DT_OUT_REVERSE;
         else {
             fprintf(stderr, "Unknown output format\n");
             usage(argv[0], EXIT_FAILURE);
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
     smbwk_init_curdir(&curdir, host);
     
     switch(out) {
-        case DT_OUT_FILESFIRST:
+        case DT_OUT_REVERSE:
             dt_singlewalk(&smbwk_walker, &d, &curdir, out);
             break;
         default:
