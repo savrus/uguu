@@ -36,6 +36,12 @@ typedef enum {
     DT_DIR
 } dt_type;
 
+typedef enum {
+    DT_OUT_SIMPLIFIED,
+    DT_OUT_FULL,
+    DT_OUT_FILESFIRST
+} dt_out;
+
 struct dt_dentry {
     dt_type type;
     char *name;
@@ -44,6 +50,7 @@ struct dt_dentry {
     struct dt_dentry *sibling;
     struct dt_dentry *child;
     int stamp;
+    unsigned int id;
 };
 
 /* all must return < 0 or NULL on fail
@@ -72,8 +79,8 @@ struct dt_walker {
 };
 
 /* root must have it's type, name and size set */
-void dt_mktree(struct dt_walker *wk, struct dt_dentry *root, void *curdir);
-void dt_printtree(struct dt_dentry *root);
+void dt_mktree(struct dt_walker *wk, struct dt_dentry *root, void *curdir, dt_out out);
+void dt_printtree(struct dt_dentry *root, dt_out out);
 void dt_free(struct dt_dentry *root);
 
 

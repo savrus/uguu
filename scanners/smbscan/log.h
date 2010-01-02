@@ -47,6 +47,6 @@ do { \
         abort(); \
     } \
 } while(0)
-        
+
 #endif /* LOG_H */
 
