@@ -74,9 +74,16 @@ int main(int argc, char **argv)
 
     smbwk_init_curdir(&curdir, host);
     
-    dt_mktree(&smbwk_walker, &d, &curdir, out);
-    dt_printtree(&d, out);
-    dt_free(&d);
+    switch(out) {
+        case DT_OUT_FILESFIRST:
+            dt_singlewalk(&smbwk_walker, &d, &curdir, out);
+            break;
+        default:
+            dt_mktree(&smbwk_walker, &d, &curdir, out);
+            dt_printtree(&d, out);
+            dt_free(&d);
+            break;
+    }
 
     smbwk_fini_curdir(&curdir);
 

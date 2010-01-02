@@ -42,6 +42,7 @@ struct smbwk_dir {
     char *url;
     size_t url_len;
     int fd;
+    int fd_real;
 };
 
 /* initialize curdir with respect to host */

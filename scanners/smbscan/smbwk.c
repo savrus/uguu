@@ -97,6 +97,7 @@ int smbwk_init(void *curdir)
     
     c->ctx = smbc_new_context();
     smbc_option_set(c->ctx, "user", "guest");
+    //smbc_setOptionUrlEncodeReaddirEntries(c->ctx, 1);
 
     if (smbc_init_context(c->ctx) != c->ctx) {
         LOG_ERR("smbc_init_context() failed\n");
@@ -110,8 +111,10 @@ int smbwk_init(void *curdir)
 
     if ((c->fd = smbc_opendir(c->url)) < 0) {
         LOG_ERR("smbc_opendir() failed\n");
+        c->fd_real = 0;
         return -1;
     }
+    c->fd_real = 1;
 
     return 1;
 }
@@ -121,9 +124,11 @@ int smbwk_fini(void *curdir)
     struct smbwk_dir *c = (struct smbwk_dir*) curdir;
     int ret = 1;    
     
-    /* do not check for errors because we don't really know if c->fd points to an opened dir */
-    smbc_closedir(c->fd);
-    
+    if (c->fd_real == 1)
+        if (smbc_closedir(c->fd) < 0)
+            LOG_ERR("smbc_closedir() returned error. url: %s\n", c->url);
+    c->fd_real = 0;
+
     if (smbc_free_context(c->ctx, 1) == 1) {
         LOG_ERR("smbc_free_context() failed\n");
         ret = -1;
@@ -193,6 +198,7 @@ static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
 {
     struct smbwk_dir *c = (struct smbwk_dir*) curdir;
     int fd = c->fd;
+    int fd_real = c->fd_real;
 
     switch (type) {
         case SMBWK_GO_PARENT:
@@ -221,20 +227,24 @@ static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
    
     if (type != SMBWK_GO_PARENT) {
         /* 'dir tree' engine won't request readdir afrer go_parent, so we don't
-         * have to call smbc_opendir() in such a case. This will cause redundant
-         * smbc_closedir() calls but we bear with it */
+         * have to call smbc_opendir() in such a case. We track if fd points to an
+         * opened directory in fd_read field of smbwk_dir structure */
         if ((fd = smbc_opendir(c->url)) < 0) {
             LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n", c->url, type);
             if (type == SMBWK_GO_CHILD)
                 smbwk_url_suspend(c->url);
             return -1;
         }
-    }
+        fd_real = 1;
+    } else
+        fd_real = 0;
 
-    /* do not check for errors because we don't really know if c->fd points to an opened dir */
-    smbc_closedir(c->fd);
+    if (c->fd_real == 1)
+        if (smbc_closedir(c->fd) < 0)
+            LOG_ERR("smbc_closedir() returned error. url: %s, go_type: %d\n", c->url, type);
     
     c->fd = fd;
+    c->fd_real = fd_real;
     return 1;
 }
 

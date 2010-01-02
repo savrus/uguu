@@ -288,6 +288,7 @@ static void dt_free_childs(struct dt_dentry *d)
         free(dc);
         dc = dn;
     }
+    d->child = NULL;
 }
 
 void dt_free(struct dt_dentry *root)
@@ -316,5 +317,55 @@ void dt_free(struct dt_dentry *root)
         }
     }
     dt_free_childs(root);
+}
+
+void dt_singlewalk(struct dt_walker *wk, struct dt_dentry *root, void *curdir, dt_out out)
+{
+    struct dt_dentry *d, *dc;
+    unsigned int id = 1;
+
+    if ((root == NULL) || (wk == NULL)) {
+        LOG_ERR("Bad arguments\n");
+        return;
+    }
+
+    root->parent = NULL;
+    root->sibling = NULL;
+    root->child = NULL;
+    root->stamp = 0;
+    root->id = id++;
+
+    if (wk->init(curdir) < 0)
+        return;
+
+    dt_readdir(wk, root, curdir, &id, out);
+    d = dt_go_child(wk, root, curdir);
+
+    while((d != NULL) && (d != root)) {
+        if (d->stamp == 0) {
+            dt_readdir(wk, d, curdir, &id, out);
+            if ((dc = dt_go_child(wk, d, curdir)) != NULL) {
+                d->stamp = 1;
+                d = dc;
+                continue;
+            }
+        } else {
+            d->stamp = 0;
+        }
+        for (dc = d->child; dc != NULL; dc = dc->sibling)
+            d->size += dc->size;
+        dt_printdir(d, out);
+        dt_free_childs(d);
+        d = dt_go_sibling_or_parent(wk, d, curdir);
+    }
+
+    for (dc = root->child; dc != NULL; dc = dc->sibling)
+        root->size += dc->size;
+        
+    dt_printdir(root, out);
+    dt_free_childs(root);
+    dt_printfile(root, out);
+
+    wk->fini(curdir);
 }
 
