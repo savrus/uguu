@@ -5,14 +5,7 @@ from django.conf.urls.defaults import *
 # admin.autodiscover()
 
 urlpatterns = patterns('',
-    #(r'^vfs/', include('webuguu.vfs.urls')),
-    (r'^vfs/$', 'webuguu.vfs.views.index'),
-    (r'^vfs/(?P<network_id>\d+)/$', 'webuguu.vfs.views.network'),
-    (r'^vfs/(?P<network_id>\d+)/(?P<share_id>\d+)/(?P<path>.*)',
-        'webuguu.vfs.views.share'),
-
-    # Example:
-    # (r'^webuguu/', include('webuguu.foo.urls')),
+    (r'^vfs/', include('webuguu.vfs.urls')),
 
     # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
     # to INSTALLED_APPS to enable admin documentation:
