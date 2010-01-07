@@ -29,6 +29,7 @@ struct dt_dentry {
     struct dt_dentry *child;
     int stamp;
     unsigned int id;
+    unsigned int fid;
 };
 
 /* all must return < 0 or NULL on fail
