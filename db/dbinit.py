@@ -57,12 +57,13 @@ def ddl(db):
     cursor.execute("""
         CREATE TABLE file (
             share_id integer,
+            parent_within_share_id integer,
             path_within_share_id integer,
             file_within_path_id integer,
             size bigint,
             filename_id bigint REFERENCES filename ON DELETE RESTRICT,
             file_type smallint,
-            PRIMARY KEY (share_id, path_within_share_id, file_within_path_id)
+            PRIMARY KEY (share_id, parent_within_share_id, file_within_path_id)
         )""")
 
 def fill(db):
