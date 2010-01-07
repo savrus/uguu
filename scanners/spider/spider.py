@@ -49,13 +49,14 @@ def scan_line(cursor, share, line):
         filename, = cursor.fetchone()
     cursor.execute("""
         INSERT INTO file (share_id,
+                          parent_within_share_id,
                           path_within_share_id,
                           file_within_path_id,
                           size,
                           filename_id,
                           file_type)
-        VALUES (%(s)s, %(pws)s, %(fwp)s, %(sz)s, %(fn)s, %(ft)s)
-        """, {'s':share, 'pws':parent, 'fwp':file, 'sz':size,
+        VALUES (%(s)s, %(parent)s, %(pws)s, %(fwp)s, %(sz)s, %(fn)s, %(ft)s)
+        """, {'s':share, 'parent':parent, 'pws':path, 'fwp':file, 'sz':size,
               'fn':filename, 'ft':filetype})
 
 def scan_share(db, share_id, ip, command):
