@@ -181,7 +181,7 @@ void dt_mktree(struct dt_walker *wk, struct dt_dentry *root, void *curdir, dt_ou
 static void dt_printpath(struct dt_dentry *d)
 {
     LOG_ASSERT(d != NULL, "Bad arguments\n");
-    if (d->parent != NULL) {
+    if ((d->parent != NULL) && (d->parent->name[0] != 0) ) {
         dt_printpath(d->parent);
         printf("/");
     }
@@ -197,10 +197,15 @@ static void dt_printfile(struct dt_dentry *d, dt_out out)
             break;
         case DT_OUT_SIMPLIFIED:
         case DT_OUT_REVERSE:
-            printf("%u %u %u %llu %s\n",
+            printf("%u %u %u %llu ",
                     (d->parent != NULL) ? d->parent->id : 0,
                     (d->type == DT_DIR) ? d->id : 0,
-                    d->fid, d->size, d->name);
+                    d->fid, d->size);
+            if (d->type == DT_DIR)
+                dt_printpath(d);
+            else
+                printf("%s", d->name);
+            printf("\n");
             break;
     }
 }
