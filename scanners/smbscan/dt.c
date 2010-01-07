@@ -58,12 +58,14 @@ static struct dt_dentry * dt_linkchild(struct dt_dentry *d, struct dt_dentry *dp
 static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, unsigned int *id, dt_out out)
 {
     struct dt_dentry *dp = NULL, *dn;
+    unsigned int fid = 0;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
     
     while ((dn = wk->readdir(curdir)) != NULL) {
         if (dn->type == DT_DIR)
             dn->id = (*id)++;
         dn->stamp = 0;
+        dn->fid = fid++;
         dp = dt_linkchild(d, dp, dn, out);
     }
     if (dp != NULL)
@@ -195,10 +197,10 @@ static void dt_printfile(struct dt_dentry *d, dt_out out)
             break;
         case DT_OUT_SIMPLIFIED:
         case DT_OUT_REVERSE:
-            printf("%u %u %llu %s\n",
+            printf("%u %u %u %llu %s\n",
                     (d->parent != NULL) ? d->parent->id : 0,
                     (d->type == DT_DIR) ? d->id : 0,
-                    d->size, d->name);
+                    d->fid, d->size, d->name);
             break;
     }
 }
