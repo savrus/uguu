@@ -1,4 +1,10 @@
 #!/usr/bin/python
+#
+# spider.py - high-level scanner
+#
+# Copyright 2010, savrus
+# Read the COPYING file in the root of the source tree.
+#
 
 import psycopg2
 import sys
