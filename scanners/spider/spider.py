@@ -31,6 +31,7 @@ def scan_line(cursor, share, line):
         filetype = 0
     else:
         filetype = 1
+    name = name[string.rfind(name, "/") + 1 :]
     cursor.execute("SELECT filename_id FROM filename WHERE name = %(n)s",
         {'n':name})
     try:
@@ -68,10 +69,6 @@ def scan_share(db, share_id, ip, command):
         db.commit()
         print "Scanning", ip, "succeeded"
         
-
-
-
-
 try:
     db = psycopg2.connect(
         "host='{host}' user='{user}' " \
