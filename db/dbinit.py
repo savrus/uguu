@@ -56,8 +56,6 @@ def ddl(db):
             size bigint,
             filename_id bigint REFERENCES filename ON DELETE RESTRICT,
             file_type smallint,
-            FOREIGN KEY (share_id, path_within_share_id) REFERENCES path
-                ON DELETE CASCADE,
             PRIMARY KEY (share_id, path_within_share_id, file_within_path_id)
         )""")
 
