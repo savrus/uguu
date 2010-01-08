@@ -51,6 +51,49 @@ do { \
 	throw _exception; \
 } while(0)
 
+#include <string>
+class logger
+{
+	std::string f;
+	std::string &prefix()
+	{
+		static std::string res;
+		return res;
+	}
+public:
+	logger(std::string func, std::string id = "")
+	{
+		f = func + "("+id+")";
+		fprintf(stderr, "%s>> %s\n", prefix().c_str(), f.c_str());
+		prefix() += " ";
+	}
+	~logger()
+	{
+		prefix().resize(prefix().size()-1);
+		fprintf(stderr, "%s<< %s\n", prefix().c_str(), f.c_str());
+	}
+	void logres(std::string res)
+	{
+		f += " => ";
+		f += res;
+	}
+};
+#define LOGF(...) \
+	logger __logger(__func__, __VA_ARGS__)
+#define LOGR(data) \
+	__logger.logres(data)
+#if 1
+#define LOGRET(res, type, tolog) \
+do { \
+	type __result = res; \
+	if( __result ) \
+		LOGR(__result##tolog); \
+	return __result; \
+} while(0)
+#else
+#define LOGRET(res, type, tolog) return res
+#endif
+
 #endif //__cplusplus
 
 #endif /* LOGP_H */
