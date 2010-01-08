@@ -25,6 +25,7 @@
 #endif//_WIN32
 
 #include <stdio.h>
+#include <string.h>
 #include <string>
 
 extern "C" {
@@ -44,8 +45,19 @@ public:
 	bool do_list;
 	FtpFindInfo findinfo;
 	int errors;
-	CFtpControlEx(): CFtpControl() {}
 };
+
+#define SAFE_FTP_CALL(...) \
+	while(1) { \
+		try { \
+			__VA_ARGS__ \
+		} catch(const CFtpControl::NetworkError) { \
+			if( ftp->errors--<0 ) \
+				throw CFtpControl::NetworkError(); \
+			usleep(1000); \
+			TryReconnect(ftp); \
+		} \
+	}
 
 void TryReconnect(CFtpControlEx *ftp)
 {
@@ -79,80 +91,71 @@ struct dt_dentry *fill_dentry(FtpFindInfo &fi)
 	struct dt_dentry *result = (struct dt_dentry*)calloc(1, sizeof(struct dt_dentry));
 	result->type = fi.Data.flagtrycwd?DT_DIR:DT_FILE;
 	result->name = strdup(fi.Data.name);
-	result->size = fi.Data.size;
+	if( DT_FILE == result->type )
+		result->size = fi.Data.size;
 	return result;
 }
 
+
 struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 {
-	if(ftp->do_list) {
-		while(1) {
-			try {
+	do {
+		if(ftp->do_list) {
+			SAFE_FTP_CALL(
 				if( ftp->FindFirstFile(ftp->curpath.c_str(), ftp->findinfo) ) {
 					ftp->do_list = false;
-					if( !strcmp(".", ftp->findinfo.Data.name) || !strcmp("..", ftp->findinfo.Data.name) )
-						return ftp_readdir_fn(ftp);
-					else
-						return fill_dentry(ftp->findinfo);
+					break;
 				} else return NULL;
-			} catch(const CFtpControl::NetworkError) {
-				if( ftp->errors--<0 )
-					throw CFtpControl::NetworkError();
-				usleep(1000);
-				TryReconnect(ftp);
+			)
+		} else {
+			if( !ftp->FindNextFile(ftp->findinfo) ) {
+				ftp->FindClose(ftp->findinfo);
+				ftp->do_list = true;
+				return NULL;
 			}
 		}
-	} else {
-		if( ftp->FindNextFile(ftp->findinfo) ) {
-			if( !strcmp(".", ftp->findinfo.Data.name) || !strcmp("..", ftp->findinfo.Data.name) )
-				return ftp_readdir_fn(ftp);
-			else
-				return fill_dentry(ftp->findinfo);
-		} else {
-			ftp->FindClose(ftp->findinfo);
-			ftp->do_list = true;
-			return NULL;
-		}
-	}
+	} while( !strcmp(".", ftp->findinfo.Data.name) || !strcmp("..", ftp->findinfo.Data.name) );
+	return fill_dentry(ftp->findinfo);
 }
 
-int ftp_go_somewhere(CFtpControlEx *ftp)
+int ftp_go_somewhere(CFtpControlEx *ftp, std::string olddir)
 {
-	while(1) {
-		try {
-			return ftp->ChDir(ftp->curpath.c_str()) ? 1 : -1;
-		} catch(const CFtpControl::NetworkError) {
-			if( ftp->errors--<0 )
-				throw CFtpControl::NetworkError();
-			usleep(1000);
-			TryReconnect(ftp);
+	ftp->do_list = true;
+	SAFE_FTP_CALL(
+		if( ftp->ChDir(ftp->curpath.c_str()) ) return 1;
+		else {
+			ftp->curpath = olddir;
+			return -1;
 		}
-	}
+	)
 }
 
 int ftp_goparent_fn(CFtpControlEx *ftp)
 {
-	ftp->do_list = true;
-	if( ftp->curpath.size() == 1 ) return -1;
-	ftp->curpath.resize(ftp->curpath.rfind("/")+1);
-	return ftp_go_somewhere(ftp);
+	if( ftp->curpath.size() == 1 )
+		return -1;
+	std::string olddir = ftp->curpath;
+	ftp->curpath.resize(ftp->curpath.rfind("/", ftp->curpath.size()-2)+1);
+	return ftp_go_somewhere(ftp, olddir);
 }
 
 int ftp_gosibling_fn(char *name, CFtpControlEx *ftp)
 {
-	ftp->do_list = true;
-	if( ftp->curpath.size() == 1 ) return -1;
-	ftp->curpath.resize(ftp->curpath.rfind("/")+1);
+	if( ftp->curpath.size() == 1 )
+		return -1;
+	std::string olddir = ftp->curpath;
+	ftp->curpath.resize(ftp->curpath.rfind("/", ftp->curpath.size()-2)+1);
 	ftp->curpath += name;
-	return ftp_go_somewhere(ftp);
+	ftp->curpath += "/";
+	return ftp_go_somewhere(ftp, olddir);
 }
 
 int ftp_gochild_fn(char *name, CFtpControlEx *ftp)
 {
-	if( ftp->curpath.size() != 1 )
-		ftp->curpath += "/";
+	std::string olddir = ftp->curpath;
 	ftp->curpath += name;
-	return ftp_go_somewhere(ftp);
+	ftp->curpath += "/";
+	return ftp_go_somewhere(ftp, olddir);
 }
 
 static struct dt_walker walker = {

@@ -53,7 +53,8 @@ static inline errno_t gmtime_s(struct tm * _Tm, const time_t * _Time)
 }
 
 errno_t _strupr_s(char * _Str, size_t _Size);
-int sprintf_s(char * _DstBuf, size_t _SizeInBytes, const char * _Format, ...);
+//int sprintf_s(char * _DstBuf, size_t _SizeInBytes, const char * _Format, ...);
+#define sprintf_s snprintf
 
 static inline int _vsnprintf_s(char * _DstBuf, size_t _SizeInBytes, size_t _MaxCount, const char * _Format, va_list _ArgList)
 {
