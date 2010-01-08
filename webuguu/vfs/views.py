@@ -6,6 +6,8 @@
 
 import psycopg2
 from django.http import HttpResponse
+from django.shortcuts import render_to_response
+import string
 
 db_host = "localhost"
 db_user = "postgres"
@@ -13,7 +15,7 @@ db_password = ""
 db_database = "uguu"
 
 
-def index(reqest):
+def index(request):
     try:
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
@@ -23,13 +25,10 @@ def index(reqest):
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     cursor.execute("SELECT network_id, name FROM network")
-    out = ""
-    for id, net in cursor.fetchall():
-        out = out + " " + str(id) + " " + str(net)
-    db.close()
-    return HttpResponse(out)
+    return render_to_response('vfs/index.html', \
+        {'networks': cursor.fetchall()})
 
-def network(reqest, network_id):
+def network(request, network_id):
     try:
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
@@ -37,6 +36,8 @@ def network(reqest, network_id):
                 h=db_host, u=db_user, p=db_password, d=db_database))
     except:
         return HttpResponse("Unable to connect to the database.")
+    uplink = request.build_absolute_uri()
+    uplink = uplink[:string.rfind(uplink,"/", 0, -1)]
     cursor = db.cursor()
     cursor.execute("""
         SELECT share.share_id, host.name, size
@@ -47,13 +48,10 @@ def network(reqest, network_id):
         WHERE host.network_id = %(n)s
         ORDER BY host.host_id
         """, {'n':network_id})
-    out = ""
-    for id, name, size in cursor.fetchall():
-        out = out + " " + str(id) + " " + name + " "  + str(size)
-    db.close()
-    return HttpResponse(out)
+    return render_to_response('vfs/network.html', \
+        {'shares': cursor.fetchall(), 'uplink': uplink})
 
-def share(reqest, network_id, share_id, path):
+def share(request, network_id, share_id, path=""):
     try:
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
@@ -71,16 +69,22 @@ def share(reqest, network_id, share_id, path):
         path_id, parent_id = cursor.fetchone()
     except:
         return HttpResponse("No such file or directory '" + path + "'")
-    cursor.execute("""
-        SELECT path
-        FROM path
-        WHERE share_id = %(s)s AND path_within_share_id = %(p)s
-        """, {'s':share_id, 'p':parent_id})
-    try:
-        path, = cursor.fetchone()
-        out = "Up: " + path + "<br><br>"
-    except:
-        out = ""
+    #cursor.execute("""
+    #    SELECT path
+    #    FROM path
+    #    WHERE share_id = %(s)s AND path_within_share_id = %(p)s
+    #    """, {'s':share_id, 'p':parent_id})
+    #try:
+    #    path, = cursor.fetchone()
+    #    out = "Up: " + path + "<br><br>"
+    #except:
+    #    out = ""
+    out = ""
+    #uplink = "http://" + request.get_host() + "/vfs/" + \
+    #    str(network_id) + "/" + str(share_id) + "/" + \
+    #    path[:string.rfind(path,"/")+1]
+    uplink = request.build_absolute_uri()
+    uplink = uplink[:string.rfind(uplink,"/", 0, -1)]
     cursor.execute("""
         SELECT path_within_share_id, size, name
         FROM file
@@ -89,10 +93,6 @@ def share(reqest, network_id, share_id, path):
             AND parent_within_share_id = %(p)s
         ORDER BY file_within_path_id;
         """, {'s':share_id, 'p':path_id})
-    for path, size, name in cursor.fetchall():
-        out = out + " " + str(path) + " "  + str(size) + " " + name + "<br>"
-    db.close()
-    return HttpResponse(out)
-
-
+    return render_to_response('vfs/share.html', \
+        {'files': cursor.fetchall(), 'uplink': uplink})
 

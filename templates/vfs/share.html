@@ -1,0 +1,22 @@
+<div id="uplink">
+    <a href="{{ uplink }}">Up</a><br>
+</div>
+<br>
+<div id="filelist">
+    <table>
+        <tr>
+            <td> file </td>
+            <td> size </td> 
+        </tr>
+        {% for file in files %}
+        <tr>
+            {% if file.0 %}
+            <td> <a href = "{{ file.2 }}"> {{ file.2 }} </a></td>
+            {% else %}
+            <td> {{ file.2 }} </td>
+            {% endif %}
+            <td> {{ file.1 }} </td> 
+        </tr>
+        {% endfor %}
+    </table>
+</div>
