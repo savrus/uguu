@@ -1,0 +1,16 @@
+<div id="uplink">
+    <a href="{{ uplink }}">Up</a><br>
+</div>
+<br>
+<table>
+    <tr>
+        <td> shares </td>
+        <td> size </td> 
+    </tr>
+    {% for share in shares %}
+    <tr>
+        <td> <a href = "{{ share.0}}"> {{ share.1 }} </a></td>
+        <td> {{ share.2 }} </td> 
+    </tr>
+    {% endfor %}
+</table>
