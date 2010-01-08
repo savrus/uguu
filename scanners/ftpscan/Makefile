@@ -1,5 +1,5 @@
 CC = gcc
-CXX = c++
+CXX = g++
 CALLFLAGS = -Wall -g
 CFLAGS += $(CALLFLAGS)
 CXXFLAGS += $(CALLFLAGS)

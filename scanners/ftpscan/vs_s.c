@@ -4,6 +4,7 @@
  * Read the COPYING file in the root of the source tree.
  */
 
+#include <ctype.h>
 #include "vs_s.h"
 
 errno_t _strupr_s(char * _Str, size_t _Size)
@@ -11,14 +12,15 @@ errno_t _strupr_s(char * _Str, size_t _Size)
 	CheckArg(_Str,);
 	if(!*_Str) return 0;
 	while(_Size) {
-		if( *_Str >= 'a' && *_Str <='z' )
-			_Str += 'A' - 'a';
+		if( islower(*_Str) )
+			*_Str = toupper(*_Str);
 		if( !*++_Str ) return 0;
 		--_Size;
 	}
 	return ERANGE;
 }
 
+#if 0
 int sprintf_s(char * _DstBuf, size_t _SizeInBytes, const char * _Format, ...)
 {
 	CheckArg2(_DstBuf && _Format);
@@ -28,3 +30,4 @@ int sprintf_s(char * _DstBuf, size_t _SizeInBytes, const char * _Format, ...)
 	va_end(_Args);
 	return result;
 }
+#endif
