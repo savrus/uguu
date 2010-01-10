@@ -61,7 +61,6 @@ public:
 
 void TryReconnect(CFtpControlEx *ftp)
 {
-	LOGF(ftp->curpath);
 	ftp->Quit();
 	if( !ftp->tryconn() )
 		throw CFtpControl::NetworkError();
@@ -69,14 +68,11 @@ void TryReconnect(CFtpControlEx *ftp)
 		LOG_ERR("Cannot logon: %s\n", ftp->GetLastResponse());
 		throw CFtpControl::NetworkError();
 	}
-	LOGR(
-		ftp->ChDir(ftp->curpath.c_str())
-		?"chdired":"unknown dir");
+	ftp->ChDir(ftp->curpath.c_str());
 }
 
 int ftp_init_fn(CFtpControlEx *ftp)
 {
-	LOGF();
 	ftp->curpath = "/";
 	ftp->do_list = true;
 	ftp->errors = 10;
@@ -86,7 +82,6 @@ int ftp_init_fn(CFtpControlEx *ftp)
 
 int ftp_fini_fn(CFtpControlEx *ftp)
 {
-	LOGF();
 	ftp->Quit();
 	return 1;
 }
@@ -104,7 +99,6 @@ struct dt_dentry *fill_dentry(FtpFindInfo &fi)
 
 struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 {
-	LOGF(ftp->curpath);
 	do {
 		if(ftp->do_list) {
 			SAFE_FTP_CALL(
@@ -117,23 +111,20 @@ struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 			if( !ftp->FindNextFile(ftp->findinfo) ) {
 				ftp->FindClose(ftp->findinfo);
 				ftp->do_list = true;
-				LOGR("NULL");
 				return NULL;
 			}
 		}
 	} while( !strcmp(".", ftp->findinfo.Data.name) || !strcmp("..", ftp->findinfo.Data.name) );
-	LOGRET(fill_dentry(ftp->findinfo), struct dt_dentry *, ->name);
+	return fill_dentry(ftp->findinfo);
 }
 
 int ftp_go_somewhere(CFtpControlEx *ftp, std::string olddir)
 {
-	LOGF(ftp->curpath);
 	ftp->do_list = true;
 	SAFE_FTP_CALL(
-		if( ftp->ChDir(ftp->curpath.c_str()) ) return LOGR("chdired"), 1;
+		if( ftp->ChDir(ftp->curpath.c_str()) ) return 1;
 		else {
 			ftp->curpath = olddir;
-			LOGR("unknown dir");
 			return -1;
 		}
 	)
@@ -141,7 +132,6 @@ int ftp_go_somewhere(CFtpControlEx *ftp, std::string olddir)
 
 int ftp_goparent_fn(CFtpControlEx *ftp)
 {
-	LOGF(ftp->curpath);
 	if( ftp->curpath.size() == 1 )
 		return -1;
 	std::string olddir = ftp->curpath;
@@ -151,7 +141,6 @@ int ftp_goparent_fn(CFtpControlEx *ftp)
 
 int ftp_gosibling_fn(char *name, CFtpControlEx *ftp)
 {
-	LOGF(ftp->curpath + "," + name);
 	if( ftp->curpath.size() == 1 )
 		return -1;
 	std::string olddir = ftp->curpath;
@@ -163,7 +152,6 @@ int ftp_gosibling_fn(char *name, CFtpControlEx *ftp)
 
 int ftp_gochild_fn(char *name, CFtpControlEx *ftp)
 {
-	LOGF(ftp->curpath + "," + name);
 	std::string olddir = ftp->curpath;
 	ftp->curpath += name;
 	ftp->curpath += "/";
