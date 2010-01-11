@@ -118,9 +118,18 @@ struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 	return fill_dentry(ftp->findinfo);
 }
 
-int ftp_go_somewhere(CFtpControlEx *ftp, std::string olddir)
+int ftp_go_somewhere(dt_go type, char *name, CFtpControlEx *ftp)
 {
 	ftp->do_list = true;
+	if( DT_GO_CHILD != type && ftp->curpath.size() == 1 )
+		return -1;
+	std::string olddir = ftp->curpath;
+	if (DT_GO_CHILD != type)
+		ftp->curpath.resize(ftp->curpath.rfind("/", ftp->curpath.size()-2)+1);
+	if (DT_GO_PARENT != type) {
+		ftp->curpath += name;
+		ftp->curpath += "/";
+	}
 	SAFE_FTP_CALL(
 		if( ftp->ChDir(ftp->curpath.c_str()) ) return 1;
 		else {
@@ -130,6 +139,7 @@ int ftp_go_somewhere(CFtpControlEx *ftp, std::string olddir)
 	)
 }
 
+#if 0
 int ftp_goparent_fn(CFtpControlEx *ftp)
 {
 	if( ftp->curpath.size() == 1 )
@@ -157,14 +167,13 @@ int ftp_gochild_fn(char *name, CFtpControlEx *ftp)
 	ftp->curpath += "/";
 	return ftp_go_somewhere(ftp, olddir);
 }
+#endif
 
 static struct dt_walker walker = {
     (dt_init_fn) &ftp_init_fn,
     (dt_fini_fn) &ftp_fini_fn,
     (dt_readdir_fn) &ftp_readdir_fn,
-    (dt_goparent_fn) &ftp_goparent_fn,
-    (dt_gosibling_fn) &ftp_gosibling_fn,
-    (dt_gochild_fn) &ftp_gochild_fn
+    (dt_go_fn) &ftp_go_somewhere,
 };
 
 //////////////////////////////////////////////////////////////////////////
