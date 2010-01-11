@@ -166,23 +166,17 @@ struct dt_dentry * smbwk_readdir(void *curdir)
     return d;
 }
 
-typedef enum {
-    SMBWK_GO_PARENT = 0,
-    SMBWK_GO_SIBLING,
-    SMBWK_GO_CHILD,
-} smbwk_go_type;
-
-static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
+static int smbwk_go(dt_go type, char *name, void *curdir)
 {
     struct smbwk_dir *c = (struct smbwk_dir*) curdir;
     int fd = c->fd;
     int fd_real = c->fd_real;
 
     switch (type) {
-        case SMBWK_GO_PARENT:
+        case DT_GO_PARENT:
             smbwk_url_suspend(c->url);
             break;
-        case SMBWK_GO_SIBLING:
+        case DT_GO_SIBLING:
             smbwk_url_suspend(c->url);
             if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
                 LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
@@ -191,7 +185,7 @@ static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
                 return -1;
             }
             break;
-        case SMBWK_GO_CHILD:
+        case DT_GO_CHILD:
             if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
                 LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
                         c->url, name, type);
@@ -203,13 +197,13 @@ static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
             return -1;
     }
    
-    if (type != SMBWK_GO_PARENT) {
+    if (type != DT_GO_PARENT) {
         /* 'dir tree' engine won't request readdir afrer go_parent, so we don't
          * have to call smbc_opendir() in such a case. We track if fd points to an
          * opened directory in fd_read field of smbwk_dir structure */
         if ((fd = smbc_opendir(c->url)) < 0) {
             LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n", c->url, type);
-            if (type == SMBWK_GO_CHILD)
+            if (type == DT_GO_CHILD)
                 smbwk_url_suspend(c->url);
             return -1;
         }
@@ -226,28 +220,11 @@ static int smbwk_go(char *name, void *curdir, smbwk_go_type type)
     return 1;
 }
 
-int smbwk_goparent(void *curdir)
-{
-    return smbwk_go(NULL, curdir, SMBWK_GO_PARENT);
-}
-
-int smbwk_gosibling(char *name, void *curdir)
-{
-    return smbwk_go(name, curdir, SMBWK_GO_SIBLING);
-}
-
-int smbwk_gochild(char *name, void *curdir)
-{
-    return smbwk_go(name, curdir, SMBWK_GO_CHILD);
-}
-
 struct dt_walker smbwk_walker = {
     smbwk_init,
     smbwk_fini,
     smbwk_readdir,
-    smbwk_goparent,
-    smbwk_gosibling,
-    smbwk_gochild,
+    smbwk_go,
 };
 
 int smbwk_init_curdir(struct smbwk_dir *c, char *host)
