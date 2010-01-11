@@ -50,8 +50,6 @@ static struct dt_dentry * dt_list_sort(struct dt_dentry *d, size_t nmemb, unsign
 static void dt_list_print_and_free(struct dt_dentry *d, dt_out out)
 {
     struct dt_dentry *dn;
-    if (d == NULL)
-        return;
     for (; d != NULL; d = dn) {
         dn = d->sibling;
         dt_printfile(d, out);
@@ -141,11 +139,11 @@ static struct dt_dentry * dt_go_sibling_or_parent(struct dt_walker *wk, struct d
     struct dt_dentry *dn = d;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
     while (((dn = dt_find_dir_sibling(dn)) != NULL)
-           && (wk->gosibling(dn->name, curdir) < 0))
+           && (wk->go(DT_GO_SIBLING, dn->name, curdir) < 0))
            ;
     if (dn == NULL) {
         dn = d->parent;
-        if (wk->goparent(curdir) < 0)
+        if (wk->go(DT_GO_PARENT, NULL, curdir) < 0)
             return NULL;
     }
     return dn;
@@ -157,7 +155,7 @@ static struct dt_dentry * dt_go_child(struct dt_walker *wk, struct dt_dentry *d,
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
     if ((dc = dt_find_dir_child(d)) == NULL)
         return NULL;
-    while ((wk->gochild(dc->name, curdir) < 0)
+    while ((wk->go(DT_GO_CHILD, dc->name, curdir) < 0)
            && ((dc = dt_find_dir_sibling(dc)) != NULL))
         ;
     return dc;
