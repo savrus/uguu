@@ -494,9 +494,9 @@ void CFtpControl::sockwait(bool forread) _throw_NE
   FD_ZERO(&fds);
   FD_SET(sock, &fds);
   if( forread )
-    res = select(0, &fds, NULL, NULL, &timeout);
+    res = select(sock + 1, &fds, NULL, NULL, &timeout);
   else
-    res = select(0, NULL, &fds, NULL, &timeout);
+    res = select(sock + 1, NULL, &fds, NULL, &timeout);
   if( res<0 )
     LOG_THROW(NetworkError, "Socket is invalid or network error at %s operation\n", forread ? "read" : "write");
   else if( !res )
