@@ -10,8 +10,8 @@
 #include <sys/types.h>
 
 typedef enum {
-    DT_FILE = 1,
-    DT_DIR
+    DT_DIR = 1,
+    DT_FILE,
 } dt_type;
 
 typedef enum {
@@ -27,9 +27,11 @@ struct dt_dentry {
     struct dt_dentry *parent;
     struct dt_dentry *sibling;
     struct dt_dentry *child;
+    struct dt_dentry *file_child;
     int stamp;
     unsigned int id;
     unsigned int fid;
+    unsigned int total;
 };
 
 /* all must return < 0 or NULL on fail
