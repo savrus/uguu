@@ -16,6 +16,49 @@
 
 static void dt_printfile(struct dt_dentry *d, dt_out out);
 
+int dt_compare(const void *dd1, const void *dd2)
+{
+    struct dt_dentry *d1 = *(struct dt_dentry **) dd1;
+    struct dt_dentry *d2 = *(struct dt_dentry **) dd2;
+    return strcmp(d1->name, d2->name);
+}
+
+/* sorts list of dt_detnries by names and
+ * assignes fids according to the order starting from s */
+static struct dt_dentry * dt_list_sort(struct dt_dentry *d, size_t nmemb, unsigned int s)
+{
+    struct dt_dentry **da;
+    struct dt_dentry *dp;
+    int i;
+    LOG_ASSERT((d != NULL) && (nmemb > 0), "Bad arguments\n");
+
+    da = (struct dt_dentry **) malloc(nmemb * sizeof(struct dt_dentry *));
+    for (da[0] = d, i = 1; i < nmemb; i++)
+        da[i] = da[i-1]->sibling;
+    qsort (da, nmemb, sizeof(struct dt_dentry *), dt_compare);
+    for (i = 1, dp = da[0], dp->fid = s++; i < nmemb; i++) {
+        dp->sibling = da[i];
+        dp = da[i];
+        dp->fid = s++;
+    }
+    dp->sibling = NULL;
+    dp = da[0];
+    free(da);
+    return dp;
+}
+
+static void dt_list_print_and_free(struct dt_dentry *d, dt_out out)
+{
+    struct dt_dentry *dn;
+    if (d == NULL)
+        return;
+    for (; d != NULL; d = dn) {
+        dn = d->sibling;
+        dt_printfile(d, out);
+        free(d->name);
+        free(d);
+    }
+}
 
 /* link next read child into dir tree according to selectd out policy
  * d - current directory
@@ -24,73 +67,73 @@ static void dt_printfile(struct dt_dentry *d, dt_out out);
  *
  * return: dn, if dn linked, dc otherwise
  */
-static struct dt_dentry * dt_linkchild(struct dt_dentry *d, struct dt_dentry *dp, struct dt_dentry *dn, dt_out out)
+static struct dt_dentry * dt_linkchild(struct dt_dentry *d, struct dt_dentry *dp, struct dt_dentry *dn)
 {
     LOG_ASSERT((d != NULL) && (dn != NULL), "Bad arguments\n");
-     dn->parent = d;
-     switch(out) {
-        case DT_OUT_FULL:
-        case DT_OUT_SIMPLIFIED:
-        default:
-            if (dp == NULL)
-                d->child = dn;
-            else
-                dp->sibling = dn;
-            return dn;
-            break;
-        case DT_OUT_REVERSE:
-            if (dn->type == DT_DIR) {
-                if (dp == NULL)
-                    d->child = dn;
-                else
-                    dp->sibling = dn;
-                return dn;
-            } else {
-                dt_printfile(dn, out);
-                d->size += dn->size;
-                free(dn->name);
-                free(dn);
-                return dp;
-            }
-    }
+    dn->parent = d;
+    if (dp == NULL)
+        if (dn->type == DT_DIR)
+            d->child = dn;
+        else
+            d->file_child = dn;
+    else
+        dp->sibling = dn;
+    if (dn->type == DT_FILE)
+        d->size += dn->size;
+    return dn;
 }
 
 static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, unsigned int *id, dt_out out)
 {
-    struct dt_dentry *dp = NULL, *dn;
-    unsigned int fid = 0;
+    struct dt_dentry *ddc = NULL, *dfc = NULL, *dn;
+    unsigned int dirs = 0;
+    unsigned int files = 0;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
     
+    d->total = 0;
     while ((dn = wk->readdir(curdir)) != NULL) {
-        if (dn->type == DT_DIR)
-            dn->id = (*id)++;
         dn->stamp = 0;
-        dn->fid = fid++;
-        dp = dt_linkchild(d, dp, dn, out);
+        if (dn->type == DT_DIR) {
+            dirs++;
+            dn->id = (*id)++;
+            ddc = dt_linkchild(d, ddc, dn);
+        } else {
+            files++;
+            dfc = dt_linkchild(d, dfc, dn);
+        }
     }
-    if (dp != NULL)
-        dp->sibling = NULL;
+    if (ddc != NULL)
+        ddc->sibling = NULL;
+    if (dfc != NULL)
+        dfc->sibling = NULL;
+
+    if (dirs > 0)
+        d->child = dt_list_sort(d->child, dirs, 0);
+    if (files > 0)
+        d->file_child = dt_list_sort(d->file_child, files, dirs);
+    d->total = files + dirs;
+
+    if ((out == DT_OUT_REVERSE) || (out == DT_OUT_SIMPLIFIED)) {
+        dfc = d->file_child;
+        d->file_child = NULL;
+        dt_list_print_and_free(dfc, out);
+    }
 }
 
 static struct dt_dentry * dt_find_dir_sibling(struct dt_dentry *d)
 {
-    struct dt_dentry *dn;
-    LOG_ASSERT(d != NULL, "Bad arguments\n");
-    for (dn = d->sibling;
-         (dn != NULL) && (dn->type != DT_DIR);
-         dn = dn->sibling)
-        ;
-    return dn;
+    LOG_ASSERT((d != NULL) && (d->type == DT_DIR), "Bad arguments\n");
+    if (d->sibling != NULL)
+        LOG_ASSERT(d->sibling->type == DT_DIR, "Not DT_DIR node in DIR tree\n");
+    return d->sibling;
 }
 
 static struct dt_dentry * dt_find_dir_child(struct dt_dentry *d)
 {
-    struct dt_dentry *dn;
     LOG_ASSERT(d != NULL, "Bad arguments\n");
-    dn = d->child;
-    if ((dn != NULL) && (dn->type != DT_DIR))
-        return dt_find_dir_sibling(dn);
-    return dn;
+    if (d->child != NULL)
+        LOG_ASSERT(d->child->type == DT_DIR, "Not DT_DIR node in DIR tree\n"); 
+    return d->child;
 }
 
 static struct dt_dentry * dt_go_sibling_or_parent(struct dt_walker *wk, struct dt_dentry *d, void *curdir)
@@ -221,6 +264,10 @@ static void dt_printdir(struct dt_dentry *d, dt_out out)
                 dt_printpath(dc);
                 dt_printfile(dc, out);
             }
+            for (dc = d->file_child; dc != NULL; dc = dc->sibling) {
+                dt_printpath(dc);
+                dt_printfile(dc, out);
+            }
             break;
         case DT_OUT_SIMPLIFIED:
         case DT_OUT_REVERSE:
@@ -317,6 +364,7 @@ void dt_singlewalk(struct dt_walker *wk, struct dt_dentry *root, void *curdir, d
     root->parent = NULL;
     root->sibling = NULL;
     root->child = NULL;
+    root->file_child = NULL;
     root->stamp = 0;
     root->id = id++;
 
