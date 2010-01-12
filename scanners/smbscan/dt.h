@@ -59,7 +59,9 @@ typedef enum {
  * One may have noticed that gosibling() is equivalent to goup() combined with
  * gochild() for next non-visited child.
  * If gosibling() or gochild() fails then current directory should not be
- * changed. If goup() fails then 'dir tree' is terminated.
+ * changed. But since readdir() will not be invoked, for gosibling() it is not
+ * that strict (however, walker must ratain the same level in the file tree).
+ * If goup() fails then 'dir tree' is terminated.
  * The following conditions are guaranteed:
  *   gosibling() is executed only for siblings obtained by readir()
  *   gochild() is executed only for childs obtained by realdir()
