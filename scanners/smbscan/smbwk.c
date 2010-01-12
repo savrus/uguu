@@ -90,17 +90,22 @@ int smbwk_open(struct smbwk_dir *c, char *host)
 
     if (smbc_init_context(c->ctx) != c->ctx) {
         LOG_ERR("smbc_init_context() failed\n");
+        free(c->url);
         return -1;
     }
 
     if (smbc_init(smbwk_auth, 0) != 0) {
         LOG_ERR("smbc_init() failed\n");
+        free(c->url);
+        smbc_free_context(c->ctx, 1);
         return -1;
     }
 
     if ((c->fd = smbc_opendir(c->url)) < 0) {
         LOG_ERR("smbc_opendir() failed\n");
         c->fd_real = 0;
+        free(c->url);
+        smbc_free_context(c->ctx, 1);
         return -1;
     }
     c->fd_real = 1;
