@@ -9,16 +9,14 @@
 
 #include <sys/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     DT_DIR = 1,
     DT_FILE,
 } dt_type;
-
-typedef enum {
-    DT_OUT_SIMPLIFIED,
-    DT_OUT_FULL,
-    DT_OUT_REVERSE
-} dt_out;
 
 struct dt_dentry {
     dt_type type;
@@ -40,37 +38,58 @@ typedef enum {
     DT_GO_CHILD,
 } dt_go;
 
-/* all must return < 0 or NULL on fail
+/*
  * dt_readdir_fn - must fill type, name and size fields of dt_dentry struct,
  * others must be null;
  *
- * Walking algorithm: dt_mktree executes dt_readdir as many times
- * as necessary to read all curdir files/subdirs. After that goup, gosibling
- * or gochild are executed to navigate fs. After each gochild and gosibling
- * readdir is executed to read all content of the directory.
- *
+ * The following notations will be used:
  * goup = go(DT_GO_PARENT)
  * gosibling = go(DT_GO_SIBLING)
  * gochild = go(DT_GO_CHILD)
+ *
+ * Walking algorithm: starting from the root of the share 'dir tree' walks
+ * the filesystem using goup(), gosibling() or gochild(). In each directory
+ * (including the root) readdir() is executed as many times as necessary to
+ * get all curdir files/subdirs.
+ * After that navigatoin is performed in the following order:
+ * if there is a non-visited subdirectory go there by executing gochild(),
+ * if there is a non-visited sibling directory go there by executing
+ * gosibling(),
+ * else go up by executing goup()
+ * One may have noticed that gosibling() is equivalent to goup() combined with
+ * gochild() for next non-visited child.
+ * If gosibling() or gochild() fails then current directory should not be
+ * changed. If goup() fails then 'dir tree' is terminated.
+ * The following conditions are guaranteed:
+ *   gosibling() is executed only for siblings obtained by readir()
+ *   gochild() is executed only for childs obtained by realdir()
+ *   goup() is never executed when we are in the root of the share
+ *   readdir() is executed exactly once for each directory including the root
+ *
+ * curdir is the data structure that contains an abstract pointer into
+ * current directory for external walker. curdir must be initialized before
+ * calling dt_full() or dt_reverse()
  */
-typedef int (*dt_init_fn) (void *curdir);
-typedef int (*dt_fini_fn) (void *curdir);
+
 typedef struct dt_dentry * (*dt_readdir_fn) (void *curdir);
 typedef int (*dt_go_fn) (dt_go type, char *name, void *curdir);
 
 struct dt_walker {
-    dt_init_fn init;
-    dt_fini_fn fini;
+    /* returns a single item from a direcotry.
+     * readdir must return NULL on failure or when no new items are left */
     dt_readdir_fn readdir;
+    /* go is used to navigate the fs 
+     * go must return negative value on failure */
     dt_go_fn go;
 };
 
 /* root must have it's type, name and size set */
-void dt_mktree(struct dt_walker *wk, struct dt_dentry *root, void *curdir, dt_out out);
-void dt_printtree(struct dt_dentry *root, dt_out out);
-void dt_free(struct dt_dentry *root);
-void dt_singlewalk(struct dt_walker *wk, struct dt_dentry *root, void *curdir, dt_out out);
+void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir);
+void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* DT_H */
 

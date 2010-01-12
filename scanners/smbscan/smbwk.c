@@ -69,9 +69,20 @@ void smbwk_auth(const char *srv,
 {
 }
 
-int smbwk_init(void *curdir)
+int smbwk_open(struct smbwk_dir *c, char *host)
 {
-    struct smbwk_dir *c = (struct smbwk_dir*) curdir;
+    if (strnlen(host, SMBWK_PATH_MAX_LEN) > SMBWK_PATH_MAX_LEN - 10) {
+        LOG_ERR("bad argument. host is too long\n");
+        return -1;
+    }
+    c->url = (char *) malloc((SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN)
+                             * sizeof(char));
+    if(c->url == NULL) {
+        LOG_ERR("malloc() reutrned NULL\n");
+        return -1;
+    }
+    c->url_len = SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN;
+    sprintf(c->url, "smb://%s", host);
     
     c->ctx = smbc_new_context();
     smbc_option_set(c->ctx, "user", "guest");
@@ -97,9 +108,8 @@ int smbwk_init(void *curdir)
     return 1;
 }
 
-int smbwk_fini(void *curdir)
+int smbwk_close(struct smbwk_dir *c)
 {
-    struct smbwk_dir *c = (struct smbwk_dir*) curdir;
     int ret = 1;    
     
     if (c->fd_real == 1)
@@ -112,6 +122,8 @@ int smbwk_fini(void *curdir)
         ret = -1;
     }
 
+    free(c->url);
+    
     return ret;
 }
 
@@ -221,31 +233,7 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
 }
 
 struct dt_walker smbwk_walker = {
-    smbwk_init,
-    smbwk_fini,
     smbwk_readdir,
     smbwk_go,
 };
-
-int smbwk_init_curdir(struct smbwk_dir *c, char *host)
-{
-    c->url = (char *) malloc((SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN) * sizeof(char));
-    if(c->url == NULL) {
-        LOG_ERR("malloc() reutrned NULL\n");
-        return -1;
-    }
-    c->url_len = SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN;
-    if (strnlen(host, SMBWK_PATH_MAX_LEN) > SMBWK_PATH_MAX_LEN - 10) {
-        LOG_ERR("bad argument. host is too long\n");
-        return -1;
-    }
-    sprintf(c->url, "smb://%s", host);
-    return 1;
-}
-
-int smbwk_fini_curdir(struct smbwk_dir *c)
-{
-    free(c->url);
-    return 1;
-}
 
