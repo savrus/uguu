@@ -78,7 +78,7 @@ def fill(db):
         """)
     cursor.execute("""
         INSERT INTO sharetype (protocol, scan_command)
-        VALUES (0, 'smbscan -f reverse')
+        VALUES (0, 'smbscan')
         """)
     cursor.execute("""
         INSERT INTO share (sharetype_id, host_id)

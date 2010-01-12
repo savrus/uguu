@@ -23,10 +23,10 @@ struct smbwk_dir {
     int fd_real;
 };
 
-/* initialize curdir with respect to host */
-int smbwk_init_curdir(struct smbwk_dir *c, char *host);
-
-int smbwk_fini_curdir(struct smbwk_dir *c);
+/* initialise the walker */
+int smbwk_open(struct smbwk_dir *c, char *host);
+/* close the walker */
+int smbwk_close(struct smbwk_dir *c);
 
 /* smb walker for 'dir tree' engine */
 extern struct dt_walker smbwk_walker;

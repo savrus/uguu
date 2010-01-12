@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 {
     struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0};
     struct smbwk_dir curdir;
-    int out = DT_OUT_SIMPLIFIED;
+    int full = 0;
     char *host;
 
     if (argc < 2)
@@ -34,36 +34,21 @@ int main(int argc, char **argv)
     host = argv[1];
 
     if (strcmp(argv[1], "-f") == 0) {
-        if (argc < 4)
+        if (argc < 2)
             usage(argv[0], EXIT_FAILURE);
-
-        host = argv[3];
-        if (strcmp(argv[2], "full") == 0)
-            out = DT_OUT_FULL;
-        else if (strcmp(argv[2], "simplified") == 0)
-            out = DT_OUT_SIMPLIFIED;
-        else if (strcmp(argv[2], "reverse") == 0)
-            out = DT_OUT_REVERSE;
-        else {
-            fprintf(stderr, "Unknown output format\n");
-            usage(argv[0], EXIT_FAILURE);
-        }
+        full = 1;
+        host = argv[2];
     }
 
-    smbwk_init_curdir(&curdir, host);
+    if (smbwk_open(&curdir, host) < 0)
+        exit(EXIT_FAILURE);
     
-    switch(out) {
-        case DT_OUT_REVERSE:
-            dt_singlewalk(&smbwk_walker, &d, &curdir, out);
-            break;
-        default:
-            dt_mktree(&smbwk_walker, &d, &curdir, out);
-            dt_printtree(&d, out);
-            dt_free(&d);
-            break;
-    }
+    if (full)
+        dt_full(&smbwk_walker, &d, &curdir);
+    else
+        dt_reverse(&smbwk_walker, &d, &curdir);
 
-    smbwk_fini_curdir(&curdir);
+    smbwk_close(&curdir);
 
     return 0;
 }
