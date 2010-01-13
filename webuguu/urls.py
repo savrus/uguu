@@ -5,7 +5,9 @@ from django.conf.urls.defaults import *
 # admin.autodiscover()
 
 urlpatterns = patterns('',
-    (r'^vfs/', include('webuguu.vfs.urls')),
+    (r'^$',         include('webuguu.search.urls')),
+    (r'^search/',   include('webuguu.search.urls')),
+    (r'^vfs/',      include('webuguu.vfs.urls')),
 
     # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
     # to INSTALLED_APPS to enable admin documentation:

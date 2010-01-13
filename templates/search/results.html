@@ -1,0 +1,20 @@
+<form action="/search" name=f>
+    <input name=q title="Uguu search" value="">
+    <input name=b type=submit title="search" value="search">
+</form>
+
+<div id="searchresults">
+    <table>
+        {% for r in results %}
+        <tr>
+            <td><u>{{r.1}}://{{r.2}}/{{r.3}}/{{r.4}}</u></td>
+        {% if r.0 %}
+            <td><a href="/vfs/{{r.1}}/{{r.2}}/{{r.3}}/{{r.4}}">vfs</a></td>
+        {% else %}
+            <td><a href="/vfs/{{r.1}}/{{r.2}}/{{r.3}}">vfs</a></td>
+        {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
