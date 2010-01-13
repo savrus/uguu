@@ -61,6 +61,6 @@ int wmain(int argc, wchar_t **argv)
 
     smbwk_close(&curdir);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 

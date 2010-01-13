@@ -42,7 +42,7 @@ static char *smbwk_getshare(struct smbwk_dir *c)
 	return res;
 }
 
-static void smbwk_fillshares(struct smbwk_dir *c) 
+static int smbwk_fillshares(struct smbwk_dir *c) 
 {
 	NETRESOURCE netenum, *item;
 	HANDLE hEnum;
@@ -59,7 +59,7 @@ static void smbwk_fillshares(struct smbwk_dir *c)
 	netenum.lpRemoteName = c->url;
 	if ((res = WNetOpenEnum(RESOURCE_GLOBALNET, RESOURCETYPE_DISK, 0, &netenum, &hEnum)) != NO_ERROR) {
 		LOG_ERR("WNetOpenEnum failed (%d)\n", res);
-		return;
+		return 0;
 	}
 
 	buffer = malloc(BUF_SIZE);
@@ -71,9 +71,12 @@ static void smbwk_fillshares(struct smbwk_dir *c)
 		if (ERROR_MORE_DATA == res)
 			res = NO_ERROR;
 		else if (NO_ERROR != res) {
-			if (ERROR_NO_MORE_ITEMS != res)
+			if (ERROR_NO_MORE_ITEMS == res)
+				break;
 			LOG_ERR("WNetEnumResource failed (%d)\n", res);
-			break;
+			free(buffer);
+			WNetCloseEnum(hEnum);
+			return 0;
 		}
 		for (i = 0, item = (LPNETRESOURCE)buffer; i < rescount; i++, item++) {
 			name = wcschr(item->lpRemoteName + 2, L'\\');
@@ -88,11 +91,12 @@ static void smbwk_fillshares(struct smbwk_dir *c)
 	free(buffer);
 
 	WNetCloseEnum(hEnum);
+	return 1;
 }
 
-static void smbwk_fillallshares(struct smbwk_dir *c, int adm) 
+static int smbwk_fillallshares(struct smbwk_dir *c, int adm) 
 {
-	DWORD res, resread, rescount, resh, i;
+	DWORD res, resread = 0, rescount = 0, resh = 0, i;
 	BYTE *buffer;
 	PSHARE_INFO_1 item;
 	SHARELIST_TMP_DECLARE;
@@ -102,7 +106,7 @@ static void smbwk_fillallshares(struct smbwk_dir *c, int adm)
 		res = NetShareEnum(c->url + 2, 1, &buffer, BUF_SIZE, &resread, &rescount, &resh);
 		if (NERR_Success != res && ERROR_MORE_DATA != res) {
 			LOG_ERR("NetShareEnum failed (%d)\n", res);
-			break;
+			return 0;
 		}
 		for (i = 0, item = (PSHARE_INFO_1)buffer; i < resread; i++, item++) {
 			switch (item->shi1_type)
@@ -120,6 +124,7 @@ static void smbwk_fillallshares(struct smbwk_dir *c, int adm)
 		}
 		NetApiBufferFree((void *)buffer);
 	} while (ERROR_MORE_DATA == res);
+	return 1;
 }
 
 /* appends to null-terminated url string new file/dir
@@ -196,6 +201,8 @@ struct dt_dentry * smbwk_readdir(void *curdir)
 			if (!FindNextFile(c->find, &c->data)) {
 				FindClose(c->find);
 				c->find = INVALID_HANDLE_VALUE;
+				if (ERROR_NO_MORE_FILES != GetLastError())
+					LOG_ERR("Enumeration failed for %S (%d)\n", c->url, GetLastError());
 			}
 		}
 	} else if (name = smbwk_getshare(c)) {
@@ -215,7 +222,6 @@ struct dt_dentry * smbwk_readdir(void *curdir)
 static int smbwk_go(dt_go type, char *name, void *curdir)
 {
     struct smbwk_dir *c = (struct smbwk_dir*) curdir;
-
 
     switch (type) {
         case DT_GO_PARENT:
@@ -254,6 +260,7 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
 		smbwk_url_suspend(c->url);
 		if (INVALID_HANDLE_VALUE == c->find)
 		{
+			LOG_ERR("Enumeration failed for %S (%d)\n", c->url, GetLastError());
 			if (type == DT_GO_CHILD) {
 				smbwk_url_suspend(c->url);
 				c->subdir--;
@@ -294,15 +301,19 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
 	case ERROR_SESSION_CREDENTIAL_CONFLICT://already connected under other username, let's scan using it
 		break;
 	default:
-		LOG_ERR("Cann\'t establish connection to %S as %S\n", c->url, username);
+		LOG_ERR("Cann\'t establish connection to %S as %S (%d)\n", c->url, username, GetLastError());
 		smbwk_close(c);
 		return -1;
 	}
 	c->share_list = NULL;
-	if (ENUM_SKIP_DOLLAR == enum_hidden_shares)
-		smbwk_fillshares(c);
-	else
-		smbwk_fillallshares(c, !(int)enum_hidden_shares);
+	if (!(
+		ENUM_SKIP_DOLLAR == enum_hidden_shares ?
+			(int(*)(struct smbwk_dir *, int))smbwk_fillshares :
+			smbwk_fillallshares
+		)(c, !(int)enum_hidden_shares)) {
+			smbwk_close(c);
+			return -1;
+	}
 	SHARELIST_START_ENUM(*c);
 	c->subdir = 0;
 	c->find = INVALID_HANDLE_VALUE;
