@@ -28,12 +28,14 @@ def search(request):
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     cursor.execute("""
-        SELECT file.path_within_share_id, proto.name, host.name,
-            path.path, filename.name
+        SELECT proto.name, host.name,
+            path.path, spath.path, filename.name
         FROM filename
         JOIN file ON (filename.filename_id = file.filename_id)
-        JOIN path ON (file.share_id = path.share_id
+        LEFT OUTER JOIN path ON (file.share_id = path.share_id
             AND file.parent_within_share_id = path.path_within_share_id)
+        LEFT OUTER JOIN path AS spath ON (file.share_id = spath.share_id
+            AND file.path_within_share_id = spath.path_within_share_id)
         JOIN share ON (file.share_id = share.share_id)
         JOIN host ON (share.host_id = host.host_id)
         JOIN sharetype ON (share.sharetype_id = sharetype.sharetype_id)
