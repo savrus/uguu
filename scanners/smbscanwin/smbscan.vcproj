@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9,00"
-	Name="ftpscan"
-	ProjectGUID="{941C2069-7753-4432-B96A-F7642C929239}"
-	RootNamespace="ftpscan"
+	Name="smbscan"
+	ProjectGUID="{2960CCC5-F5D2-4BEF-BAE0-12B26AB47AC8}"
+	RootNamespace="smbscanwin"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -21,7 +21,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			CharacterSet="0"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -41,7 +41,6 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)\win&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -61,9 +60,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libiconv.lib Ws2_32.lib"
+				AdditionalDependencies="Mpr.lib Netapi32.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;$(ProjectDir)\win&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -95,7 +93,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			CharacterSet="0"
+			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -117,7 +115,6 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)\win&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -136,9 +133,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libiconv.lib Ws2_32.lib"
+				AdditionalDependencies="Mpr.lib Netapi32.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(ProjectDir)\win&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -181,15 +177,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\ftpparse.c"
+				RelativePath=".\smbscan.c"
 				>
 			</File>
 			<File
-				RelativePath=".\ftpscan.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\FtpSockLib.cpp"
+				RelativePath=".\smbwk.c"
 				>
 			</File>
 		</Filter>
@@ -203,15 +195,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\ftpparse.h"
+				RelativePath=".\log.h"
 				>
 			</File>
 			<File
-				RelativePath=".\FtpSockLib.h"
-				>
-			</File>
-			<File
-				RelativePath=".\logpp.h"
+				RelativePath=".\smbwk.h"
 				>
 			</File>
 		</Filter>

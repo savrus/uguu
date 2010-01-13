@@ -12,7 +12,7 @@
 #include <stdio.h>
 
 #include "dt.h"
-#include "logpp.h"
+#include "log.h"
 
 static void dt_init_root(struct dt_dentry *root, unsigned int *id)
 {

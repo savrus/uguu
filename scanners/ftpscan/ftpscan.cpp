@@ -28,9 +28,7 @@
 #include <string.h>
 #include <string>
 
-extern "C" {
 #include "dt.h"
-}
 #include "logpp.h"
 #include "FtpSockLib.h"
 
@@ -41,6 +39,7 @@ class CFtpControlEx
 : public CFtpControl
 {
 public:
+	CFtpControlEx() : curpath("/"), do_list(true), errors(10) {}
 	std::string curpath;
 	bool do_list;
 	FtpFindInfo findinfo;
@@ -59,7 +58,7 @@ public:
 		} \
 	}
 
-void TryReconnect(CFtpControlEx *ftp)
+static void TryReconnect(CFtpControlEx *ftp)
 {
 	ftp->Quit();
 	if( !ftp->tryconn() )
@@ -71,22 +70,7 @@ void TryReconnect(CFtpControlEx *ftp)
 	ftp->ChDir(ftp->curpath.c_str());
 }
 
-int ftp_init_fn(CFtpControlEx *ftp)
-{
-	ftp->curpath = "/";
-	ftp->do_list = true;
-	ftp->errors = 10;
-	TryReconnect(ftp);
-	return 1;
-}
-
-int ftp_fini_fn(CFtpControlEx *ftp)
-{
-	ftp->Quit();
-	return 1;
-}
-
-struct dt_dentry *fill_dentry(FtpFindInfo &fi)
+static struct dt_dentry *fill_dentry(FtpFindInfo &fi)
 {
 	struct dt_dentry *result = (struct dt_dentry*)calloc(1, sizeof(struct dt_dentry));
 	result->type = fi.Data.flagtrycwd?DT_DIR:DT_FILE;
@@ -97,7 +81,7 @@ struct dt_dentry *fill_dentry(FtpFindInfo &fi)
 }
 
 
-struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
+static struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 {
 	do {
 		if(ftp->do_list) {
@@ -118,11 +102,9 @@ struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 	return fill_dentry(ftp->findinfo);
 }
 
-int ftp_go_somewhere(dt_go type, char *name, CFtpControlEx *ftp)
+static int ftp_go_somewhere(dt_go type, char *name, CFtpControlEx *ftp)
 {
 	ftp->do_list = true;
-	if( DT_GO_CHILD != type && ftp->curpath.size() == 1 )
-		return -1;
 	std::string olddir = ftp->curpath;
 	if (DT_GO_CHILD != type)
 		ftp->curpath.resize(ftp->curpath.rfind("/", ftp->curpath.size()-2)+1);
@@ -139,39 +121,7 @@ int ftp_go_somewhere(dt_go type, char *name, CFtpControlEx *ftp)
 	)
 }
 
-#if 0
-int ftp_goparent_fn(CFtpControlEx *ftp)
-{
-	if( ftp->curpath.size() == 1 )
-		return -1;
-	std::string olddir = ftp->curpath;
-	ftp->curpath.resize(ftp->curpath.rfind("/", ftp->curpath.size()-2)+1);
-	return ftp_go_somewhere(ftp, olddir);
-}
-
-int ftp_gosibling_fn(char *name, CFtpControlEx *ftp)
-{
-	if( ftp->curpath.size() == 1 )
-		return -1;
-	std::string olddir = ftp->curpath;
-	ftp->curpath.resize(ftp->curpath.rfind("/", ftp->curpath.size()-2)+1);
-	ftp->curpath += name;
-	ftp->curpath += "/";
-	return ftp_go_somewhere(ftp, olddir);
-}
-
-int ftp_gochild_fn(char *name, CFtpControlEx *ftp)
-{
-	std::string olddir = ftp->curpath;
-	ftp->curpath += name;
-	ftp->curpath += "/";
-	return ftp_go_somewhere(ftp, olddir);
-}
-#endif
-
 static struct dt_walker walker = {
-    (dt_init_fn) &ftp_init_fn,
-    (dt_fini_fn) &ftp_fini_fn,
     (dt_readdir_fn) &ftp_readdir_fn,
     (dt_go_fn) &ftp_go_somewhere,
 };
@@ -183,11 +133,8 @@ static struct dt_walker walker = {
 static void usage(char *binname, int err)
 {
 	//todo: this should be rewritten
-    fprintf(stderr, "Usage: %s [-f out] host_ip\n", binname);
-    fprintf(stderr, "out:\n");
-    fprintf(stderr, "\tfull - print full paths\n");
-    fprintf(stderr, "\tsimplified - print only id of a path\n");
-    fprintf(stderr, "\tfilesfirst - simplified with filis printed first\n");
+    fprintf(stderr, "Usage: %s [-f] host_ip\n", binname);
+    fprintf(stderr, "\t-f\tprint full paths (debug output)\n");
     exit(err);
 }
 
@@ -200,9 +147,9 @@ int main(int argc, char *argv[])
 	_CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF | _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
 #endif // _DEBUG
 
-    struct dt_dentry d = {DT_DIR, strdup(""), 0, NULL, NULL, NULL, 0};
+    struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0};
     CFtpControlEx curdir;
-    dt_out out = DT_OUT_SIMPLIFIED;
+    bool full = false;
     char *host;
 
     CFtpControl::DefaultAnsiCP = "cp1251";
@@ -214,20 +161,11 @@ int main(int argc, char *argv[])
     host = argv[1];
 
     if (strcmp(argv[1], "-f") == 0) {
-        if (argc < 4)
+        if (argc < 3)
             usage(argv[0], EXIT_FAILURE);
 
-        host = argv[3];
-        if (strcmp(argv[2], "full") == 0)
-            out = DT_OUT_FULL;
-        else if (strcmp(argv[2], "simplified") == 0)
-            out = DT_OUT_SIMPLIFIED;
-        else if (strcmp(argv[2], "reverse") == 0)
-            out = DT_OUT_REVERSE;
-        else {
-            fprintf(stderr, "Unknown output format\n");
-            usage(argv[0], EXIT_FAILURE);
-        }
+        host = argv[2];
+		full = true;
     }
 
 	curdir.ServerIP = inet_addr(host);
@@ -238,17 +176,13 @@ int main(int argc, char *argv[])
 	//curdir.SetConnCP(const char *cpId);
 
 	try {
-		switch(out) {
-			case DT_OUT_REVERSE:
-				dt_singlewalk(&walker, &d, &curdir, out);
-				break;
-			default:
-				dt_mktree(&walker, &d, &curdir, out);
-				dt_printtree(&d, out);
-				dt_free(&d);
-				break;
-		}
+		TryReconnect(&curdir);
+		if (full)
+			dt_full(&walker, &d, &curdir);
+		else
+			dt_reverse(&walker, &d, &curdir);
 	} catch(const CFtpControl::NetworkError&){}
+	curdir.Quit();
 
     return 0;
 }
