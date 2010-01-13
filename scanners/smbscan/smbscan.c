@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     host = argv[1];
 
     if (strcmp(argv[1], "-f") == 0) {
-        if (argc < 2)
+        if (argc < 3)
             usage(argv[0], EXIT_FAILURE);
         full = 1;
         host = argv[2];
