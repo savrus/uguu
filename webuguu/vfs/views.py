@@ -23,12 +23,22 @@ def index(request):
                 h=db_host, u=db_user, p=db_password, d=db_database))
     except:
         return HttpResponse("Unable to connect to the database.")
+    return render_to_response('vfs/index.html')
+
+def net(request):
+    try:
+        db = psycopg2.connect(
+            "host='{h}' user='{u}' " \
+            "password='{p}' dbname='{d}'".format(
+                h=db_host, u=db_user, p=db_password, d=db_database))
+    except:
+        return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     cursor.execute("SELECT network_id, name FROM network")
-    return render_to_response('vfs/index.html', \
+    return render_to_response('vfs/net.html', \
         {'networks': cursor.fetchall()})
 
-def network(request, network_id):
+def network(request, network):
     try:
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
@@ -36,22 +46,23 @@ def network(request, network_id):
                 h=db_host, u=db_user, p=db_password, d=db_database))
     except:
         return HttpResponse("Unable to connect to the database.")
-    uplink = request.build_absolute_uri()
-    uplink = uplink[:string.rfind(uplink,"/", 0, -1)]
     cursor = db.cursor()
     cursor.execute("""
-        SELECT share.share_id, host.name, size
+        SELECT share.share_id, host.name, size, proto.name
         FROM host
         LEFT JOIN share ON (host.host_id = share.host_id)
+        LEFT JOIN sharetype ON (share.sharetype_id = sharetype.sharetype_id)
+        LEFT JOIN proto ON (sharetype.proto_id = proto.proto_id)
         LEFT JOIN file ON (share.share_id = file.share_id
                            AND file.parent_within_share_id = 0)
-        WHERE host.network_id = %(n)s
+        WHERE host.network_id =
+            (SELECT network_id FROM network WHERE name = %(n)s)
         ORDER BY host.host_id
-        """, {'n':network_id})
+        """, {'n':network})
     return render_to_response('vfs/network.html', \
-        {'shares': cursor.fetchall(), 'uplink': uplink})
+        {'shares': cursor.fetchall(), 'uplink': ".."})
 
-def share(request, network_id, share_id, path=""):
+def share(request, proto, hostname, path=""):
     try:
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
@@ -60,11 +71,27 @@ def share(request, network_id, share_id, path=""):
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
+    #TODO split hostname into hostname and port
+    cursor.execute("""
+        SELECT share_id
+        FROM share
+        WHERE sharetype_id =
+                (SELECT sharetype_id
+                FROM sharetype
+                LEFT JOIN proto ON (sharetype.proto_id = proto.proto_id)
+                WHERE proto.name = %(p)s)
+            AND host_id =
+            (SELECT host_id FROM host WHERE name = %(h)s)
+        """, {'p': proto, 'h': hostname})
+    try:
+        share_id, = cursor.fetchone()
+    except:
+        return HttpResponse("Unknown share");
     cursor.execute("""
         SELECT path_within_share_id, parent_id
         FROM path
         WHERE share_id = %(s)s AND path = %(p)s
-        """, {'s':share_id, 'p':path})
+        """, {'s': share_id, 'p': path})
     try:
         path_id, parent_id = cursor.fetchone()
     except:
@@ -79,12 +106,18 @@ def share(request, network_id, share_id, path=""):
     #    out = "Up: " + path + "<br><br>"
     #except:
     #    out = ""
-    out = ""
-    #uplink = "http://" + request.get_host() + "/vfs/" + \
-    #    str(network_id) + "/" + str(share_id) + "/" + \
-    #    path[:string.rfind(path,"/")+1]
-    uplink = request.build_absolute_uri()
-    uplink = uplink[:string.rfind(uplink,"/", 0, -1)]
+    if parent_id == 0:
+        cursor.execute("""
+            SELECT network.name
+            FROM share
+            LEFT JOIN host ON (share.host_id = host.host_id)
+            LEFT JOIN network ON (host.network_id = network.network_id)
+            WHERE share_id = %(s)s
+        """, {'s': share_id})
+        network, = cursor.fetchone()
+        uplink = "../../net/" + network
+    else:
+        uplink = ".."
     cursor.execute("""
         SELECT path_within_share_id, size, name
         FROM file
@@ -92,7 +125,7 @@ def share(request, network_id, share_id, path=""):
         WHERE share_id = %(s)s
             AND parent_within_share_id = %(p)s
         ORDER BY file_within_path_id;
-        """, {'s':share_id, 'p':path_id})
+        """, {'s': share_id, 'p': path_id})
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(), 'uplink': uplink})
 

@@ -30,9 +30,14 @@ def ddl(db):
             ip_address inet
         )""")
     cursor.execute("""
+        CREATE TABLE proto (
+            proto_id SERIAL PRIMARY KEY,
+            name varchar(8)
+        )""")
+    cursor.execute("""
         CREATE TABLE sharetype (
             sharetype_id SERIAL PRIMARY KEY,
-            protocol smallint,
+            proto_id integer REFERENCES proto ON DELETE RESTRICT,
             scan_command text
         )""")
     cursor.execute("""
@@ -77,8 +82,12 @@ def fill(db):
         VALUES (1, 'localhost', '127.0.0.1')
         """)
     cursor.execute("""
-        INSERT INTO sharetype (protocol, scan_command)
-        VALUES (0, 'smbscan')
+        INSERT INTO proto (name)
+        VALUES ('smb'), ('ftp')
+        """)
+    cursor.execute("""
+        INSERT INTO sharetype (proto_id, scan_command)
+        VALUES (1, 'smbscan')
         """)
     cursor.execute("""
         INSERT INTO share (sharetype_id, host_id)

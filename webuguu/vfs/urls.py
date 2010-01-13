@@ -1,9 +1,17 @@
 from django.conf.urls.defaults import *
 
-urlpatterns = patterns('webuguu.vfs.views',
-    (r'^$', 'index'),
-    (r'^(?P<network_id>\d+)/$', 'network'),
-    (r'^(?P<network_id>\d+)/(?P<share_id>\d+)/$', 'share'),
-    (r'^(?P<network_id>\d+)/(?P<share_id>\d+)/(?P<path>.*)/$',
-        'share'),
+urlpatterns = patterns('django.views.generic.simple',
+    (r'^$', 'direct_to_template', {'template': 'vfs/index.html'}),
 )
+
+urlpatterns += patterns('webuguu.vfs.views',
+    (r'^net/$', 'net'),
+    (r'^net/(?P<network>\w+)/$', 'network'),
+    (r'^(?P<proto>\w+)/(?P<hostname>\w+)/$', 'share'),
+    (r'^(?P<proto>\w+)/(?P<hostname>\w+)/(?P<path>.*)/$', 'share'),
+)
+
+urlpatterns += patterns('django.views.generic.simple',
+    (r'^(?P<proto>\w+)/$', 'redirect_to', {'url': '..'}),
+)
+
