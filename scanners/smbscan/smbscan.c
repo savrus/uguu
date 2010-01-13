@@ -13,11 +13,8 @@
 
 static void usage(char *binname, int err)
 {
-    fprintf(stderr, "Usage: %s [-f out] host\n", binname);
-    fprintf(stderr, "out:\n");
-    fprintf(stderr, "\tfull - print full paths\n");
-    fprintf(stderr, "\tsimplified - print only id of a path\n");
-    fprintf(stderr, "\tfilesfirst - simplified with filis printed first\n");
+    fprintf(stderr, "Usage: %s [-f] host\n", binname);
+    fprintf(stderr, "  -f\tprint full paths (debug output)\n");
     exit(err);
 }
 
