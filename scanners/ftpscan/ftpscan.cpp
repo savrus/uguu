@@ -181,9 +181,12 @@ int main(int argc, char *argv[])
 			dt_full(&walker, &d, &curdir);
 		else
 			dt_reverse(&walker, &d, &curdir);
-	} catch(const CFtpControl::NetworkError&){}
+	} catch(const CFtpControl::NetworkError&) {
+		curdir.Quit();
+		return EXIT_FAILURE;
+	}
 	curdir.Quit();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
