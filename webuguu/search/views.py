@@ -29,7 +29,7 @@ def search(request):
     cursor = db.cursor()
     cursor.execute("""
         SELECT proto.name, host.name,
-            path.path, spath.path, filename.name
+            path.path, spath.path, filename.name, file.size
         FROM filename
         JOIN file ON (filename.filename_id = file.filename_id)
         LEFT OUTER JOIN path ON (file.share_id = path.share_id

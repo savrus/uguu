@@ -5,8 +5,12 @@
 
 <div id="searchresults">
     <table>
+            <td>size</td>
+            <td>result</td>
+            <td>vfs</a></td>
         {% for r in results %}
         <tr>
+            <td>{{ r.5|filesizeformat }}</td>
         {%if r.3 %}
             <td><u>{{r.0}}://{{r.1}}/{{r.3}}</u></td>
             <td><a href="{%url webuguu.vfs.views.share r.0, r.1, r.3 %}">vfs</a></td>
