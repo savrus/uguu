@@ -10,7 +10,7 @@
     {% for share in shares %}
     <tr>
         <td> <a href = "../../{{share.3}}/{{ share.1}}"> {{ share.1 }} </a></td>
-        <td> {{ share.2 }} </td> 
+        <td> {{ share.2|filesizeformat }} </td> 
     </tr>
     {% endfor %}
 </table>
