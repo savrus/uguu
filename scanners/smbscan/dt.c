@@ -37,7 +37,7 @@ static struct dt_dentry * dt_list_sort(struct dt_dentry *d, size_t nmemb, unsign
 {
     struct dt_dentry **da;
     struct dt_dentry *dp;
-    int i;
+    size_t i;
     LOG_ASSERT((d != NULL) && (nmemb > 0), "Bad arguments\n");
 
     da = (struct dt_dentry **) malloc(nmemb * sizeof(struct dt_dentry *));
