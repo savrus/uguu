@@ -188,7 +188,7 @@ static struct dt_dentry * dt_go_sibling_or_parent(struct dt_walker *wk, struct d
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
     while (((dn = dt_find_dir_sibling(dn)) != NULL)
            && (wk->go(DT_GO_SIBLING, dn->name, curdir) < 0))
-           ;
+        ;
     if (dn == NULL) {
         dn = d->parent;
         if ((dn != NULL) && (wk->go(DT_GO_PARENT, NULL, curdir) < 0))
