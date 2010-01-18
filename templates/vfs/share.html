@@ -1,5 +1,9 @@
 <div id="uplink">
-    <a href="{{ uplink }}">Up</a><br>
+    {%if network %}
+    <a href="{%url webuguu.vfs.views.network network %}">Up</a><br>
+    {% else %}
+    <a href="..">Up</a><br>
+    {% endif %}
 </div>
 <br>
 <div id="filelist">

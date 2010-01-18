@@ -60,7 +60,7 @@ def network(request, network):
         ORDER BY host.host_id
         """, {'n':network})
     return render_to_response('vfs/network.html', \
-        {'shares': cursor.fetchall(), 'uplink': ".."})
+        {'shares': cursor.fetchall()})
 
 def share(request, proto, hostname, path=""):
     try:
@@ -115,9 +115,8 @@ def share(request, proto, hostname, path=""):
             WHERE share_id = %(s)s
         """, {'s': share_id})
         network, = cursor.fetchone()
-        uplink = "../../net/" + network
     else:
-        uplink = ".."
+        network = ""
     cursor.execute("""
         SELECT path_within_share_id, size, name
         FROM file
@@ -127,5 +126,5 @@ def share(request, proto, hostname, path=""):
         ORDER BY file_within_path_id;
         """, {'s': share_id, 'p': path_id})
     return render_to_response('vfs/share.html', \
-        {'files': cursor.fetchall(), 'uplink': uplink})
+        {'files': cursor.fetchall(), 'network': network})
 

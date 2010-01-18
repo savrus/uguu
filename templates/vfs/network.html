@@ -1,16 +1,18 @@
 <div id="uplink">
-    <a href="{{ uplink }}">Up</a><br>
+    <a href="{%url webuguu.vfs.views.net %}">Up</a><br>
 </div>
 <br>
 <table>
     <tr>
+        <td> proto </td>
         <td> shares </td>
         <td> size </td> 
     </tr>
-    {% for share in shares %}
+    {% for s in shares %}
     <tr>
-        <td> <a href = "../../{{share.3}}/{{ share.1}}"> {{ share.1 }} </a></td>
-        <td> {{ share.2|filesizeformat }} </td> 
+        <td> {{ s.3 }} </td>
+        <td> <a href = "{%url webuguu.vfs.views.share s.3, s.1 %}"> {{ s.1 }} </a></td>
+        <td> {{ s.2|filesizeformat }} </td> 
     </tr>
     {% endfor %}
 </table>
