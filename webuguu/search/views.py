@@ -31,19 +31,16 @@ def search(request):
     cursor = db.cursor()
     cursor.execute("""
         SELECT protocol, hosts.name AS hostname,
-            paths.path AS path, spaths.path AS spath,
+            paths.path AS path, files.sharedir_id AS dirid,
             filenames.name AS filename, files.size AS size, port
         FROM filenames
         JOIN files ON (filenames.filename_id = files.filename_id)
-        LEFT OUTER JOIN paths ON (files.share_id = paths.share_id
+        JOIN paths ON (files.share_id = paths.share_id
             AND files.sharepath_id = paths.sharepath_id)
-        LEFT OUTER JOIN paths AS spaths ON (files.share_id = spaths.share_id
-            AND files.sharedir_id = spaths.sharepath_id)
         JOIN shares ON (files.share_id = shares.share_id)
         JOIN hosts ON (shares.host_id = hosts.host_id)
         WHERE filenames.name like %(q)s
-        ORDER BY files.share_id, files.sharepath_id,
-            files.pathfile_id
+        ORDER BY files.share_id, files.sharepath_id, files.pathfile_id
         """, {'q': "%" + query + "%"})
     if cursor.rowcount == 0:
         return render_to_response('search/noresults.html')
