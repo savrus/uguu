@@ -17,81 +17,67 @@ db_database = "uguu"
 def ddl(db):
     cursor = db.cursor()
     cursor.execute("""
-        CREATE TABLE network (
-            network_id SERIAL PRIMARY KEY,
-            ip_range varchar(256),
-            name varchar(64)
-        )""")
-    cursor.execute("""
-        CREATE TABLE host (
+        CREATE TABLE networks (
+            network_name varchar(32) PRIMARY KEY
+        );
+        CREATE TABLE hosts (
             host_id SERIAL PRIMARY KEY,
-            network_id integer REFERENCES network ON DELETE CASCADE,
+            network_name varchar(32) REFERENCES networks ON DELETE CASCADE,
             name varchar(64),
-            ip_address inet
-        )""")
-    cursor.execute("""
-        CREATE TABLE proto (
-            proto_id SERIAL PRIMARY KEY,
-            name varchar(8)
-        )""")
-    cursor.execute("""
-        CREATE TABLE sharetype (
-            sharetype_id SERIAL PRIMARY KEY,
-            proto_id integer REFERENCES proto ON DELETE RESTRICT,
+            host_addr inet
+        );
+        CREATE TABLE scantypes (
+            scantype_id SERIAL PRIMARY KEY,
             scan_command text
-        )""")
-    cursor.execute("""
-        CREATE TABLE share (
+        );
+        CREATE TABLE shares (
             share_id SERIAL PRIMARY KEY,
-            sharetype_id integer REFERENCES sharetype ON DELETE RESTRICT,
-            host_id integer REFERENCES host ON DELETE CASCADE
-        )""")
-    cursor.execute("""
-        CREATE TABLE path (
-            share_id integer REFERENCES share ON DELETE CASCADE,
-            path_within_share_id integer,
+            scantype_id integer REFERENCES scantypes ON DELETE RESTRICT,
+            host_id integer REFERENCES hosts ON DELETE CASCADE,
+            protocol varchar(8),
+            port smallint DEFAULT 0,
+            online boolean,
+            size bigint,
+            last_scan timestamp
+        );
+        CREATE TABLE paths (
+            share_id integer REFERENCES shares ON DELETE CASCADE,
+            sharepath_id integer,
             parent_id integer,
             path text,
-            PRIMARY KEY (share_id, path_within_share_id)
-        )""")
-    cursor.execute("""
-        CREATE TABLE filename (
+            items integer,
+            PRIMARY KEY (share_id, sharepath_id)
+        );
+        CREATE TABLE filenames (
             filename_id BIGSERIAL PRIMARY KEY,
-            name text
-        )""")
-    cursor.execute("""
-        CREATE TABLE file (
+            name text,
+            type varchar(16)
+        );
+        CREATE TABLE files (
             share_id integer,
-            parent_within_share_id integer,
-            path_within_share_id integer,
-            file_within_path_id integer,
+            sharepath_id integer,
+            pathfile_id integer,
+            sharedir_id integer,
             size bigint,
-            filename_id bigint REFERENCES filename ON DELETE RESTRICT,
-            file_type smallint,
-            PRIMARY KEY (share_id, parent_within_share_id, file_within_path_id)
-        )""")
+            filename_id bigint REFERENCES filenames ON DELETE RESTRICT,
+            PRIMARY KEY (share_id, sharepath_id, pathfile_id)
+        );
+        """)
 
 def fill(db):
     cursor = db.cursor()
     cursor.execute("""
-        INSERT INTO network (ip_range, name)
-        VALUES ('127.0.0.1', 'localnet')
-        """)
-    cursor.execute("""
-        INSERT INTO host (network_id, name, ip_address)
-        VALUES (1, 'localhost', '127.0.0.1')
-        """)
-    cursor.execute("""
-        INSERT INTO proto (name)
-        VALUES ('smb'), ('ftp')
-        """)
-    cursor.execute("""
-        INSERT INTO sharetype (proto_id, scan_command)
-        VALUES (1, 'smbscan')
-        """)
-    cursor.execute("""
-        INSERT INTO share (sharetype_id, host_id)
-        VALUES (1, 1)
+        INSERT INTO networks (network_name)
+        VALUES ('localnet');
+
+        INSERT INTO hosts (network_name, name, host_addr)
+        VALUES ('localnet', 'localhost', '127.0.0.1');
+
+        INSERT INTO scantypes (scan_command)
+        VALUES ('smbscan');
+
+        INSERT INTO shares (scantype_id, host_id, protocol)
+        VALUES (1, 1, 'smb');
         """)
 
 
