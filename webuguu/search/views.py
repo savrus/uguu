@@ -5,6 +5,7 @@
 #
 
 import psycopg2
+from psycopg2.extras import DictConnection
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
 import string
@@ -23,13 +24,15 @@ def search(request):
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
             "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database))
+                h=db_host, u=db_user, p=db_password, d=db_database),
+            connection_factory=DictConnection)
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     cursor.execute("""
-        SELECT protocol, hosts.name,
-            paths.path, spaths.path, filenames.name, files.size, shares.port
+        SELECT protocol, hosts.name AS hostname,
+            paths.path AS path, spaths.path AS spath,
+            filenames.name AS filename, files.size AS size, port
         FROM filenames
         JOIN files ON (filenames.filename_id = files.filename_id)
         LEFT OUTER JOIN paths ON (files.share_id = paths.share_id

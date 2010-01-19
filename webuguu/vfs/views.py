@@ -5,6 +5,7 @@
 #
 
 import psycopg2
+from psycopg2.extras import DictConnection
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
 import string
@@ -20,7 +21,8 @@ def index(request):
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
             "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database))
+                h=db_host, u=db_user, p=db_password, d=db_database),
+            connection_factory=DictConnection)
     except:
         return HttpResponse("Unable to connect to the database.")
     return render_to_response('vfs/index.html')
@@ -30,11 +32,12 @@ def net(request):
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
             "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database))
+                h=db_host, u=db_user, p=db_password, d=db_database),
+            connection_factory=DictConnection)
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
-    cursor.execute("SELECT network_name FROM networks")
+    cursor.execute("SELECT network_name AS name FROM networks")
     return render_to_response('vfs/net.html', \
         {'networks': cursor.fetchall()})
 
@@ -43,12 +46,13 @@ def network(request, network):
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
             "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database))
+                h=db_host, u=db_user, p=db_password, d=db_database),
+            connection_factory=DictConnection)
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     cursor.execute("""
-        SELECT shares.share_id, hosts.name, shares.size, shares.protocol, shares.port
+        SELECT share_id, hosts.name AS hostname, size, protocol, port
         FROM hosts
         LEFT JOIN shares ON (hosts.host_id = shares.host_id)
         WHERE hosts.network_name = %(n)s
@@ -62,7 +66,8 @@ def host(request, proto, hostname):
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
             "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database))
+                h=db_host, u=db_user, p=db_password, d=db_database),
+            connection_factory=DictConnection)
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
@@ -73,7 +78,7 @@ def host(request, proto, hostname):
     """, {'h': hostname})
     network, = cursor.fetchone()
     cursor.execute("""
-        SELECT shares.share_id, shares.size, shares.protocol, shares.port
+        SELECT share_id, size, protocol, port
         FROM hosts
         LEFT JOIN shares ON (hosts.host_id = shares.host_id)
         WHERE hosts.name = %(n)s
@@ -89,7 +94,8 @@ def share(request, proto, hostname, port, path=""):
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
             "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database))
+                h=db_host, u=db_user, p=db_password, d=db_database),
+            connection_factory=DictConnection)
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
@@ -125,7 +131,7 @@ def share(request, proto, hostname, port, path=""):
     else:
         network = ""
     cursor.execute("""
-        SELECT sharedir_id, size, name
+        SELECT sharedir_id AS dirid, size, name
         FROM files
         LEFT JOIN filenames ON (files.filename_id = filenames.filename_id)
         WHERE share_id = %(s)s
