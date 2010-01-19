@@ -7,8 +7,9 @@ urlpatterns = patterns('django.views.generic.simple',
 urlpatterns += patterns('webuguu.vfs.views',
     (r'^net/$',                                             'net'),
     (r'^net/(?P<network>\w+)/$',                            'network'),
-    (r'^(?P<proto>\w+)/(?P<hostname>\w+)/$',                'share'),
-    (r'^(?P<proto>\w+)/(?P<hostname>\w+)/(?P<path>.*)/$',   'share'),
+    (r'^(?P<proto>\w+)/(?P<hostname>\w+)/$',                'host'),
+    (r'^(?P<proto>\w+)/(?P<hostname>\w+)/(?P<port>\d+)/$',  'share'),
+    (r'^(?P<proto>\w+)/(?P<hostname>\w+)/(?P<port>\d+)/(?P<path>.*)/$',  'share'),
 )
 
 urlpatterns += patterns('django.views.generic.simple',

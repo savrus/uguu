@@ -13,10 +13,10 @@
             <td>{{ r.5|filesizeformat }}</td>
         {%if r.3 %}
             <td><u>{{r.0}}://{{r.1}}/{{r.3}}</u></td>
-            <td><a href="{%url webuguu.vfs.views.share r.0, r.1, r.3 %}">vfs</a></td>
+            <td><a href="{%url webuguu.vfs.views.share r.0, r.1, r.6, r.3 %}">vfs</a></td>
         {% else %}
             <td><u>{{r.0}}://{{r.1}}/{{r.2}}/{{r.4}}</u></td>
-            <td><a href="{%url webuguu.vfs.views.share r.0, r.1, r.2 %}">vfs</a></td>
+            <td><a href="{%url webuguu.vfs.views.share r.0, r.1, r.6, r.2 %}">vfs</a></td>
         {% endif %}
         </tr>
         {% endfor %}
