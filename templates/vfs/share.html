@@ -12,14 +12,14 @@
             <td> file </td>
             <td> size </td> 
         </tr>
-        {% for file in files %}
+        {% for f in files %}
         <tr>
-            {% if file.0 %}
-            <td> <a href = "{{ file.2 }}"> {{ file.2 }} </a></td>
+            {% if f.dirid %}
+            <td> <a href = "{{ f.name }}"> {{ f.name }} </a></td>
             {% else %}
-            <td> {{ file.2 }} </td>
+            <td> {{ f.name }} </td>
             {% endif %}
-            <td> {{ file.1|filesizeformat }} </td> 
+            <td> {{ f.size|filesizeformat }} </td> 
         </tr>
         {% endfor %}
     </table>

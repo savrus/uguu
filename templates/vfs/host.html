@@ -11,10 +11,10 @@
     </tr>
     {% for s in shares %}
     <tr>
-        <td> {{ s.2 }} </td>
-        <td> <a href = "{%url webuguu.vfs.views.share s.2, hostname, s.3 %}"> {{ hostname }} </a></td>
-        <td> {{ s.3 }} </td> 
-        <td> {{ s.1|filesizeformat }} </td> 
+        <td> {{ s.protocol }} </td>
+        <td> <a href = "{%url webuguu.vfs.views.share s.protocol, hostname, s.port %}"> {{ hostname }} </a></td>
+        <td> {{ s.port }} </td> 
+        <td> {{ s.size|filesizeformat }} </td> 
     </tr>
     {% endfor %}
 </table>

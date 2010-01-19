@@ -10,13 +10,13 @@
             <td>vfs</a></td>
         {% for r in results %}
         <tr>
-            <td>{{ r.5|filesizeformat }}</td>
-        {%if r.3 %}
-            <td><u>{{r.0}}://{{r.1}}/{{r.3}}</u></td>
-            <td><a href="{%url webuguu.vfs.views.share r.0, r.1, r.6, r.3 %}">vfs</a></td>
+            <td>{{ r.size|filesizeformat }}</td>
+        {%if r.spath %}
+            <td><u>{{r.protocol}}://{{r.hostname}}/{{r.spath}}</u></td>
+            <td><a href="{%url webuguu.vfs.views.share r.protocol, r.hostname, r.port, r.spath %}">vfs</a></td>
         {% else %}
-            <td><u>{{r.0}}://{{r.1}}/{{r.2}}/{{r.4}}</u></td>
-            <td><a href="{%url webuguu.vfs.views.share r.0, r.1, r.6, r.2 %}">vfs</a></td>
+            <td><u>{{r.protocol}}://{{r.hostname}}/{{r.path}}/{{r.filename}}</u></td>
+            <td><a href="{%url webuguu.vfs.views.share r.protocol, r.hostname, r.port, r.path %}">vfs</a></td>
         {% endif %}
         </tr>
         {% endfor %}
