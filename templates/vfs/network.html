@@ -11,7 +11,7 @@
     {% for s in shares %}
     <tr>
         <td> {{ s.3 }} </td>
-        <td> <a href = "{%url webuguu.vfs.views.share s.3, s.1 %}"> {{ s.1 }} </a></td>
+        <td> <a href = "{%url webuguu.vfs.views.share s.3, s.1, s.4 %}"> {{ s.1 }} </a></td>
         <td> {{ s.2|filesizeformat }} </td> 
     </tr>
     {% endfor %}

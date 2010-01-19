@@ -29,7 +29,7 @@ def search(request):
     cursor = db.cursor()
     cursor.execute("""
         SELECT protocol, hosts.name,
-            paths.path, spaths.path, filenames.name, files.size
+            paths.path, spaths.path, filenames.name, files.size, shares.port
         FROM filenames
         JOIN files ON (filenames.filename_id = files.filename_id)
         LEFT OUTER JOIN paths ON (files.share_id = paths.share_id

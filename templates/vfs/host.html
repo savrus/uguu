@@ -1,0 +1,20 @@
+<div id="uplink">
+    <a href="{%url webuguu.vfs.views.network network %}">Up</a><br>
+</div>
+<br>
+<table>
+    <tr>
+        <td> proto </td>
+        <td> shares </td>
+        <td> port </td> 
+        <td> size </td> 
+    </tr>
+    {% for s in shares %}
+    <tr>
+        <td> {{ s.2 }} </td>
+        <td> <a href = "{%url webuguu.vfs.views.share s.2, hostname, s.3 %}"> {{ hostname }} </a></td>
+        <td> {{ s.3 }} </td> 
+        <td> {{ s.1|filesizeformat }} </td> 
+    </tr>
+    {% endfor %}
+</table>

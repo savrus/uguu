@@ -48,7 +48,7 @@ def network(request, network):
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     cursor.execute("""
-        SELECT shares.share_id, hosts.name, shares.size, shares.protocol
+        SELECT shares.share_id, hosts.name, shares.size, shares.protocol, shares.port
         FROM hosts
         LEFT JOIN shares ON (hosts.host_id = shares.host_id)
         WHERE hosts.network_name = %(n)s
@@ -57,7 +57,7 @@ def network(request, network):
     return render_to_response('vfs/network.html', \
         {'shares': cursor.fetchall()})
 
-def share(request, proto, hostname, path=""):
+def host(request, proto, hostname):
     try:
         db = psycopg2.connect(
             "host='{h}' user='{u}' " \
@@ -66,14 +66,41 @@ def share(request, proto, hostname, path=""):
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
-    #TODO split hostname into hostname and port
+    cursor.execute("""
+        SELECT network_name
+        FROM hosts
+        WHERE name = %(h)s
+    """, {'h': hostname})
+    network, = cursor.fetchone()
+    cursor.execute("""
+        SELECT shares.share_id, shares.size, shares.protocol, shares.port
+        FROM hosts
+        LEFT JOIN shares ON (hosts.host_id = shares.host_id)
+        WHERE hosts.name = %(n)s
+        ORDER BY hosts.host_id
+        """, {'n':hostname})
+    return render_to_response('vfs/host.html', \
+        {'shares': cursor.fetchall(), 'hostname': hostname,
+            'network': network})
+
+
+def share(request, proto, hostname, port, path=""):
+    try:
+        db = psycopg2.connect(
+            "host='{h}' user='{u}' " \
+            "password='{p}' dbname='{d}'".format(
+                h=db_host, u=db_user, p=db_password, d=db_database))
+    except:
+        return HttpResponse("Unable to connect to the database.")
+    cursor = db.cursor()
     cursor.execute("""
         SELECT share_id
         FROM shares
         WHERE protocol = %(p)s
             AND host_id =
             (SELECT host_id FROM hosts WHERE name = %(h)s)
-        """, {'p': proto, 'h': hostname})
+            AND port = %(port)s
+        """, {'p': proto, 'h': hostname, 'port': port})
     try:
         share_id, = cursor.fetchone()
     except:
