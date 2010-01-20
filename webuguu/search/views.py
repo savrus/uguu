@@ -30,7 +30,7 @@ def search(request):
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     cursor.execute("""
-        SELECT protocol, hosts.name AS hostname,
+        SELECT protocol, hostname,
             paths.path AS path, files.sharedir_id AS dirid,
             filenames.name AS filename, files.size AS size, port
         FROM filenames
@@ -38,7 +38,6 @@ def search(request):
         JOIN paths ON (files.share_id = paths.share_id
             AND files.sharepath_id = paths.sharepath_id)
         JOIN shares ON (files.share_id = shares.share_id)
-        JOIN hosts ON (shares.host_id = hosts.host_id)
         WHERE filenames.name like %(q)s
         ORDER BY files.share_id, files.sharepath_id, files.pathfile_id
         """, {'q': "%" + query + "%"})
