@@ -163,7 +163,7 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
         d->child = dt_list_sort(d->child, dirs, 0);
     if (files > 0)
         d->file_child = dt_list_sort(d->file_child, files, dirs);
-    d->total = files + dirs;
+    d->items = files + dirs;
 }
 
 static struct dt_dentry * dt_find_dir_sibling(struct dt_dentry *d)
@@ -254,7 +254,6 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     for (d = root; d != NULL;) {
         if (d->stamp == 0) {
             dt_readdir(wk, d, curdir, &id);
-            dt_list_sum(d, &(d->file_child));
             if ((dc = dt_go_child(wk, d, curdir)) != NULL) {
                 d->stamp = 1;
                 d = dc;
@@ -263,6 +262,7 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
         } else {
             d->stamp = 0;
         }
+        dt_list_sum(d, &(d->file_child));
         dt_list_sum(d, &(d->child));
         d = dt_go_sibling_or_parent(wk, d, curdir);
     }
@@ -285,16 +285,22 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     }
 }
 
+static void dt_printdir_reverse(struct dt_dentry *d)
+{
+    printf("0 %u ", d->id);
+    dt_printpath(d);
+    printf("\n");
+}
+
 static void dt_printfile_reverse(struct dt_dentry *d)
 {
-    printf("%u %u %u %llu ",
+    printf("1 %u %u %llu %u %u ",
             (d->parent != NULL) ? d->parent->id : 0,
+            d->fid, d->size,
             (d->type == DT_DIR) ? d->id : 0,
-            d->fid, d->size);
-    if (d->type == DT_DIR)
-        dt_printpath(d);
-    else
-        printf("%s", d->name);
+            (d->type == DT_DIR) ? d->items : 0
+            );
+    printf("%s", d->name);
     printf("\n");
 }
 
@@ -313,6 +319,7 @@ void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     for (d = root; d != NULL;) {
         if (d->stamp == 0) {
             dt_readdir(wk, d, curdir, &id);
+            dt_list_print(&(d->child), dt_printdir_reverse);
             dt_list_print_sum_free(d, &(d->file_child), dt_printfile_reverse);
             if ((dc = dt_go_child(wk, d, curdir)) != NULL) {
                 d->stamp = 1;

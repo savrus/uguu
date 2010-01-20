@@ -29,7 +29,7 @@ struct dt_dentry {
     int stamp;
     unsigned int id;
     unsigned int fid;
-    unsigned int total;
+    unsigned int items;
 };
 
 typedef enum {
