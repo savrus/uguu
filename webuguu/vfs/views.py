@@ -27,6 +27,7 @@ def index(request):
         return HttpResponse("Unable to connect to the database.")
     return render_to_response('vfs/index.html')
 
+
 def net(request):
     try:
         db = psycopg2.connect(
@@ -37,9 +38,10 @@ def net(request):
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
-    cursor.execute("SELECT network_name AS name FROM networks")
+    cursor.execute("SELECT network FROM networks")
     return render_to_response('vfs/net.html', \
         {'networks': cursor.fetchall()})
+
 
 def network(request, network):
     try:
@@ -52,14 +54,15 @@ def network(request, network):
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     cursor.execute("""
-        SELECT share_id, hosts.name AS hostname, size, protocol, port
-        FROM hosts
-        LEFT JOIN shares ON (hosts.host_id = shares.host_id)
-        WHERE hosts.network_name = %(n)s
-        ORDER BY hosts.host_id
+        SELECT share_id, hostname, size, protocol, port
+        FROM shares
+        WHERE network = %(n)s
+        ORDER BY hostname
         """, {'n':network})
     return render_to_response('vfs/network.html', \
-        {'shares': cursor.fetchall()})
+        {'shares': cursor.fetchall(),
+         'network': network})
+
 
 def host(request, proto, hostname):
     try:
@@ -72,21 +75,14 @@ def host(request, proto, hostname):
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     cursor.execute("""
-        SELECT network_name
-        FROM hosts
-        WHERE name = %(h)s
-    """, {'h': hostname})
-    network, = cursor.fetchone()
-    cursor.execute("""
-        SELECT share_id, size, protocol, port
-        FROM hosts
-        LEFT JOIN shares ON (hosts.host_id = shares.host_id)
-        WHERE hosts.name = %(n)s
-        ORDER BY hosts.host_id
+        SELECT share_id, size, network, protocol, port
+        FROM shares
+        WHERE hostname = %(n)s
+        ORDER BY share_id
         """, {'n':hostname})
     return render_to_response('vfs/host.html', \
-        {'shares': cursor.fetchall(), 'hostname': hostname,
-            'network': network})
+        {'shares': cursor.fetchall(),
+         'hostname': hostname})
 
 
 def share(request, proto, hostname, port, path=""):
@@ -103,8 +99,7 @@ def share(request, proto, hostname, port, path=""):
         SELECT share_id
         FROM shares
         WHERE protocol = %(p)s
-            AND host_id =
-            (SELECT host_id FROM hosts WHERE name = %(h)s)
+            AND hostname = %(h)s
             AND port = %(port)s
         """, {'p': proto, 'h': hostname, 'port': port})
     try:
@@ -120,16 +115,6 @@ def share(request, proto, hostname, port, path=""):
         path_id, parent_id = cursor.fetchone()
     except:
         return HttpResponse("No such file or directory '" + path + "'")
-    if parent_id == 0:
-        cursor.execute("""
-            SELECT network_name
-            FROM shares
-            LEFT JOIN hosts ON (shares.host_id = hosts.host_id)
-            WHERE share_id = %(s)s
-        """, {'s': share_id})
-        network, = cursor.fetchone()
-    else:
-        network = ""
     cursor.execute("""
         SELECT sharedir_id AS dirid, size, name
         FROM files
@@ -139,5 +124,9 @@ def share(request, proto, hostname, port, path=""):
         ORDER BY pathfile_id;
         """, {'s': share_id, 'p': path_id})
     return render_to_response('vfs/share.html', \
-        {'files': cursor.fetchall(), 'network': network})
+        {'files': cursor.fetchall(),
+         'protocol': proto,
+         'hostname': hostname,
+         'port': port,
+         'path': path})
 

@@ -1,7 +1,7 @@
 <table>
     {% for n in networks %}
     <tr>
-        <td> <a href = "{%url webuguu.vfs.views.network n.name %}"> {{ n.name }} </a></td>
+        <td> <a href = "{%url webuguu.vfs.views.network n.network %}"> {{ n.network }} </a></td>
     </tr>
     {% endfor %}
 </table>

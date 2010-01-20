@@ -18,13 +18,7 @@ def ddl(db):
     cursor = db.cursor()
     cursor.execute("""
         CREATE TABLE networks (
-            network_name varchar(32) PRIMARY KEY
-        );
-        CREATE TABLE hosts (
-            host_id SERIAL PRIMARY KEY,
-            network_name varchar(32) REFERENCES networks ON DELETE CASCADE,
-            name varchar(64),
-            host_addr inet
+            network varchar(32) PRIMARY KEY
         );
         CREATE TABLE scantypes (
             scantype_id SERIAL PRIMARY KEY,
@@ -33,8 +27,9 @@ def ddl(db):
         CREATE TABLE shares (
             share_id SERIAL PRIMARY KEY,
             scantype_id integer REFERENCES scantypes ON DELETE RESTRICT,
-            host_id integer REFERENCES hosts ON DELETE CASCADE,
+            network varchar(32) REFERENCES networks ON DELETE CASCADE,
             protocol varchar(8),
+            hostname varchar(64),
             port smallint DEFAULT 0,
             online boolean,
             size bigint,
@@ -46,6 +41,7 @@ def ddl(db):
             parent_id integer,
             path text,
             items integer,
+            size bigint,
             PRIMARY KEY (share_id, sharepath_id)
         );
         CREATE TABLE filenames (
@@ -64,20 +60,18 @@ def ddl(db):
         );
         """)
 
+
 def fill(db):
     cursor = db.cursor()
     cursor.execute("""
-        INSERT INTO networks (network_name)
+        INSERT INTO networks (network)
         VALUES ('localnet');
-
-        INSERT INTO hosts (network_name, name, host_addr)
-        VALUES ('localnet', 'localhost', '127.0.0.1');
 
         INSERT INTO scantypes (scan_command)
         VALUES ('smbscan');
 
-        INSERT INTO shares (scantype_id, host_id, protocol)
-        VALUES (1, 1, 'smb');
+        INSERT INTO shares (scantype_id, network, protocol, hostname)
+        VALUES (1, 'localnet', 'smb', '127.0.0.1');
         """)
 
 

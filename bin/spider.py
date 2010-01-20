@@ -58,11 +58,11 @@ def scan_line(cursor, share, line):
         """, {'s':share, 'p':parent, 'f':file, 'did':path, 'sz':size,
               'fn':filename })
 
-def scan_share(db, share_id, ip, command):
+def scan_share(db, share_id, host, command):
     cursor = db.cursor()
     cursor.execute("DELETE FROM files WHERE share_id = %(id)s", {'id':share_id})
     cursor.execute("DELETE FROM paths WHERE share_id = %(id)s", {'id':share_id})
-    cmd = path + '/' + command + ' ' + ip + ' 2>/dev/null'
+    cmd = path + '/' + command + ' ' + host + ' 2>/dev/null'
     data = subprocess.Popen(cmd, shell=True, stdin=PIPE,
                             stdout=PIPE, stderr=None, close_fds=True)
     for line in data.stdout:
@@ -70,10 +70,10 @@ def scan_share(db, share_id, ip, command):
     data.stdin.close()
     if data.wait() != 0:
         db.rollback()
-        print "Scanning", ip, "failed"
+        print "Scanning", host, "failed"
     else:
         db.commit()
-        print "Scanning", ip, "succeeded"
+        print "Scanning", host, "succeeded"
 
 
 try:
@@ -88,12 +88,11 @@ except:
     sys.exit()
 shares = db.cursor()
 shares.execute("""
-    SELECT share_id, host_addr, scan_command
+    SELECT share_id, hostname, scan_command
     FROM shares
     LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
-    LEFT JOIN hosts ON shares.host_id = hosts.host_id
     """)
-for id, ip, command in shares.fetchall():
-    scan_share(db, id, ip, command)
+for id, host, command in shares.fetchall():
+    scan_share(db, id, host, command)
 
 
