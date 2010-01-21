@@ -315,6 +315,7 @@ void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     }
 
     dt_init_root(root, &id);
+    dt_printdir_reverse(root);
 
     for (d = root; d != NULL;) {
         if (d->stamp == 0) {
