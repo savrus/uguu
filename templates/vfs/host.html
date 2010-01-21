@@ -1,22 +1,9 @@
+{% extends "vfs/sharelist.html" %}
+{% block uplink %}
 <div id="uplink">
     <a href="{%url webuguu.vfs.views.network shares.0.network %}">Up</a><br>
 </div>
-<br>
+{% endblock %}
+{% block title %}
 List of shares in host {{ hostname }}:
-<br>
-<table>
-    <tr>
-        <td> proto </td>
-        <td> shares </td>
-        <td> port </td> 
-        <td> size </td> 
-    </tr>
-    {% for s in shares %}
-    <tr>
-        <td> {{ s.protocol }} </td>
-        <td> <a href = "{%url webuguu.vfs.views.share s.protocol, hostname, s.port %}"> {{ hostname }} </a></td>
-        <td> {{ s.port }} </td> 
-        <td> {{ s.size|filesizeformat }} </td> 
-    </tr>
-    {% endfor %}
-</table>
+{% endblock %}
