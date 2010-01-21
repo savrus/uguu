@@ -21,6 +21,7 @@ path="/home/savrus/devel/uguu/scanners/smbscan"
 
 def scan_line(cursor, share, line):
     if line[0] == "0":
+        # 'path' type of line 
         try:
             l, id, path = string.split(s=line, maxsplit=2)
         except:
@@ -32,6 +33,7 @@ def scan_line(cursor, share, line):
             VALUES (%(s)s, %(id)s, %(p)s)
             """, {'s':share, 'id':id, 'p':path})
     else:
+        # 'file' type of line
         try:
             l, path, file, size, dirid, items, name = string.split(s=line, maxsplit=6)
         except:
@@ -43,36 +45,41 @@ def scan_line(cursor, share, line):
         dirid = int(dirid)
         items = int(items)
         if dirid > 0:
+            # if directory then update paths table
             cursor.execute("""
                 UPDATE paths SET parent_id = %(p)s,
                                  items = %(i)s,
                                  size = %(sz)s
                 WHERE share_id = %(s)s AND sharepath_id = %(d)s
                 """, {'p':path, 'i':items, 'sz':size, 's':share, 'd':dirid})
-            if path == 0:
-                cursor.execute("""
-                    UPDATE shares SET size = %(sz)s
-                    WHERE share_id = %(s)s
-                    """, {'sz':size, 's':share})
-        cursor.execute("SELECT filename_id FROM filenames WHERE name = %(n)s",
-            {'n':name})
-        try:
-            filename, = cursor.fetchone()
-        except:
-            cursor.execute("INSERT INTO filenames (name) VALUES (%(n)s)",
+        if path == 0:
+            # if share root then it's size is the share size
+            cursor.execute("""
+                UPDATE shares SET size = %(sz)s
+                WHERE share_id = %(s)s
+                """, {'sz':size, 's':share})
+        else:
+            # not share root
+            # save all info into the files table
+            cursor.execute("SELECT filename_id FROM filenames WHERE name = %(n)s",
                 {'n':name})
-            cursor.execute("SELECT * FROM lastval()")
-            filename, = cursor.fetchone()
-        cursor.execute("""
-            INSERT INTO files (share_id,
-                               sharepath_id,
-                               pathfile_id,
-                               sharedir_id,
-                               size,
-                               filename_id)
-            VALUES (%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(fn)s)
-            """, {'s':share, 'p':path, 'f':file, 'did':dirid, 'sz':size,
-                  'fn':filename })
+            try:
+                filename, = cursor.fetchone()
+            except:
+                cursor.execute("INSERT INTO filenames (name) VALUES (%(n)s)",
+                    {'n':name})
+                cursor.execute("SELECT * FROM lastval()")
+                filename, = cursor.fetchone()
+            cursor.execute("""
+                INSERT INTO files (share_id,
+                                   sharepath_id,
+                                   pathfile_id,
+                                   sharedir_id,
+                                   size,
+                                   filename_id)
+                VALUES (%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(fn)s)
+                """, {'s':share, 'p':path, 'f':file, 'did':dirid, 'sz':size,
+                      'fn':filename })
 
 
 def scan_share(db, share_id, host, command):
