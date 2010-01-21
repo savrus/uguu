@@ -32,7 +32,8 @@ def search(request):
     cursor.execute("""
         SELECT protocol, hostname,
             paths.path AS path, files.sharedir_id AS dirid,
-            filenames.name AS filename, files.size AS size, port
+            filenames.name AS filename, files.size AS size, port,
+            shares.share_id, paths.sharepath_id as path_id
         FROM filenames
         JOIN files ON (filenames.filename_id = files.filename_id)
         JOIN paths ON (files.share_id = paths.share_id
