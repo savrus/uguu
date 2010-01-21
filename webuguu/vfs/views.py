@@ -123,12 +123,22 @@ def share(request, proto, hostname, port, path=""):
             AND sharepath_id = %(p)s
         ORDER BY pathfile_id;
         """, {'s': share_id, 'p': path_id})
+    if port != "0":
+        hostname += ":" + port
+    if path != "":
+        path = "/" + path
+    ##change 'smb' to 'file' here
+    #if proto == "smb":
+    #    urlproto = "file"
+    #else:
+    #    urlproto = proto
+    urlproto = proto
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,
-         'hostname': hostname,
-         'port': port,
-         'path': path,
+         'urlproto': urlproto,
+         'urlhost': hostname,
+         'urlpath': path,
          'items':items,
          'size':size})
 

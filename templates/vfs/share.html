@@ -1,4 +1,4 @@
-Listing of <a href="{{protocol}}://{{hostname}}/{{path}}">{{protocol}}://{{hostname}}/{{path}}</a>
+Listing of <a href="{{urlproto}}://{{urlhost}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a>
 <br>
 Number of files in directory: {{ items }}
 Total size {{ size|filesizeformat }}
@@ -19,7 +19,7 @@ Total size {{ size|filesizeformat }}
             {% if f.dirid %}
             <td> <a href = "{{ f.name }}"> {{ f.name }} </a></td>
             {% else %}
-            <td> {{ f.name }} </td>
+            <td> <a href = "{{urlproto}}://{{urlhost}}{{urlpath}}/{{f.name}}">{{ f.name }}</a> </td>
             {% endif %}
             <td> {{ f.size|filesizeformat }} </td> 
         </tr>
