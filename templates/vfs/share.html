@@ -5,7 +5,7 @@ Total size {{ size|filesizeformat }}
 <br>
 <br>
 <div id="uplink">
-    <a href="..">Up</a><br>
+    <a href="../{{fastup}}">Up</a><br>
 </div>
 <br>
 <div id="filelist">
@@ -17,7 +17,7 @@ Total size {{ size|filesizeformat }}
         {% for f in files %}
         <tr>
             {% if f.dirid %}
-            <td> <a href = "{{ f.name }}"> {{ f.name }} </a></td>
+            <td> <a href = "{{ f.name }}?s={{share_id}}&p={{f.dirid}}"> {{ f.name }} </a></td>
             {% else %}
             <td> <a href = "{{urlproto}}://{{urlhost}}{{urlpath}}/{{f.name}}">{{ f.name }}</a> </td>
             {% endif %}
