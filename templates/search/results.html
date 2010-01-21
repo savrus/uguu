@@ -5,22 +5,25 @@
 
 <div id="searchresults">
     <table>
+        <tr>
             <td>size</td>
             <td>result</td>
+        </tr>
         {% for r in results %}
-        <tr>
+        <tr>{% spaceless %}
             {% if r.path %}
-                {%url webuguu.vfs.views.share r.protocol, r.hostname, r.port, r.path  as parent_url %}
+                {%url webuguu.vfs.views.share r.protocol, r.hostname, r.port, r.path  as vfs_url %}
             {% else %}
-                {%url webuguu.vfs.views.share r.protocol, r.hostname, r.port  as parent_url %}
+                {%url webuguu.vfs.views.share r.protocol, r.hostname, r.port  as vfs_url %}
             {% endif %}
+            {% endspaceless %}
             <td>{{ r.size|filesizeformat }}</td>
             <td>
-                <a href="{{parent_url}}">{{r.protocol}}://{{r.hostname}}{% if r.path %}/{{r.path}}{% endif %}</a>/{% spaceless %}
+                <a href="{{vfs_url}}">{{r.protocol}}://{{r.urlhost}}{{r.urlpath}}</a>/{% spaceless %}
                 {% if r.dirid %}
-                <a href="{{parent_url}}{{r.filename}}">{{r.filename}}</a>
+                <a href="{{vfs_url}}{{r.filename}}">{{r.filename}}</a>
                 {% else %}
-                <a href="{{r.protocol}}://{{r.hostname}}{% if r.path %}/{{r.path}}{% endif %}/{{r.filename}}">{{r.filename}}</a>
+                <a href="{{r.urlproto}}://{{r.urlhost}}{{r.urlpath}}/{{r.filename}}">{{r.filename}}</a>
                 {% endif %}
                 {% endspaceless %}
             </td>

@@ -44,6 +44,28 @@ def search(request):
     if cursor.rowcount == 0:
         return render_to_response('search/noresults.html')
     else:
+        res = cursor.fetchall()
+        result = []
+        for row in res:
+            newrow = row.copy()
+            del row
+            if newrow['path'] != "":
+                newrow['urlpath'] = "/" + newrow['path']
+            else:
+                newrow['urlpath'] = ""
+            if newrow['port'] != 0:
+                newrow['urlhost'] = newrow['hostname'] + ":" \
+                                    + str(newrow['port'])
+            else:
+                newrow['urlhost'] = newrow['hostname']
+            ##change 'smb' to 'file' here
+            #if newrow['protocol'] == "smb":
+            #    newrow['urlproto'] = "file"
+            #else:
+            #    newrow['urlproto'] = newrow['protocol']
+            newrow['urlproto'] = newrow['protocol']
+            result.append(newrow)
+        del res
         return render_to_response('search/results.html',
-            {'results': cursor.fetchall()})
+            {'results': result})
 
