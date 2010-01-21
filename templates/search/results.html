@@ -19,9 +19,9 @@
             {% endspaceless %}
             <td>{{ r.size|filesizeformat }}</td>
             <td>
-                <a href="{{vfs_url}}">{{r.protocol}}://{{r.urlhost}}{{r.urlpath}}</a>/{% spaceless %}
+                <a href="{{vfs_url}}?s={{r.share_id}}&p={{r.path_id}}">{{r.protocol}}://{{r.urlhost}}{{r.urlpath}}</a>/{% spaceless %}
                 {% if r.dirid %}
-                <a href="{{vfs_url}}{{r.filename}}">{{r.filename}}</a>
+                <a href="{{vfs_url}}{{r.filename}}/?s={{r.share_id}}&p={{r.dirid}}">{{r.filename}}</a>
                 {% else %}
                 <a href="{{r.urlproto}}://{{r.urlhost}}{{r.urlpath}}/{{r.filename}}">{{r.filename}}</a>
                 {% endif %}
