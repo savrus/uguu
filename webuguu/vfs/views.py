@@ -107,12 +107,12 @@ def share(request, proto, hostname, port, path=""):
     except:
         return HttpResponse("Unknown share");
     cursor.execute("""
-        SELECT sharepath_id, parent_id
+        SELECT sharepath_id, parent_id, items, size
         FROM paths
         WHERE share_id = %(s)s AND path = %(p)s
         """, {'s': share_id, 'p': path})
     try:
-        path_id, parent_id = cursor.fetchone()
+        path_id, parent_id, items, size = cursor.fetchone()
     except:
         return HttpResponse("No such file or directory '" + path + "'")
     cursor.execute("""
@@ -128,5 +128,7 @@ def share(request, proto, hostname, port, path=""):
          'protocol': proto,
          'hostname': hostname,
          'port': port,
-         'path': path})
+         'path': path,
+         'items':items,
+         'size':size})
 
