@@ -1,0 +1,22 @@
+{% block uplink %}{% endblock %}
+<br>
+{% block title %}{% endblock %}
+<br>
+<table>
+    <tr>
+        <td> proto </td>
+        <td> shares </td>
+        <td> port </td> 
+        <td> size </td> 
+    </tr>
+    {% block sharelist %}
+    {% for s in shares %}
+    <tr>
+        <td> {{ s.protocol }} </td>
+        <td> <a href = "{%url webuguu.vfs.views.share s.protocol, s.hostname, s.port %}?s={{s.share_id}}&p=1"> {{ s.hostname }} </a></td>
+        <td> {{ s.port }} </td> 
+        <td> {{ s.size|filesizeformat }} </td> 
+    </tr>
+    {% endfor %}
+    {% endblock %}
+</table>
