@@ -27,19 +27,28 @@ def connectdb():
             h=db_host, u=db_user, p=db_password, d=db_database),
         connection_factory=DictConnection)
 
-def gobar(items, offset):
-    go_first = 0
-    go_last = items / items_per_page
-    go_min = max(go_first + 1, offset - 4)
-    go_max = min(go_last - 1, offset + 5)
-    go_min_adj = offset + 5 - go_max
-    go_max_adj = go_min - (offset - 4)
-    go_min = max(go_first + 1, go_min - go_min_adj)
-    go_max = min(go_last - 1, go_max + go_max_adj)
-    # if you want 'first' and 'last' not to appear in numbered list try
-    # go_immediate = range(go_min, go_max + 1)
-    go_immediate = range(go_min - 1, go_max + 2)
-    return (go_first, go_immediate, go_last)
+def generate_go_bar(items, offset):
+    if items > 0:
+        items = items - 1
+    go = dict()
+    go['first'] = 0
+    go['last'] = items / items_per_page
+    left = max(go['first'] + 1, offset - 4)
+    right = min(go['last'] - 1, offset + 4)
+    left_adj = offset + 4 - right
+    right_adj = left - (offset - 4)
+    left = max(go['first'] + 1, left - left_adj)
+    right = min(go['last'] - 1, right + right_adj)
+    # if you want 'left' and 'right' never to duplicate 'first' and 'last'
+    # remove the next two lines
+    left = left - 1
+    right = right + 1
+    if offset != left:
+        go['prev'] = str(offset - 1)
+    if offset != right:
+        go['next'] = str(offset + 1)
+    go['imm'] = range(left, right + 1)
+    return go
 
 def index(request):
     try:
@@ -162,9 +171,10 @@ def share(request, proto, hostname, port, path=""):
         uplink_offset = int(path_fid)/items_per_page
     else:
         uplink_offset = 0
-    # detect offset in file list
+    # detect offset in file list and fill offset bar
     page_offset = int(request.GET.get('o', 0))
     offset = page_offset * items_per_page
+    gobar = generate_go_bar(items, page_offset)
     # get file list
     cursor.execute("""
         SELECT sharedir_id AS dirid, size, name
@@ -176,8 +186,7 @@ def share(request, proto, hostname, port, path=""):
         ORDER BY pathfile_id
         LIMIT %(l)s;
         """, {'s': share_id, 'p': path_id, 'o': offset, 'l':items_per_page})
-    # fill go offset bar
-    go_first, go_immediate, go_last = gobar(items, page_offset)
+    # some additional variables for template
     if port != "0":
         hostname += ":" + port
     if path != "":
@@ -208,8 +217,6 @@ def share(request, proto, hostname, port, path=""):
          'fastup': fastuplink,
          'fastself': fastselflink,
          'offset': offset,
-         'go_first': go_first,
-         'go_last': go_last,
-         'go_imm': go_immediate
+         'gobar': gobar
          })
 
