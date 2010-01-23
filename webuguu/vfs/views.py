@@ -17,14 +17,16 @@ db_user = "postgres"
 db_password = ""
 db_database = "uguu"
 
+def connectdb():
+    return psycopg2.connect(
+        "host='{h}' user='{u}' " \
+        "password='{p}' dbname='{d}'".format(
+            h=db_host, u=db_user, p=db_password, d=db_database),
+        connection_factory=DictConnection)
 
 def index(request):
     try:
-        db = psycopg2.connect(
-            "host='{h}' user='{u}' " \
-            "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database),
-            connection_factory=DictConnection)
+        db = connectdb()
     except:
         return HttpResponse("Unable to connect to the database.")
     return render_to_response('vfs/index.html')
@@ -32,11 +34,7 @@ def index(request):
 
 def net(request):
     try:
-        db = psycopg2.connect(
-            "host='{h}' user='{u}' " \
-            "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database),
-            connection_factory=DictConnection)
+        db = connectdb()
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
@@ -47,11 +45,7 @@ def net(request):
 
 def network(request, network):
     try:
-        db = psycopg2.connect(
-            "host='{h}' user='{u}' " \
-            "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database),
-            connection_factory=DictConnection)
+        db = connectdb()
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
@@ -68,11 +62,7 @@ def network(request, network):
 
 def host(request, proto, hostname):
     try:
-        db = psycopg2.connect(
-            "host='{h}' user='{u}' " \
-            "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database),
-            connection_factory=DictConnection)
+        db = connectdb()
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
@@ -89,11 +79,7 @@ def host(request, proto, hostname):
 
 def share(request, proto, hostname, port, path=""):
     try:
-        db = psycopg2.connect(
-            "host='{h}' user='{u}' " \
-            "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database),
-            connection_factory=DictConnection)
+        db = connectdb()
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
