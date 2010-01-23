@@ -108,7 +108,10 @@ def share(request, proto, hostname, port, path=""):
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
     # detect share
-    share_id = request.GET.get('s', 0)
+    try:
+        share_id = int(request.GET.get('s', 0))
+    except:
+        return HttpResponse("Wrong GET paremeters.")
     if share_id != 0:
         cursor.execute("""
             SELECT protocol, hostname, port
@@ -133,7 +136,10 @@ def share(request, proto, hostname, port, path=""):
         except:
             return HttpResponse("Unknown share");
     # detect path
-    path_id = request.GET.get('p', 0)
+    try:
+        path_id = int(request.GET.get('p', 0))
+    except:
+        return HttpResponse("Wrong GET paremeters.")
     if path_id != 0:
         cursor.execute("""
             SELECT path, parent_id, items, size
@@ -170,7 +176,10 @@ def share(request, proto, hostname, port, path=""):
     else:
         uplink_offset = 0
     # detect offset in file list and fill offset bar
-    page_offset = max(0, int(request.GET.get('o', 0)))
+    try:
+        page_offset = max(0, int(request.GET.get('o', 0)))
+    except:
+        return HttpResponse("Wrong GET paremeters.")
     offset = page_offset * items_per_page
     gobar = generate_go_bar(items, page_offset)
     # get file list
