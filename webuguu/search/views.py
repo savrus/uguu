@@ -15,17 +15,20 @@ db_user = "postgres"
 db_password = ""
 db_database = "uguu"
 
+def connectdb():
+    return psycopg2.connect(
+        "host='{h}' user='{u}' " \
+        "password='{p}' dbname='{d}'".format(
+            h=db_host, u=db_user, p=db_password, d=db_database),
+        connection_factory=DictConnection)
+
 def search(request):
     try:
         query = request.GET['q']
     except:
         return render_to_response('search/index.html')
     try:
-        db = psycopg2.connect(
-            "host='{h}' user='{u}' " \
-            "password='{p}' dbname='{d}'".format(
-                h=db_host, u=db_user, p=db_password, d=db_database),
-            connection_factory=DictConnection)
+        db = connectdb()
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
