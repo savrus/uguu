@@ -11,11 +11,13 @@ Total size {{ size|filesizeformat }}
 <div id="filelist">
     <table>
         <tr>
+            <td> </td>
             <td> file </td>
             <td> size </td> 
         </tr>
         {% for f in files %}
         <tr>
+            <td> {{ forloop.counter|add:offset }}. </td>
             {% if f.dirid %}
             <td> <a href = "{{ f.name }}?s={{share_id}}&p={{f.dirid}}"> {{ f.name }} </a></td>
             {% else %}
@@ -25,4 +27,13 @@ Total size {{ size|filesizeformat }}
         </tr>
         {% endfor %}
     </table>
+</div>
+
+<br>
+<div id="gobar">
+    <table><tr>
+        <td> <a href="{{fastself}}&o={{go_first}}">first</a>
+        {% for g in go_imm %}<td> <a href="{{fastself}}&o={{g}}">{{g}}</a>{% endfor %}
+        <td> <a href="{{fastself}}&o={{go_last}}">last</a>
+    </tr></table>
 </div>
