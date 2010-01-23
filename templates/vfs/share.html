@@ -19,7 +19,7 @@ Total size {{ size|filesizeformat }}
         <tr>
             <td> {{ forloop.counter|add:offset }}. </td>
             {% if f.dirid %}
-            <td> <a href = "{{ f.name }}?s={{share_id}}&p={{f.dirid}}"> {{ f.name }} </a></td>
+            <td> <a href = "{{ f.name }}?s={{share_id}}&p={{f.dirid}}{{childoffs}}"> {{ f.name }} </a></td>
             {% else %}
             <td> <a href = "{{urlproto}}://{{urlhost}}{{urlpath}}/{{f.name}}">{{ f.name }}</a> </td>
             {% endif %}

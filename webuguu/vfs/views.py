@@ -175,14 +175,19 @@ def share(request, proto, hostname, port, path=""):
     #else:
     #    urlproto = proto
     urlproto = proto
+    d = QueryDict("")
+    d = d.copy()
+    offsets_stack_list = request.GET.getlist("o")
+    d.setlist('o', offsets_stack_list)
+    child_offs = "&" + d.urlencode() + "&o=0"
     if parent_id != 0:
-        d = QueryDict("")
-        d = d.copy()
         d.update({'s':share_id, 'p':parent_id})
+        d.setlist('o', offsets_stack_list[:-1])
         fastuplink = "?" + d.urlencode()
     else:
         fastuplink = ""
     fastselflink = "./?s=" + str(share_id) + "&p=" + str(path_id)
+    
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,
@@ -194,6 +199,7 @@ def share(request, proto, hostname, port, path=""):
          'share_id': share_id,
          'fastup': fastuplink,
          'fastself': fastselflink,
+         'childoffs': child_offs,
          'offset': offset,
          'go_first': go_first,
          'go_last': go_last,
