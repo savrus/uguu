@@ -17,7 +17,22 @@ db_user = "postgres"
 db_password = ""
 db_database = "uguu"
 
+types = dict(
+    map(lambda x: (x,'audio'), ('mp3', 'ogg', 'vaw', 'flac', 'ape')) +
+    map(lambda x: (x,'video'), ('mkv', 'avi', 'mp4', 'mov')) +
+    map(lambda x: (x,'document'), ('txt', 'doc', 'xls', 'rtf')) +
+    map(lambda x: (x,'archive'), ('bz', 'gz', 'bz2', 'tar', 'tbz', 'tgz', 'zip', 'rar', 'arj')) +
+    map(lambda x: (x,'image'), ('jpg', 'jpeg', 'gif', 'png', 'bmp', 'tiff'))
+)
+
 path="/home/savrus/devel/uguu/scanners/smbscan"
+
+def suffix(filename):
+    dot = filename.rfind(".")
+    if dot == -1:
+        return ""
+    else:
+        return string.lower(filename[dot + 1:])
 
 def scan_line(cursor, share, line):
     if line[0] == "0":
@@ -63,11 +78,15 @@ def scan_line(cursor, share, line):
             # save all info into the files table
             cursor.execute("SELECT filename_id FROM filenames WHERE name = %(n)s",
                 {'n':name})
-            try:
+            if cursor.rowcount > 0:
                 filename, = cursor.fetchone()
-            except:
-                cursor.execute("INSERT INTO filenames (name) VALUES (%(n)s)",
-                    {'n':name})
+            else:
+                suf = suffix(name)
+                type = types.get(suf)
+                cursor.execute("""
+                    INSERT INTO filenames (name, type)
+                    VALUES (%(n)s, %(t)s)
+                    """, {'n':name, 't':type})
                 cursor.execute("SELECT * FROM lastval()")
                 filename, = cursor.fetchone()
             cursor.execute("""
