@@ -149,6 +149,19 @@ def share(request, proto, hostname, port, path=""):
             path_id, parent_id, items, size = cursor.fetchone()
         except:
             return HttpResponse("No such file or directory '" + path + "'")
+    # detect parent offset in file list (for uplink)
+    # TODO: merge it into queries upper. Most likely copy of pathfile_id in
+    # paths table is required
+    cursor.execute("""
+        SELECT pathfile_id
+        FROM files
+        WHERE share_id = %(s)s AND sharedir_id = %(d)s
+        """, {'s': share_id, 'd': path_id})
+    if cursor.rowcount > 0:
+        path_fid, = cursor.fetchone()
+        uplink_offset = int(path_fid)/items_per_page
+    else:
+        uplink_offset = 0
     # detect offset in file list
     page_offset = int(request.GET.get('o', 0))
     offset = page_offset * items_per_page
@@ -175,19 +188,14 @@ def share(request, proto, hostname, port, path=""):
     #else:
     #    urlproto = proto
     urlproto = proto
-    d = QueryDict("")
-    d = d.copy()
-    offsets_stack_list = request.GET.getlist("o")
-    d.setlist('o', offsets_stack_list)
-    child_offs = "&" + d.urlencode() + "&o=0"
     if parent_id != 0:
-        d.update({'s':share_id, 'p':parent_id})
-        d.setlist('o', offsets_stack_list[:-1])
+        d = QueryDict("")
+        d = d.copy()
+        d.update({'s':share_id, 'p':parent_id, 'o': uplink_offset})
         fastuplink = "?" + d.urlencode()
     else:
         fastuplink = ""
     fastselflink = "./?s=" + str(share_id) + "&p=" + str(path_id)
-    
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,
@@ -199,7 +207,6 @@ def share(request, proto, hostname, port, path=""):
          'share_id': share_id,
          'fastup': fastuplink,
          'fastself': fastselflink,
-         'childoffs': child_offs,
          'offset': offset,
          'go_first': go_first,
          'go_last': go_last,
