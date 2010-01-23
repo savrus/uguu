@@ -33,21 +33,19 @@ def generate_go_bar(items, offset):
     go = dict()
     go['first'] = 0
     go['last'] = items / items_per_page
-    left = max(go['first'] + 1, offset - 4)
-    right = min(go['last'] - 1, offset + 4)
+    left = max(go['first'], offset - 4)
+    right = min(go['last'], offset + 4)
     left_adj = offset + 4 - right
     right_adj = left - (offset - 4)
-    left = max(go['first'] + 1, left - left_adj)
-    right = min(go['last'] - 1, right + right_adj)
-    # if you want 'left' and 'right' never to duplicate 'first' and 'last'
-    # remove the next two lines
-    left = left - 1
-    right = right + 1
+    left = max(go['first'], left - left_adj)
+    right = min(go['last'], right + right_adj)
     if offset != left:
         go['prev'] = str(offset - 1)
     if offset != right:
         go['next'] = str(offset + 1)
-    go['imm'] = range(left, right + 1)
+    go['before'] = range(left, offset)
+    go['self'] = offset
+    go['after'] = range(offset + 1, right + 1)
     return go
 
 def index(request):
