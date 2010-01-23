@@ -170,7 +170,7 @@ def share(request, proto, hostname, port, path=""):
     else:
         uplink_offset = 0
     # detect offset in file list and fill offset bar
-    page_offset = int(request.GET.get('o', 0))
+    page_offset = max(0, int(request.GET.get('o', 0)))
     offset = page_offset * items_per_page
     gobar = generate_go_bar(items, page_offset)
     # get file list
