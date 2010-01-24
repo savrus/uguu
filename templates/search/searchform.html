@@ -1,0 +1,7 @@
+<form action="{%url webuguu.search.views.search %}" name=f>
+    <input name=q title="Uguu search" value="{{query}}">
+    <input name=b type=submit title="search" value="search">
+    <select name=t >{% for t in types %}
+        <option {{t.selected}} value="{{t.value}}">{{t.text}}</option>{% endfor %}
+    </select>
+</form>
