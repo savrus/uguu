@@ -51,10 +51,7 @@ def search(request):
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
-    try:
-        type = request.GET['t']
-    except:
-        type = "all"
+    type = request.GET.get('t', "all")
     types = []
     for t in usertypes:
         nt = dict(t)
