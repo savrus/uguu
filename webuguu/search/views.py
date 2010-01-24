@@ -16,12 +16,12 @@ db_password = ""
 db_database = "uguu"
 
 usertypes = (
-    {'value':'all',  'text':'All'},
-    {'value':'film',  'text':'Films'},
-    {'value':'clip',  'text':'Clips'},
-    {'value':'audio',  'text':'Audio'},
-    {'value':'archive',  'text':'Archives'},
-    {'value':'directory',  'text':'Directories'}
+    {'value':'all',         'text':'All'},
+    {'value':'film',        'text':'Films'},
+    {'value':'clip',        'text':'Clips'},
+    {'value':'audio',       'text':'Audio'},
+    {'value':'archive',     'text':'Archives'},
+    {'value':'directory',   'text':'Directories'}
 )
 
 conditions = {
@@ -60,6 +60,8 @@ def search(request):
         nt = dict(t)
         if nt['value'] == type:
             nt['selected'] = "selected"
+        else:
+            nt['selected'] = ""
         types.append(nt)
     cursor.execute("""
         SELECT protocol, hostname,
