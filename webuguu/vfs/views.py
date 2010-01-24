@@ -137,6 +137,8 @@ def share(request, proto, hostname, port, path=""):
             share_id, state, scantime, changetime = cursor.fetchone()
         except:
             return HttpResponse("Unknown share");
+    if scantime == None:
+        return HttpResponse("Sorry, this share hasn't been scanned yet.")
     # detect path
     try:
         path_id = int(request.GET.get('p', 0))
