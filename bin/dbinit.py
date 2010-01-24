@@ -31,8 +31,9 @@ def ddl(db):
             protocol varchar(8),
             hostname varchar(64),
             port smallint DEFAULT 0,
-            online boolean,
+            state boolean DEFAULT FALSE,
             size bigint,
+            last_state_change timestamp,
             last_scan timestamp
         );
         CREATE TABLE paths (

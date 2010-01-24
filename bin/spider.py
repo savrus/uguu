@@ -117,6 +117,7 @@ def scan_share(db, share_id, host, command):
         db.rollback()
         print "Scanning", host, "failed"
     else:
+        cursor.execute("UPDATE shares SET last_scan = now()")
         db.commit()
         print "Scanning", host, "succeeded"
 

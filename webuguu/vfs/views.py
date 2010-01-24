@@ -114,25 +114,27 @@ def share(request, proto, hostname, port, path=""):
         return HttpResponse("Wrong GET paremeters.")
     if share_id != 0:
         cursor.execute("""
-            SELECT protocol, hostname, port
+            SELECT protocol, hostname, port,
+                   state, last_scan, last_state_change
             FROM shares
             WHERE share_id = %(s)s
             """, {'s':share_id})
         try:
-            if [proto, hostname, int(port)] != cursor.fetchone():
+            d_proto, d_hostname, d_port, state, scantime, changetime = cursor.fetchone()
+            if [proto, hostname, int(port)] != [d_proto, d_hostname, d_port]:
                 return HttpResponseRedirect(".")
         except: 
             return HttpResponseRedirect(".")
     else:
         cursor.execute("""
-            SELECT share_id
+            SELECT share_id, state, last_scan, last_state_change
             FROM shares
             WHERE protocol = %(p)s
                 AND hostname = %(h)s
                 AND port = %(port)s
             """, {'p': proto, 'h': hostname, 'port': port})
         try:
-            share_id, = cursor.fetchone()
+            share_id, state, scantime, changetime = cursor.fetchone()
         except:
             return HttpResponse("Unknown share");
     # detect path
@@ -201,6 +203,7 @@ def share(request, proto, hostname, port, path=""):
     else:
         fastuplink = ""
     fastselflink = "./?s=" + str(share_id) + "&p=" + str(path_id)
+    state = ['offline', 'online'][int(state)]
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,
@@ -213,6 +216,9 @@ def share(request, proto, hostname, port, path=""):
          'fastup': fastuplink,
          'fastself': fastselflink,
          'offset': offset,
-         'gobar': gobar
+         'gobar': gobar,
+         'state': state,
+         'changetime': changetime,
+         'scantime': scantime
          })
 
