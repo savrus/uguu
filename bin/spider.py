@@ -18,11 +18,11 @@ db_password = ""
 db_database = "uguu"
 
 types = dict(
-    map(lambda x: (x,'audio'), ('mp3', 'ogg', 'vaw', 'flac', 'ape')) +
-    map(lambda x: (x,'video'), ('mkv', 'avi', 'mp4', 'mov')) +
-    map(lambda x: (x,'document'), ('txt', 'doc', 'xls', 'rtf')) +
-    map(lambda x: (x,'archive'), ('bz', 'gz', 'bz2', 'tar', 'tbz', 'tgz', 'zip', 'rar', 'arj')) +
-    map(lambda x: (x,'image'), ('jpg', 'jpeg', 'gif', 'png', 'bmp', 'tiff'))
+    [(x,'audio') for x in ('mp3', 'ogg', 'vaw', 'flac', 'ape')] +
+    [(x,'video') for x in ('mkv', 'avi', 'mp4', 'mov')] +
+    [(x,'document') for x in ('txt', 'doc', 'xls', 'rtf')] +
+    [(x,'archive') for x in ('bz', 'gz', 'bz2', 'tar', 'tbz', 'tgz', 'zip', 'rar', 'arj')] +
+    [(x,'image') for x in ('jpg', 'jpeg', 'gif', 'png', 'bmp', 'tiff')]
 )
 
 path="/home/savrus/devel/uguu/scanners/smbscan"
