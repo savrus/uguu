@@ -39,6 +39,7 @@ def ddl(db):
             share_id integer REFERENCES shares ON DELETE CASCADE,
             sharepath_id integer,
             parent_id integer,
+            parentfile_id integer,
             path text,
             items integer,
             size bigint,
