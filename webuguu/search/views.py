@@ -56,7 +56,7 @@ def search(request):
     for t in usertypes:
         nt = dict(t)
         if nt['value'] == type:
-            nt['selected'] = "selected"
+            nt['selected'] = 'selected="selected"'
         else:
             nt['selected'] = ""
         types.append(nt)
