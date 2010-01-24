@@ -142,39 +142,28 @@ def share(request, proto, hostname, port, path=""):
         return HttpResponse("Wrong GET paremeters.")
     if path_id != 0:
         cursor.execute("""
-            SELECT path, parent_id, items, size
+            SELECT path, parent_id, parentfile_id, items, size
             FROM paths
             WHERE share_id = %(s)s AND sharepath_id = %(p)s
             """, {'s':share_id, 'p':path_id})
         try:
-            dbpath, parent_id, items, size = cursor.fetchone()
+            dbpath, parent_id, parentfile_id, items, size = cursor.fetchone()
             if path != dbpath:
                 return HttpResponseRedirect("./?s=" + str(share_id))
         except: 
             return HttpResponseRedirect("./?s=" + str(share_id))
     else:
         cursor.execute("""
-            SELECT sharepath_id, parent_id, items, size
+            SELECT sharepath_id, parent_id, parentfile_id, items, size
             FROM paths
             WHERE share_id = %(s)s AND path = %(p)s
             """, {'s': share_id, 'p': path})
         try:
-            path_id, parent_id, items, size = cursor.fetchone()
+            path_id, parent_id, parentfile_id, items, size = cursor.fetchone()
         except:
             return HttpResponse("No such file or directory '" + path + "'")
-    # detect parent offset in file list (for uplink)
-    # TODO: merge it into queries upper. Most likely copy of pathfile_id in
-    # paths table is required
-    cursor.execute("""
-        SELECT pathfile_id
-        FROM files
-        WHERE share_id = %(s)s AND sharedir_id = %(d)s
-        """, {'s': share_id, 'd': path_id})
-    if cursor.rowcount > 0:
-        path_fid, = cursor.fetchone()
-        uplink_offset = int(path_fid)/items_per_page
-    else:
-        uplink_offset = 0
+    # detect parent offset in grandparent file list (for uplink)
+    uplink_offset = int(parentfile_id)/items_per_page
     # detect offset in file list and fill offset bar
     try:
         page_offset = max(0, int(request.GET.get('o', 0)))

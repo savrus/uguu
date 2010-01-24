@@ -63,10 +63,12 @@ def scan_line(cursor, share, line):
             # if directory then update paths table
             cursor.execute("""
                 UPDATE paths SET parent_id = %(p)s,
+                                 parentfile_id = %(f)s,
                                  items = %(i)s,
                                  size = %(sz)s
                 WHERE share_id = %(s)s AND sharepath_id = %(d)s
-                """, {'p':path, 'i':items, 'sz':size, 's':share, 'd':dirid})
+                """, {'p':path, 'f':file, 'i':items,
+                      'sz':size, 's':share, 'd':dirid})
         if path == 0:
             # if share root then it's size is the share size
             cursor.execute("""
