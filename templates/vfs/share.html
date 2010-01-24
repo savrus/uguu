@@ -1,29 +1,26 @@
-Listing of <a href="{{urlproto}}://{{urlhost}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a>
+<div id="title">Contents of <a href="{{urlproto}}://{{urlhost}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
+total items: {{ items }}, total size: {{ size|filesizeformat }}</div>
 <br>
-Number of files in directory: {{ items }}
-Total size {{ size|filesizeformat }}
-<br>
-<br>
-<div id="uplink">
-    <a href="../{{fastup}}">Up</a><br>
-</div>
+<div id="uplink"><a href="../{{fastup}}">Up</a></div>
 <br>
 <div id="filelist">
     <table>
         <tr>
             <td> </td>
-            <td> file </td>
+            <td> </td>
             <td> size </td> 
+            <td> file </td>
         </tr>
         {% for f in files %}
         <tr>
-            <td> {{ forloop.counter|add:offset }}. </td>
+            <td> {{forloop.counter|add:offset}}. </td>
+            <td>{% if f.dirid %} &lt;dir&gt; {% endif %}</td>
+            <td> {{ f.size|filesizeformat }} </td> 
             {% if f.dirid %}
             <td> <a href = "{{ f.name }}?s={{share_id}}&p={{f.dirid}}"> {{ f.name }} </a></td>
             {% else %}
             <td> <a href = "{{urlproto}}://{{urlhost}}{{urlpath}}/{{f.name}}">{{ f.name }}</a> </td>
             {% endif %}
-            <td> {{ f.size|filesizeformat }} </td> 
         </tr>
         {% endfor %}
     </table>
@@ -45,5 +42,5 @@ Total size {{ size|filesizeformat }}
 <br>
 <div id="sharestatus">
     This share is {{state}} since {{changetime|date:"D d M Y G:i"}}.
-    Last scanned in {{scantime|date:"D d M Y G:i"}}.
+    Last scanned on {{scantime|date:"D d M Y G:i"}}.
 </div>
