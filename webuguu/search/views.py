@@ -9,6 +9,7 @@ from psycopg2.extras import DictConnection
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
 import string
+from webuguu.vfs.views import vfs_items_per_page
 
 db_host = "localhost"
 db_user = "postgres"
@@ -64,7 +65,8 @@ def search(request):
         SELECT protocol, hostname,
             paths.path AS path, files.sharedir_id AS dirid,
             filenames.name AS filename, files.size AS size, port,
-            shares.share_id, paths.sharepath_id as path_id
+            shares.share_id, paths.sharepath_id as path_id,
+            files.pathfile_id as fileid
         FROM filenames
         JOIN files ON (filenames.filename_id = files.filename_id)
         JOIN paths ON (files.share_id = paths.share_id
@@ -98,6 +100,7 @@ def search(request):
             #else:
             #    newrow['urlproto'] = newrow['protocol']
             newrow['urlproto'] = newrow['protocol']
+            newrow['offset'] = newrow['fileid'] / vfs_items_per_page
             result.append(newrow)
         del res
         return render_to_response('search/results.html',

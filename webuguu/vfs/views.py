@@ -13,7 +13,7 @@ from django.shortcuts import render_to_response
 import string
 
 # number of files in file list, shares in share list, etc
-items_per_page = 10
+vfs_items_per_page = 10
 
 db_host = "localhost"
 db_user = "postgres"
@@ -32,7 +32,7 @@ def generate_go_bar(items, offset):
         items = items - 1
     go = dict()
     go['first'] = 0
-    go['last'] = items / items_per_page
+    go['last'] = items / vfs_items_per_page
     left = max(go['first'], offset - 4)
     right = min(go['last'], offset + 4)
     left_adj = offset + 4 - right
@@ -167,13 +167,13 @@ def share(request, proto, hostname, port, path=""):
         except:
             return HttpResponse("No such file or directory '" + path + "'")
     # detect parent offset in grandparent file list (for uplink)
-    uplink_offset = int(parentfile_id)/items_per_page
+    uplink_offset = int(parentfile_id)/vfs_items_per_page
     # detect offset in file list and fill offset bar
     try:
         page_offset = max(0, int(request.GET.get('o', 0)))
     except:
         return HttpResponse("Wrong GET paremeters.")
-    offset = page_offset * items_per_page
+    offset = page_offset * vfs_items_per_page
     gobar = generate_go_bar(items, page_offset)
     # get file list
     cursor.execute("""
@@ -185,7 +185,7 @@ def share(request, proto, hostname, port, path=""):
             AND pathfile_id >= %(o)s
         ORDER BY pathfile_id
         LIMIT %(l)s;
-        """, {'s': share_id, 'p': path_id, 'o': offset, 'l':items_per_page})
+        """, {'s': share_id, 'p': path_id, 'o': offset, 'l':vfs_items_per_page})
     # some additional variables for template
     if port != "0":
         hostname += ":" + port
