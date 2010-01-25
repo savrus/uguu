@@ -8,7 +8,7 @@ import psycopg2
 from psycopg2.extras import DictConnection
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
-from django.http import QueryDict
+from django.utils.http import urlencode
 from django.shortcuts import render_to_response
 import string
 
@@ -112,11 +112,17 @@ def share(request, proto, hostname, port, path=""):
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
-    # detect share
     try:
         share_id = int(request.GET.get('s', 0))
+        path_id = int(request.GET.get('p', 0))
+        page_offset = int(request.GET.get('o', 0))
+        url = dict()
+        url['share'] = [('s', share_id)]
+        url['path'] = [('p', path_id)]
+        url['offset'] = [[], [('o', page_offset)]][page_offset > 0]
     except:
         return HttpResponse("Wrong GET paremeters.")
+    # detect share
     if share_id != 0:
         cursor.execute("""
             SELECT protocol, hostname, port,
@@ -145,11 +151,8 @@ def share(request, proto, hostname, port, path=""):
     if scantime == None:
         return HttpResponse("Sorry, this share hasn't been scanned yet.")
     # detect path
-    try:
-        path_id = int(request.GET.get('p', 0))
-    except:
-        return HttpResponse("Wrong GET paremeters.")
     if path_id != 0:
+        redirect_url = "./?" + urlencode(dict(url['share'] + url['offset']))
         cursor.execute("""
             SELECT path, parent_id, parentfile_id, items, size
             FROM paths
@@ -158,9 +161,9 @@ def share(request, proto, hostname, port, path=""):
         try:
             dbpath, parent_id, parentfile_id, items, size = cursor.fetchone()
             if path != dbpath:
-                return HttpResponseRedirect("./?s=" + str(share_id))
+                return HttpResponseRedirect(redirect_url)
         except: 
-            return HttpResponseRedirect("./?s=" + str(share_id))
+            return HttpResponseRedirect(redirect_url)
     else:
         cursor.execute("""
             SELECT sharepath_id, parent_id, parentfile_id, items, size
@@ -171,13 +174,8 @@ def share(request, proto, hostname, port, path=""):
             path_id, parent_id, parentfile_id, items, size = cursor.fetchone()
         except:
             return HttpResponse("No such file or directory '" + path + "'")
-    # detect parent offset in grandparent file list (for uplink)
-    uplink_offset = int(parentfile_id)/vfs_items_per_page
     # detect offset in file list and fill offset bar
-    try:
-        page_offset = max(0, int(request.GET.get('o', 0)))
-    except:
-        return HttpResponse("Wrong GET paremeters.")
+    page_offset = max(0, min((items - 1)/ vfs_items_per_page, page_offset))
     offset = page_offset * vfs_items_per_page
     gobar = generate_go_bar(items, page_offset)
     # get file list
@@ -203,10 +201,10 @@ def share(request, proto, hostname, port, path=""):
     #    urlproto = proto
     urlproto = proto
     if parent_id != 0:
-        d = QueryDict("")
-        d = d.copy()
-        d.update({'s':share_id, 'p':parent_id, 'o': uplink_offset})
-        fastuplink = "?" + d.urlencode()
+        uplink_offset = int(parentfile_id) / vfs_items_per_page
+        url['uoffset'] = [[], [('o', uplink_offset)]][uplink_offset > 0]
+        fastuplink = "?" + urlencode(dict(
+            url['share'] + [('p', parent_id)] + url['uoffset']))
     else:
         fastuplink = ""
     fastselflink = "./?s=" + str(share_id) + "&p=" + str(path_id)
