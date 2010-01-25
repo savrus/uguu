@@ -20,7 +20,7 @@
             <td>{% if r.dirid %} &lt;dir&gt; {% endif %}</td>
             <td> {{ r.size|filesizeformat }} </td>
             <td>
-                <a href="{{vfs_url}}?s={{r.share_id}}&p={{r.path_id}}">{{r.protocol}}://{{r.urlhost}}{{r.urlpath}}</a>/{% spaceless %}
+                <a href="{{vfs_url}}?s={{r.share_id}}&p={{r.path_id}}&o={{r.offset}}">{{r.protocol}}://{{r.urlhost}}{{r.urlpath}}</a>/{% spaceless %}
                 {% if r.dirid %}
                 <a href="{{vfs_url}}{{r.filename}}/?s={{r.share_id}}&p={{r.dirid}}">{{r.filename}}</a>
                 {% else %}
