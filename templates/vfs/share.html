@@ -26,8 +26,7 @@ total items: {{ items }}, total size: {{ size|filesizeformat }}</div>
     </table>
 </div>
 
-<br>
-<div id="gobar">
+{% if gobar.nontrivial %}<br><div id="gobar">
     <table><tr>
         <td><a href="{{fastself}}&o={{gobar.first}}">first</a></td>
         {% if gobar.prev %}<td><a href="{{fastself}}&o={{gobar.prev}}">prev</a></td>{% endif %}
@@ -37,8 +36,8 @@ total items: {{ items }}, total size: {{ size|filesizeformat }}</div>
         {% if gobar.next %}<td><a href="{{fastself}}&o={{gobar.next}}">next</a></td>{% endif %}
         <td><a href="{{fastself}}&o={{gobar.last}}">last</a></td>
     </tr></table>
-</div>
-<br>
+</div></br>{% endif %}
+
 <br>
 <div id="sharestatus">
     This share is {{state}} since {{changetime|date:"D d M Y G:i"}}.

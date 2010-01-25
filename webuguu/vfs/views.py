@@ -33,6 +33,11 @@ def generate_go_bar(items, offset):
     go = dict()
     go['first'] = 0
     go['last'] = items / vfs_items_per_page
+    if go['last'] == 0:
+        go['nontrivial'] = 0
+        return go
+    else:
+        go['nontrivial'] = 1
     left = max(go['first'], offset - 4)
     right = min(go['last'], offset + 4)
     left_adj = offset + 4 - right
