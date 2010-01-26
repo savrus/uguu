@@ -5,29 +5,15 @@
         <tr>
             <td> </td>
             <td> </td>
-            <td> size </td>
-            <td> result </td>
+            <td>size</td>
+            <td>result</td>
         </tr>
         {% for r in results %}
-        <tr>{% spaceless %}
-            {% if r.path %}
-                {%url webuguu.vfs.views.share r.protocol, r.hostname, r.port, r.path  as vfs_url %}
-            {% else %}
-                {%url webuguu.vfs.views.share r.protocol, r.hostname, r.port  as vfs_url %}
-            {% endif %}
-            {% endspaceless %}
-            <td> {{forloop.counter}}. </td>
-            <td>{% if r.dirid %} &lt;dir&gt; {% endif %}</td>
-            <td> {{ r.size|filesizeformat }} </td>
-            <td>
-                <a href="{{vfs_url}}?s={{r.share_id}}&p={{r.path_id}}&o={{r.offset}}">{{r.protocol}}://{{r.urlhost}}{{r.urlpath}}</a>/{% spaceless %}
-                {% if r.dirid %}
-                <a href="{{vfs_url}}{{r.filename}}/?s={{r.share_id}}&p={{r.dirid}}">{{r.filename}}</a>
-                {% else %}
-                <a href="{{r.urlproto}}://{{r.urlhost}}{{r.urlpath}}/{{r.filename}}">{{r.filename}}</a>
-                {% endif %}
-                {% endspaceless %}
-            </td>
+        <tr>
+            <td>{{forloop.counter}}.</td>
+            <td>{{ r.type }}</td>
+            <td>{{ r.size|filesizeformat }}</td>
+            <td><a href="{{r.pathlink}}">{{r.path}}</a>/<a href="{{r.filelink}}">{{r.filename}}</a></td>
         </tr>
         {% endfor %}
     </table>

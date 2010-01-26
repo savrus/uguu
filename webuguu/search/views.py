@@ -7,7 +7,9 @@
 import psycopg2
 from psycopg2.extras import DictConnection
 from django.http import HttpResponse
+from django.utils.http import urlencode
 from django.shortcuts import render_to_response
+from django.core.urlresolvers import reverse
 import string
 from webuguu.vfs.views import vfs_items_per_page
 
@@ -83,25 +85,46 @@ def search(request):
         res = cursor.fetchall()
         result = []
         for row in res:
-            newrow = row.copy()
-            del row
-            if newrow['path'] != "":
-                newrow['urlpath'] = "/" + newrow['path']
+            newrow = dict()
+            if row['path'] != "":
+                urlpath = "/" + row['path']
             else:
-                newrow['urlpath'] = ""
-            if newrow['port'] != 0:
-                newrow['urlhost'] = newrow['hostname'] + ":" \
-                                    + str(newrow['port'])
+                urlpath = ""
+            if row['port'] != 0:
+                urlhost = row['hostname'] + ":" + str(row['port'])
             else:
-                newrow['urlhost'] = newrow['hostname']
+                urlhost = row['hostname']
             ##change 'smb' to 'file' here
-            #if newrow['protocol'] == "smb":
-            #    newrow['urlproto'] = "file"
+            #if row['protocol'] == "smb":
+            #    urlproto = "file"
             #else:
-            #    newrow['urlproto'] = newrow['protocol']
-            newrow['urlproto'] = newrow['protocol']
-            newrow['offset'] = newrow['fileid'] / vfs_items_per_page
+            #    urlproto = row['protocol']
+            urlproto = row['protocol']
+            if row['path'] == "":
+                vfs = reverse('webuguu.vfs.views.share', args=(
+                    row['protocol'], row['hostname'], row['port']))
+            else:
+                vfs = reverse('webuguu.vfs.views.share', args=(
+                    row['protocol'], row['hostname'], row['port'],
+                    row['path']))
+            offset = int(row['fileid']) / vfs_items_per_page
+            newrow['pathlink'] = vfs + "?" + urlencode(dict(
+                [('s', row['share_id']), ('p', row['path_id'])] +
+                [[], [('o', offset)]][offset > 0]))
+            newrow['filename'] = row['filename']
+            if row['dirid'] > 0:
+                newrow['type'] = "<dir>"
+                newrow['filelink'] = vfs + newrow['filename'] \
+                    + "/?" + urlencode(dict([('s', row['share_id']),
+                        ('p', row['dirid'])]))
+            else:
+                newrow['type'] = ""
+                newrow['filelink'] = urlproto + "://" +\
+                    urlhost + urlpath + "/" + newrow['filename']
+            newrow['path'] = row['protocol'] + "://" + urlhost + urlpath
+            newrow['size'] = row['size']
             result.append(newrow)
+            del row
         del res
         return render_to_response('search/results.html',
             {'types': types, 'results': result,
