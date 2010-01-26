@@ -119,7 +119,7 @@ def share(request, proto, hostname, port, path=""):
         url = dict()
         url['share'] = [('s', share_id)]
         url['path'] = [('p', path_id)]
-        url['offset'] = [[], [('o', page_offset)]][page_offset > 0]
+        url['offset'] = [('o', page_offset)] if page_offset > 0 else []
     except:
         return HttpResponse("Wrong GET paremeters.")
     # detect share
@@ -202,13 +202,13 @@ def share(request, proto, hostname, port, path=""):
     urlproto = proto
     if parent_id != 0:
         uplink_offset = int(parentfile_id) / vfs_items_per_page
-        url['uoffset'] = [[], [('o', uplink_offset)]][uplink_offset > 0]
         fastuplink = "?" + urlencode(dict(
-            url['share'] + [('p', parent_id)] + url['uoffset']))
+            url['share'] + [('p', parent_id)] +
+            ([('o', uplink_offset)] if uplink_offset > 0 else []) ))
     else:
         fastuplink = ""
     fastselflink = "./?s=" + str(share_id) + "&p=" + str(path_id)
-    state = ['offline', 'online'][int(state)]
+    state = "offline" if int(state) else "online"
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,

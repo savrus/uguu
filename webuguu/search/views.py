@@ -58,10 +58,7 @@ def search(request):
     types = []
     for t in usertypes:
         nt = dict(t)
-        if nt['value'] == type:
-            nt['selected'] = 'selected="selected"'
-        else:
-            nt['selected'] = ""
+        nt['selected'] = 'selected="selected"' if nt['value'] == type else ""
         types.append(nt)
     cursor.execute("""
         SELECT protocol, hostname,
@@ -86,37 +83,28 @@ def search(request):
         result = []
         for row in res:
             newrow = dict()
-            if row['path'] != "":
-                urlpath = "/" + row['path']
-            else:
-                urlpath = ""
-            if row['port'] != 0:
-                urlhost = row['hostname'] + ":" + str(row['port'])
-            else:
-                urlhost = row['hostname']
+            urlpath = "/" + row['path'] if row['path'] != "" else ""
+            urlhost = row['hostname']
+            urlhost += ":" + str(row['port']) if row['port'] != 0 else ""
             ##change 'smb' to 'file' here
             #if row['protocol'] == "smb":
             #    urlproto = "file"
             #else:
             #    urlproto = row['protocol']
             urlproto = row['protocol']
-            if row['path'] == "":
-                vfs = reverse('webuguu.vfs.views.share', args=(
-                    row['protocol'], row['hostname'], row['port']))
-            else:
-                vfs = reverse('webuguu.vfs.views.share', args=(
-                    row['protocol'], row['hostname'], row['port'],
-                    row['path']))
+            viewargs = [row['protocol'], row['hostname'], row['port']]
+            if row['path'] != "":
+                viewargs.append(row['path'])
+            vfs = reverse('webuguu.vfs.views.share', args=viewargs)
             offset = int(row['fileid']) / vfs_items_per_page
             newrow['pathlink'] = vfs + "?" + urlencode(dict(
                 [('s', row['share_id']), ('p', row['path_id'])] +
-                [[], [('o', offset)]][offset > 0]))
+                ([('o', offset)] if offset > 0 else []) ))
             newrow['filename'] = row['filename']
             if row['dirid'] > 0:
                 newrow['type'] = "<dir>"
-                newrow['filelink'] = vfs + newrow['filename'] \
-                    + "/?" + urlencode(dict([('s', row['share_id']),
-                        ('p', row['dirid'])]))
+                newrow['filelink'] = vfs + newrow['filename'] + "/?" + \
+                    urlencode({'s': row['share_id'], 'p': row['dirid']})
             else:
                 newrow['type'] = ""
                 newrow['filelink'] = urlproto + "://" +\
