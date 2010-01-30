@@ -20,22 +20,20 @@ db_password = ""
 db_database = "uguu"
 
 usertypes = (
-    {'value':'all',         'text':'All'},
-    {'value':'film',        'text':'Films'},
-    {'value':'clip',        'text':'Clips'},
-    {'value':'audio',       'text':'Audio'},
-    {'value':'archive',     'text':'Archives'},
-    {'value':'directory',   'text':'Directories'}
+    {'value':'type:all',                'text':'All'},
+    {'value':'type:video min:300Mb',    'text':'Films'},
+    {'value':'type:video max:400Mb',    'text':'Clips'},
+    {'value':'type:audio',              'text':'Audio'},
+    {'value':'type:archive',            'text':'Archives'},
+    {'value':'type:directory',          'text':'Directories'}
 )
 
 conditions = {
     'all': "",
-    'video': "AND filenames.type = 'video'",
-    'film': "AND filenames.type = 'video' AND files.size > " + str(300 * 1024 * 1024),
-    'clip': "AND filenames.type = 'video' AND files.size < " + str(350 * 1024 * 1024),
-    'audio': "AND filenames.type = 'audio'",
-    'archive': "AND filenames.type = 'archive'",
-    'directory': "AND files.sharedir_id > 0"
+    'video': " AND filenames.type = 'video'",
+    'audio': " AND filenames.type = 'audio'",
+    'archive': " AND filenames.type = 'archive'",
+    'directory': " AND files.sharedir_id > 0"
 }
 
 def connectdb():
@@ -96,13 +94,13 @@ def search(request):
     except:
         return HttpResponse("Unable to connect to the database.")
     cursor = db.cursor()
-    type = request.GET.get('t', "all")
+    type = request.GET.get('t', "")
     types = []
     for t in usertypes:
         nt = dict(t)
         nt['selected'] = 'selected="selected"' if nt['value'] == type else ""
         types.append(nt)
-    parsedq = QueryParser(query)
+    parsedq = QueryParser(query + " " + type)
     cursor.execute("""
         SELECT protocol, hostname,
             paths.path AS path, files.sharedir_id AS dirid,
