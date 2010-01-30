@@ -30,6 +30,7 @@ total items: {{ items }}, total size: {{ size|filesizeformat }}</div>
 
 <br>
 <div id="sharestatus">
-    This share is {{state}} since {{changetime|date:"D d M Y G:i"}}.
+    <a href="{{urlproto}}://{{urlhost}}">{{protocol}}://{{urlhost}}</a>
+    is {{state}} since {{changetime|date:"D d M Y G:i"}}.
     Last scanned on {{scantime|date:"D d M Y G:i"}}.
 </div>

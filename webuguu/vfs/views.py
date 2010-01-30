@@ -166,8 +166,8 @@ def share(request, proto, hostname, port, path=""):
             ([('o', uplink_offset)] if uplink_offset > 0 else []) ))
     else:
         fastuplink = ""
-    fastselflink = "./?s=" + str(share_id) + "&p=" + str(path_id)
-    state = "offline" if int(state) else "online"
+    fastselflink = "./?" + urlencode(dict(url['share'] + url['path']))
+    state = "online" if int(state) else "offline"
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,
