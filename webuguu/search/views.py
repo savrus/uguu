@@ -20,7 +20,7 @@ db_password = ""
 db_database = "uguu"
 
 usertypes = (
-    {'value':'type:all',                'text':'All'},
+    {'value':'',                        'text':'All'},
     {'value':'type:video min:300Mb',    'text':'Films'},
     {'value':'type:video max:400Mb',    'text':'Clips'},
     {'value':'type:audio',              'text':'Audio'},
@@ -29,10 +29,9 @@ usertypes = (
 )
 
 conditions = {
-    'all': "",
-    'video': " AND filenames.type = 'video'",
-    'audio': " AND filenames.type = 'audio'",
-    'archive': " AND filenames.type = 'archive'",
+    'video': " AND filenames.type = %(type)s",
+    'audio': " AND filenames.type = %(type)s",
+    'archive': " AND filenames.type = %(type)s",
     'directory': " AND files.sharedir_id > 0"
 }
 
@@ -68,8 +67,9 @@ class QueryParser:
         return self.query
     def sqlwhere(self):
         str = "WHERE filenames.tsname @@ to_tsquery('uguu',%(query)s)"
-        type = self.options.pop("type", "all")
-        str += conditions[type]
+        type = self.options.get("type", "")
+        if type != "":
+            str += conditions[type]
         max = self.options.get("max")
         if max != None:
             str += "AND files.size < %(max)s"
