@@ -18,14 +18,14 @@ usertypes = (
     {'value':'type:video max:400Mb',    'text':'Clips'},
     {'value':'type:audio',              'text':'Audio'},
     {'value':'type:archive',            'text':'Archives'},
-    {'value':'type:directory',          'text':'Directories'}
+    {'value':'type:dir',          'text':'Directories'}
 )
 
 conditions = {
-    'video': " AND filenames.type = %(type)s",
-    'audio': " AND filenames.type = %(type)s",
-    'archive': " AND filenames.type = %(type)s",
-    'directory': " AND files.sharedir_id > 0"
+    'video':    " AND filenames.type = %(type)s",
+    'audio':    " AND filenames.type = %(type)s",
+    'archive':  " AND filenames.type = %(type)s",
+    'dir':      " AND files.sharedir_id > 0"
 }
 
 def size2byte(size):
@@ -53,7 +53,7 @@ class QueryParser:
             self.sqlquery += " paths.tspath ||"
         self.sqlquery += " filenames.tsname @@ to_tsquery('uguu',%(query)s)"
         type = self.options.get("type", "")
-        if type != "":
+        if type != "" and conditions.get(type, "") != "":
             self.sqlquery += conditions[type]
         max = self.options.get("max")
         if max != None:
