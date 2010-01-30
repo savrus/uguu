@@ -89,6 +89,10 @@ struct dt_walker {
 void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir);
 void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir);
 
+/* walker should use the following function to allocate dt_dentry struct */
+struct dt_dentry * dt_alloc();
+void dt_free(struct dt_dentry *d);
+
 #ifdef __cplusplus
 }
 #endif

@@ -14,6 +14,17 @@
 #include "dt.h"
 #include "log.h"
 
+struct dt_dentry * dt_alloc()
+{
+    return (struct dt_dentry *) calloc(1, sizeof(struct dt_dentry));
+}
+
+void dt_free(struct dt_dentry *d)
+{
+    free(d->name);
+    free(d);
+}
+
 static void dt_init_root(struct dt_dentry *root, unsigned int *id)
 {
     root->parent = NULL;
@@ -68,8 +79,7 @@ static void dt_list_print_sum_free(struct dt_dentry *d, struct dt_dentry **c, vo
         dn = dp->sibling;
         printfile(dp);
         d->size += dp->size;
-        free(dp->name);
-        free(dp);
+        dt_free(dp);
     }
 }
 
@@ -91,8 +101,7 @@ static void dt_list_print_free(struct dt_dentry **c, void (*printfile) (struct d
     for (; dp != NULL; dp = dn) {
         dn = dp->sibling;
         printfile(dp);
-        free(dp->name);
-        free(dp);
+        dt_free(dp);
     }
 }
 
@@ -113,8 +122,7 @@ static void dt_list_free(struct dt_dentry **c)
     *c = NULL;
     for (; dp != NULL; dp = dn) {
         dn = dp->sibling;
-        free(dp->name);
-        free(dp);
+        dt_free(dp);
     }
 }
 
@@ -166,27 +174,11 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
     d->items = files + dirs;
 }
 
-static struct dt_dentry * dt_find_dir_sibling(struct dt_dentry *d)
-{
-    LOG_ASSERT((d != NULL) && (d->type == DT_DIR), "Bad arguments\n");
-    if (d->sibling != NULL)
-        LOG_ASSERT(d->sibling->type == DT_DIR, "Not DT_DIR node in DIR tree\n");
-    return d->sibling;
-}
-
-static struct dt_dentry * dt_find_dir_child(struct dt_dentry *d)
-{
-    LOG_ASSERT(d != NULL, "Bad arguments\n");
-    if (d->child != NULL)
-        LOG_ASSERT(d->child->type == DT_DIR, "Not DT_DIR node in DIR tree\n"); 
-    return d->child;
-}
-
 static struct dt_dentry * dt_go_sibling_or_parent(struct dt_walker *wk, struct dt_dentry *d, void *curdir)
 {
     struct dt_dentry *dn = d;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
-    while (((dn = dt_find_dir_sibling(dn)) != NULL)
+    while (((dn = dn->sibling) != NULL)
            && (wk->go(DT_GO_SIBLING, dn->name, curdir) < 0))
         ;
     if (dn == NULL) {
@@ -201,20 +193,19 @@ static struct dt_dentry * dt_go_child(struct dt_walker *wk, struct dt_dentry *d,
 {
     struct dt_dentry *dc;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
-    if ((dc = dt_find_dir_child(d)) == NULL)
+    if ((dc = d->child) == NULL)
         return NULL;
     while ((wk->go(DT_GO_CHILD, dc->name, curdir) < 0)
-           && ((dc = dt_find_dir_sibling(dc)) != NULL))
+           && ((dc = dc->sibling) != NULL))
         ;
     return dc;
 }
 
 static struct dt_dentry * dt_next_sibling_or_parent(struct dt_dentry *d)
 {
-    struct dt_dentry *dc;
     LOG_ASSERT(d != NULL, "Bad arguments\n");
-    if ((dc = dt_find_dir_sibling(d)) != NULL)
-        return dc;
+    if (d->sibling != NULL)
+        return d->sibling;
     else
         return d->parent;
 }
@@ -272,7 +263,7 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
         if (d->stamp == 0) {
             dt_list_print(&(d->child), dt_printfile_full);
             dt_list_print_free(&(d->file_child), dt_printfile_full);
-            if ((dc = dt_find_dir_child(d)) != NULL) {
+            if ((dc = d->child) != NULL) {
                 d->stamp = 1;
                 d = dc;
                 continue;

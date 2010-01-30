@@ -151,9 +151,9 @@ struct dt_dentry * smbwk_readdir(void *curdir)
     if (de == NULL)
         return NULL;
 
-    d = (struct dt_dentry *) calloc(1, sizeof(struct dt_dentry));
+    d = dt_alloc();
     if (d == NULL) {
-        LOG_ERR("calloc() returned NULL\n");
+        LOG_ERR("dt_alloc() returned NULL\n");
         return NULL;
     }
     d->name = strdup(de->name);
