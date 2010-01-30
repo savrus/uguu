@@ -1,0 +1,13 @@
+{% if gobar.nontrivial %}<br><div id="gobar">
+    <table><tr>
+        <td>Page {{gobar.first}} of {{gobar.last}}<td>
+        <td><a href="{{fastself}}&o={{gobar.first}}">first</a></td>
+        {% if gobar.prev %}<td><a href="{{fastself}}&o={{gobar.prev}}">prev</a></td>{% endif %}
+        {% for g in gobar.before %}<td><a href="{{fastself}}&o={{g}}">{{g}}</a></td>{% endfor %}
+        <td>{{gobar.self}}</td>
+        {% for g in gobar.after %}<td><a href="{{fastself}}&o={{g}}">{{g}}</a></td>{% endfor %}
+        {% if gobar.next %}<td><a href="{{fastself}}&o={{gobar.next}}">next</a></td>{% endif %}
+        <td><a href="{{fastself}}&o={{gobar.last}}">last</a></td>
+    </tr></table>
+</div></br>{% endif %}
+
