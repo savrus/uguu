@@ -86,10 +86,13 @@ def scan_line(cursor, share, line):
             else:
                 suf = suffix(name)
                 type = types.get(suf)
+                relax = re.sub(r'\W', ' ', name)
+                relax = re.sub(r'([Ss])(\d+)([Ee])(\d+)',
+                               '\\1\\2\\3\\4 \\2 \\4', relax)
                 cursor.execute("""
                     INSERT INTO filenames (name, type, tsname)
-                    VALUES (%(n)s, %(t)s, to_tsvector('uguu', %(c)s))
-                    """, {'n':name, 't':type, 'c':re.sub(r'\W', ' ', name)})
+                    VALUES (%(n)s, %(t)s, to_tsvector('uguu', %(r)s))
+                    """, {'n':name, 't':type, 'r':relax})
                 cursor.execute("SELECT * FROM lastval()")
                 filename, = cursor.fetchone()
             cursor.execute("""
