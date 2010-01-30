@@ -37,7 +37,7 @@ def suffix(filename):
 
 
 def tsprepare(string):
-    relax = re.sub(r'\W', ' ', string)
+    relax = re.sub(r'\.\,\[\]\(\)\-', ' ', string)
     relax = re.sub(r'([Ss])(\d+)([Ee])(\d+)',
                    '\\1\\2\\3\\4 \\2 \\4', relax)
     return relax
