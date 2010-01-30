@@ -4,7 +4,7 @@
     <table>
         {% for r in results %}
         <tr>
-            <td>{{forloop.counter}}.</td>
+            <td>{{forloop.counter|add:offset}}.</td>
             <td>{{r.state}}</td>
             <td>{{r.type}}</td>
             <td>{{r.size|filesizeformat}}</td>
@@ -13,4 +13,6 @@
         {% endfor %}
     </table>
 </div>
+
+{% include "gobar.html" %}
 
