@@ -14,6 +14,8 @@ db_database = "uguu"
 
 # number of files in file list, shares in share list, etc
 vfs_items_per_page = 10
+# number of search results per page
+search_items_per_page = 10
 
 def connectdb():
     return psycopg2.connect(

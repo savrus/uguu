@@ -10,7 +10,7 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
-from webuguu.common import connectdb, vfs_items_per_page
+from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, search_items_per_page
 
 usertypes = (
     {'value':'',                        'text':'All'},
@@ -40,37 +40,43 @@ class QueryParser:
     def __init__(self, query):
         self.options = dict()
         self.options['query'] = ""
-        for w in re.findall(r'(\w+)(:(?:\w|\d)+)?', query):
+        for w in re.findall(r'(\w+)(:(?:\w|\d)*)?', query):
             if w[1] == "":
                 if self.options['query'] != "":
                     self.options['query'] += " & "
                 self.options['query'] += w[0] + ":*"
             elif w[0] in ['type', 'max', 'min', 'full']:
                 self.options[w[0]] = w[1][1:]
-    def setoption(self, opt, val):
-        self.options[opt] = val
-    def getquery(self):
-        return self.query
-    def sqlwhere(self):
-        str = "WHERE"
-        fullpath = self.options.pop("full","")
+        self.sqlquery = "WHERE"
+        fullpath = self.options.get("full","")
         if fullpath != "":
-            str += " paths.tspath ||"
-        str += " filenames.tsname @@ to_tsquery('uguu',%(query)s)"
+            self.sqlquery += " paths.tspath ||"
+        self.sqlquery += " filenames.tsname @@ to_tsquery('uguu',%(query)s)"
         type = self.options.get("type", "")
         if type != "":
-            str += conditions[type]
+            self.sqlquery += conditions[type]
         max = self.options.get("max")
         if max != None:
-            str += "AND files.size < %(max)s"
+            self.sqlquery += "AND files.size < %(max)s"
             self.options['max'] = size2byte(max)
         min = self.options.get("min")
         if min != None:
-            str += "AND files.size > %(min)s"
+            self.sqlquery += "AND files.size > %(min)s"
             self.options['min'] = size2byte(min)
-        return str
+    def setoption(self, opt, val):
+        self.options[opt] = val
+    def sqlwhere(self):
+        return self.sqlquery
+    def sqlcount(self):
+        str = ""
+        if self.options.get("full", "") != "":
+            str += """
+                JOIN paths ON (files.share_id = paths.share_id
+                AND files.sharepath_id = paths.sharepath_id)
+                """
+        return str + self.sqlquery
     def sqlsubs(self):
-        return self.options 
+        return self.options
 
 
 def search(request):
@@ -92,6 +98,17 @@ def search(request):
         types.append(nt)
     parsedq = QueryParser(query + " " + type)
     cursor.execute("""
+        SELECT count(*) as count
+        FROM filenames
+        JOIN files on (filenames.filename_id = files.filename_id)
+        """ + parsedq.sqlcount(), parsedq.sqlsubs())
+    items = int(cursor.fetchone()['count'])
+    page_offset = int(request.GET.get('o', 0))
+    offset = page_offset * search_items_per_page
+    gobar = generate_go_bar(items, page_offset)
+    parsedq.setoption("offset", offset)
+    parsedq.setoption("limit", search_items_per_page)
+    cursor.execute("""
         SELECT protocol, hostname,
             paths.path AS path, files.sharedir_id AS dirid,
             filenames.name AS filename, files.size AS size, port,
@@ -105,6 +122,7 @@ def search(request):
         """ + parsedq.sqlwhere() + """
         ORDER BY shares.state DESC, files.share_id, files.sharepath_id,
             files.pathfile_id
+        OFFSET %(offset)s LIMIT %(limit)s
         """, parsedq.sqlsubs())
     if cursor.rowcount == 0:
         return render_to_response('search/noresults.html',
@@ -127,10 +145,10 @@ def search(request):
             if row['path'] != "":
                 viewargs.append(row['path'])
             vfs = reverse('webuguu.vfs.views.share', args=viewargs)
-            offset = int(row['fileid']) / vfs_items_per_page
+            vfs_offset = int(row['fileid']) / vfs_items_per_page
             newrow['pathlink'] = vfs + "?" + urlencode(dict(
                 [('s', row['share_id']), ('p', row['path_id'])] +
-                ([('o', offset)] if offset > 0 else []) ))
+                ([('o', vfs_offset)] if vfs_offset > 0 else []) ))
             newrow['filename'] = row['filename']
             if row['dirid'] > 0:
                 newrow['type'] = "<dir>"
@@ -146,7 +164,13 @@ def search(request):
             result.append(newrow)
             del row
         del res
+        fastselflink = "./?" + urlencode(dict([('q', query), ('t', type)]))
         return render_to_response('search/results.html',
-            {'types': types, 'results': result,
-             'query': query})
+            {'query': query,
+             'types': types,
+             'results': result,
+             'offset': offset,
+             'fastself': fastselflink,
+             'gobar': gobar
+             })
 
