@@ -11,6 +11,7 @@ from django.utils.http import urlencode
 from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
+import re
 from webuguu.vfs.views import vfs_items_per_page
 
 db_host = "localhost"
@@ -29,6 +30,7 @@ usertypes = (
 
 conditions = {
     'all': "",
+    'video': "AND filenames.type = 'video'",
     'film': "AND filenames.type = 'video' AND files.size > " + str(300 * 1024 * 1024),
     'clip': "AND filenames.type = 'video' AND files.size < " + str(350 * 1024 * 1024),
     'audio': "AND filenames.type = 'audio'",
@@ -42,6 +44,46 @@ def connectdb():
         "password='{p}' dbname='{d}'".format(
             h=db_host, u=db_user, p=db_password, d=db_database),
         connection_factory=DictConnection)
+
+def size2byte(size):
+    sizenotatios = {'b':1, 'kb':1024, 'mb':1024*1024, 'gb':1024*1024*1024}
+    m =  re.match(r'(\d+)(\w+)', size).groups()
+    s = int(m[0])
+    if m[1]:
+        s *= sizenotatios.get(string.lower(m[1]), 1)
+    return s
+
+class QueryParser:
+    def __init__(self, query):
+        self.options = dict()
+        self.options['query'] = ""
+        for w in re.findall(r'(\w+)(:(?:\w|\d)+)?', query):
+            if w[1] == "":
+                if self.options['query'] != "":
+                    self.options['query'] += " & "
+                self.options['query'] += w[0] + ":*"
+            elif w[0] in ['type', 'max', 'min']:
+                self.options[w[0]] = w[1][1:]
+    def setoption(self, opt, val):
+        self.options[opt] = val
+    def getquery(self):
+        return self.query
+    def sqlwhere(self):
+        str = "WHERE filenames.tsname @@ to_tsquery('uguu',%(query)s)"
+        type = self.options.pop("type", "all")
+        str += conditions[type]
+        max = self.options.get("max")
+        if max != None:
+            str += "AND files.size < %(max)s"
+            self.options['max'] = size2byte(max)
+        min = self.options.get("min")
+        if min != None:
+            str += "AND files.size > %(min)s"
+            self.options['min'] = size2byte(min)
+        return str
+    def sqlsubs(self):
+        return self.options 
+
 
 def search(request):
     try:
@@ -60,6 +102,7 @@ def search(request):
         nt = dict(t)
         nt['selected'] = 'selected="selected"' if nt['value'] == type else ""
         types.append(nt)
+    parsedq = QueryParser(query)
     cursor.execute("""
         SELECT protocol, hostname,
             paths.path AS path, files.sharedir_id AS dirid,
@@ -71,10 +114,9 @@ def search(request):
         JOIN paths ON (files.share_id = paths.share_id
             AND files.sharepath_id = paths.sharepath_id)
         JOIN shares ON (files.share_id = shares.share_id)
-        WHERE filenames.name like %(q)s
-        """ + conditions.get(type, "") + """
+        """ + parsedq.sqlwhere() + """
         ORDER BY files.share_id, files.sharepath_id, files.pathfile_id
-        """, {'q': "%" + query + "%"})
+        """, parsedq.sqlsubs())
     if cursor.rowcount == 0:
         return render_to_response('search/noresults.html',
             {'types': types, 'query': query})

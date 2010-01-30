@@ -49,7 +49,8 @@ def ddl(db):
         CREATE TABLE filenames (
             filename_id BIGSERIAL PRIMARY KEY,
             name text,
-            type varchar(16)
+            type varchar(16),
+            tsname tsvector
         );
         CREATE TABLE files (
             share_id integer,
@@ -78,6 +79,18 @@ def fill(db):
         VALUES (1, 'localnet', 'smb', '127.0.0.1');
         """)
 
+def textsearch(db):
+    cursor = db.cursor()
+    cursor.execute("""
+        CREATE TEXT SEARCH CONFIGURATION public.uguu
+        (COPY = pg_catalog.english);
+
+        ALTER TEXT SEARCH CONFIGURATION uguu
+        ALTER MAPPING for asciiword, numword WITH english_stem;
+        
+        ALTER TEXT SEARCH CONFIGURATION uguu
+        ALTER MAPPING for word WITH russian_stem;
+        """)
 
 try:
     db = psycopg2.connect(
