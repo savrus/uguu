@@ -110,14 +110,15 @@ def search(request):
             paths.path AS path, files.sharedir_id AS dirid,
             filenames.name AS filename, files.size AS size, port,
             shares.share_id, paths.sharepath_id as path_id,
-            files.pathfile_id as fileid
+            files.pathfile_id as fileid, shares.state
         FROM filenames
         JOIN files ON (filenames.filename_id = files.filename_id)
         JOIN paths ON (files.share_id = paths.share_id
             AND files.sharepath_id = paths.sharepath_id)
         JOIN shares ON (files.share_id = shares.share_id)
         """ + parsedq.sqlwhere() + """
-        ORDER BY files.share_id, files.sharepath_id, files.pathfile_id
+        ORDER BY shares.state DESC, files.share_id, files.sharepath_id,
+            files.pathfile_id
         """, parsedq.sqlsubs())
     if cursor.rowcount == 0:
         return render_to_response('search/noresults.html',
@@ -155,6 +156,7 @@ def search(request):
                     urlhost + urlpath + "/" + newrow['filename']
             newrow['path'] = row['protocol'] + "://" + urlhost + urlpath
             newrow['size'] = row['size']
+            newrow['state'] = "online" if row['state'] else "offline"
             result.append(newrow)
             del row
         del res
