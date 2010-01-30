@@ -44,6 +44,7 @@ def ddl(db):
             path text,
             items integer,
             size bigint,
+            tspath tsvector,
             PRIMARY KEY (share_id, sharepath_id)
         );
         CREATE TABLE filenames (

@@ -59,14 +59,18 @@ class QueryParser:
                 if self.options['query'] != "":
                     self.options['query'] += " & "
                 self.options['query'] += w[0] + ":*"
-            elif w[0] in ['type', 'max', 'min']:
+            elif w[0] in ['type', 'max', 'min', 'full']:
                 self.options[w[0]] = w[1][1:]
     def setoption(self, opt, val):
         self.options[opt] = val
     def getquery(self):
         return self.query
     def sqlwhere(self):
-        str = "WHERE filenames.tsname @@ to_tsquery('uguu',%(query)s)"
+        str = "WHERE"
+        fullpath = self.options.pop("full","")
+        if fullpath != "":
+            str += " paths.tspath ||"
+        str += " filenames.tsname @@ to_tsquery('uguu',%(query)s)"
         type = self.options.get("type", "")
         if type != "":
             str += conditions[type]
