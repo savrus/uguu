@@ -10,6 +10,7 @@ import psycopg2
 import sys
 import string
 import subprocess
+import re
 from subprocess import PIPE, STDOUT
 
 db_host = "localhost"
@@ -86,9 +87,9 @@ def scan_line(cursor, share, line):
                 suf = suffix(name)
                 type = types.get(suf)
                 cursor.execute("""
-                    INSERT INTO filenames (name, type)
-                    VALUES (%(n)s, %(t)s)
-                    """, {'n':name, 't':type})
+                    INSERT INTO filenames (name, type, tsname)
+                    VALUES (%(n)s, %(t)s, to_tsvector('uguu', %(c)s))
+                    """, {'n':name, 't':type, 'c':re.sub(r'\W', ' ', name)})
                 cursor.execute("SELECT * FROM lastval()")
                 filename, = cursor.fetchone()
             cursor.execute("""
