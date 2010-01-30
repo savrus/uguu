@@ -40,7 +40,7 @@ class QueryParser:
     def __init__(self, query):
         self.options = dict()
         self.options['query'] = ""
-        for w in re.findall(r'(\w+)(:(?:\w|\d)*)?', query):
+        for w in re.findall(r'(\w+)(:(?:\w|\d)*)?', query, re.U):
             if w[1] == "":
                 if self.options['query'] != "":
                     self.options['query'] += " & "
