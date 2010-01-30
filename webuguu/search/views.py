@@ -4,20 +4,13 @@
 # Read the COPYING file in the root of the source tree.
 #
 
-import psycopg2
-from psycopg2.extras import DictConnection
 from django.http import HttpResponse
 from django.utils.http import urlencode
 from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
-from webuguu.vfs.views import vfs_items_per_page
-
-db_host = "localhost"
-db_user = "postgres"
-db_password = ""
-db_database = "uguu"
+from webuguu.common import connectdb, vfs_items_per_page
 
 usertypes = (
     {'value':'',                        'text':'All'},
@@ -34,13 +27,6 @@ conditions = {
     'archive': " AND filenames.type = %(type)s",
     'directory': " AND files.sharedir_id > 0"
 }
-
-def connectdb():
-    return psycopg2.connect(
-        "host='{h}' user='{u}' " \
-        "password='{p}' dbname='{d}'".format(
-            h=db_host, u=db_user, p=db_password, d=db_database),
-        connection_factory=DictConnection)
 
 def size2byte(size):
     sizenotatios = {'b':1, 'kb':1024, 'mb':1024*1024, 'gb':1024*1024*1024}
