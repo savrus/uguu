@@ -79,12 +79,12 @@ class QueryParser:
         return self.options
 
 
-def search(request):
+def do_search(request, index, searchform):
     try:
         query = request.GET['q']
     except:
-        return render_to_response('search/index.html',
-            {'types': usertypes})
+        return render_to_response(index,
+            {'form': searchform, 'types': usertypes})
     try:
         db = connectdb()
     except:
@@ -126,7 +126,7 @@ def search(request):
         """, parsedq.sqlsubs())
     if cursor.rowcount == 0:
         return render_to_response('search/noresults.html',
-            {'types': types, 'query': query})
+            {'form': searchform, 'types': types, 'query': query})
     else:
         res = cursor.fetchall()
         result = []
@@ -166,11 +166,18 @@ def search(request):
         del res
         fastselflink = "./?" + urlencode(dict([('q', query), ('t', type)]))
         return render_to_response('search/results.html',
-            {'query': query,
+            {'form': searchform,
+             'query': query,
              'types': types,
              'results': result,
              'offset': offset,
              'fastself': fastselflink,
              'gobar': gobar
              })
+
+def search(request):
+    return do_search(request, "search/index.html", "search/searchform.html")
+
+def light(request):
+    return do_search(request, "search/lightindex.html", "search/lightform.html")
 
