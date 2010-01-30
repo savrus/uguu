@@ -1,16 +1,9 @@
 <div id="title">Contents of <a href="{{urlproto}}://{{urlhost}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
 total items: {{ items }}, total size: {{ size|filesizeformat }}</div>
 <br>
-<div id="uplink"><a href="../{{fastup}}">Up</a></div>
-<br>
+<div id="uplink"><a href="../{{fastup}}">go up</a></div>
 <div id="filelist">
     <table>
-        <tr>
-            <td> </td>
-            <td> </td>
-            <td> size </td> 
-            <td> file </td>
-        </tr>
         {% for f in files %}
         <tr>
             <td> {{forloop.counter|add:offset}}. </td>
