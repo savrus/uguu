@@ -14,6 +14,12 @@ db_user = "postgres"
 db_password = ""
 db_database = "uguu"
 
+def drop(db):
+    cursor = db.cursor()
+    cursor.execute("""
+        DROP TABLE IF EXISTS networks, scantypes, shares, paths, filenames, files CASCADE
+    """)
+
 def ddl(db):
     cursor = db.cursor()
     cursor.execute("""
@@ -104,6 +110,7 @@ except:
     print "I am unable to connect to the database, exiting."
     sys.exit()
 
+drop(db)
 ddl(db)
 fill(db)
 db.commit()
