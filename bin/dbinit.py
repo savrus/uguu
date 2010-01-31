@@ -24,8 +24,8 @@ def drop(db):
     cursor = db.cursor()
     cursor.execute("""
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
-        filenames, files CASCADE
-    """)
+            filenames, files CASCADE
+        """)
 
 
 def ddl(db):
