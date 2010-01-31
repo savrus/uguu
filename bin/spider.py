@@ -12,18 +12,7 @@ import string
 import subprocess
 import re
 from subprocess import PIPE, STDOUT
-
-db_host = "localhost"
-db_user = "postgres"
-db_password = ""
-db_database = "uguu"
-
-def connectdb():
-    return psycopg2.connect(
-        "host='%(h)s' user='%(u)s' password='%(p)s' dbname='%(d)s'" \
-            % {'h':db_host, 'u':db_user, 'p':db_password, 'd':db_database},
-        connection_factory=DictConnection)
-
+from common import connectdb
 
 types = dict(
     [(x,'audio') for x in ('mp3', 'ogg', 'vaw', 'flac', 'ape')] +
