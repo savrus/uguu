@@ -14,11 +14,19 @@ db_user = "postgres"
 db_password = ""
 db_database = "uguu"
 
+def connectdb():
+    return psycopg2.connect(
+        "host='%(h)s' user='%(u)s' password='%(p)s' dbname='%(d)s'" \
+            % {'h':db_host, 'u':db_user, 'p':db_password, 'd':db_database},
+        connection_factory=DictConnection)
+
 def drop(db):
     cursor = db.cursor()
     cursor.execute("""
-        DROP TABLE IF EXISTS networks, scantypes, shares, paths, filenames, files CASCADE
+        DROP TABLE IF EXISTS networks, scantypes, shares, paths,
+        filenames, files CASCADE
     """)
+
 
 def ddl(db):
     cursor = db.cursor()
@@ -100,12 +108,7 @@ def textsearch(db):
         """)
 
 try:
-    db = psycopg2.connect(
-        "host='{host}' user='{user}' " \
-        "password='{password}' dbname='{dbname}'".format(
-            host=db_host, user=db_user,
-            password=db_password, dbname=db_database)
-        )
+    db = connectdb()
 except:
     print "I am unable to connect to the database, exiting."
     sys.exit()

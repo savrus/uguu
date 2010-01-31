@@ -19,9 +19,8 @@ search_items_per_page = 10
 
 def connectdb():
     return psycopg2.connect(
-        "host='{h}' user='{u}' " \
-        "password='{p}' dbname='{d}'".format(
-            h=db_host, u=db_user, p=db_password, d=db_database),
+        "host='%(h)s' user='%(u)s' password='%(p)s' dbname='%(d)s'" \
+            % {'h':db_host, 'u':db_user, 'p':db_password, 'd':db_database},
         connection_factory=DictConnection)
 
 

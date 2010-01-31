@@ -18,6 +18,13 @@ db_user = "postgres"
 db_password = ""
 db_database = "uguu"
 
+def connectdb():
+    return psycopg2.connect(
+        "host='%(h)s' user='%(u)s' password='%(p)s' dbname='%(d)s'" \
+            % {'h':db_host, 'u':db_user, 'p':db_password, 'd':db_database},
+        connection_factory=DictConnection)
+
+
 types = dict(
     [(x,'audio') for x in ('mp3', 'ogg', 'vaw', 'flac', 'ape')] +
     [(x,'video') for x in ('mkv', 'avi', 'mp4', 'mov')] +
@@ -132,12 +139,7 @@ def scan_share(db, share_id, host, command):
 
 
 try:
-    db = psycopg2.connect(
-        "host='{host}' user='{user}' " \
-        "password='{password}' dbname='{dbname}'".format(
-            host=db_host, user=db_user,
-            password=db_password, dbname=db_database)
-        )
+    db = connectdb()
 except:
     print "Unable to connect to the database, exiting."
     sys.exit()
