@@ -1,0 +1,11 @@
+List of networks:
+
+<br>
+<table>
+    {% for n in networks %}
+    <tr>
+        <td> {{forloop.counter}}. </td>
+        <td> <a href = "{%url webuguu.vfs.views.network n.network %}"> {{ n.network }} </a></td>
+    </tr>
+    {% endfor %}
+</table>
