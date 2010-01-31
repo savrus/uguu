@@ -7,6 +7,7 @@
 #
 
 import psycopg2
+from psycopg2.extras import DictConnection
 import sys
 import string
 import subprocess
@@ -44,7 +45,7 @@ def suffix(filename):
 
 
 def tsprepare(string):
-    relax = re.sub(r'\.\,\[\]\(\)\-', ' ', string)
+    relax = re.sub(r'\.|\,|\[|\]|\(|\)|\-', ' ', string)
     relax = re.sub(r'([Ss])(\d+)([Ee])(\d+)',
                    '\\1\\2\\3\\4 \\2 \\4', relax)
     return relax
