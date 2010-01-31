@@ -7,6 +7,7 @@
 #
 
 import psycopg2
+from psycopg2.extras import DictConnection
 import sys
 
 db_host = "localhost"
