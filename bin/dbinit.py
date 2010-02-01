@@ -70,6 +70,7 @@ def ddl(db):
         );
         """)
 
+
 def ddl_prog(db):
     cursor = db.cursor()
     cursor.execute("""
@@ -87,6 +88,7 @@ def ddl_prog(db):
             EXECUTE PROCEDURE share_state_change();
 	""")
 
+
 def fill(db):
     cursor = db.cursor()
     cursor.execute("""
@@ -94,11 +96,13 @@ def fill(db):
         VALUES ('localnet');
 
         INSERT INTO scantypes (scan_command)
-        VALUES ('smbscan');
+        VALUES ('smbscan/smbscan');
 
         INSERT INTO shares (scantype_id, network, protocol, hostname)
-        VALUES (1, 'localnet', 'smb', '127.0.0.1');
+        VALUES (1, 'localnet', 'smb', '127.0.0.1'),
+               (1, 'localnet', 'smb', 'localhost');
         """)
+
 
 def textsearch(db):
     cursor = db.cursor()
@@ -112,6 +116,7 @@ def textsearch(db):
         ALTER TEXT SEARCH CONFIGURATION uguu
         ALTER MAPPING for word WITH russian_stem;
         """)
+
 
 try:
     db = connectdb()
