@@ -18,6 +18,10 @@ db_user = "postgres"
 db_password = ""
 db_database = "uguu"
 
+#nmap online checking command and online entry regexp
+nmap_cmd = "nmap -n -sP -PT%(p)s -iL -"
+nmap_online = "^Host (.+?) appears to be up."
+
 def connectdb():
     return psycopg2.connect(
     	host = db_host,
