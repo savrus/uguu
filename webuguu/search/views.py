@@ -29,7 +29,8 @@ conditions = {
 }
 
 def size2byte(size):
-    sizenotatios = {'b':1, 'kb':1024, 'mb':1024*1024, 'gb':1024*1024*1024}
+    sizenotatios = {'b':1, 'k':1024, 'm':1024*1024, 'g':1024*1024*1024,
+                    'kb':1024, 'mb':1024*1024, 'gb':1024*1024*1024}
     m =  re.match(r'(\d+)(\w+)', size).groups()
     s = int(m[0])
     if m[1]:
@@ -40,7 +41,7 @@ class QueryParser:
     def __init__(self, query):
         self.options = dict()
         self.options['query'] = ""
-        for w in re.findall(r'(\w+)(:(?:\w|\d)*)?', query, re.U):
+        for w in re.findall(r'([^\.\,\/\\\[\]\(\)\-\:\;\s]+)(:(?:\w|\d)*)?', query, re.U):
             if w[1] == "":
                 if self.options['query'] != "":
                     self.options['query'] += " & "
