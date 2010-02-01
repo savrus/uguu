@@ -18,9 +18,11 @@ db_user = "postgres"
 db_password = ""
 db_database = "uguu"
 
-#nmap online checking command and online entry regexp
+#nmap online checking command
 nmap_cmd = "nmap -n -sP -PT%(p)s -iL -"
-nmap_online = "^Host (.+?) appears to be up."
+#online entry regexp for nmap output
+nmap_online = "^Host (.+?) appears to be up." # Nmap version 4.62 / Debian Lenny
+#nmap_online = "^Host (.+?) is up" # Nmap version 5.00 / WinNT 5.1
 
 def connectdb():
     return psycopg2.connect(
