@@ -14,6 +14,9 @@ import subprocess
 import re
 from subprocess import PIPE, STDOUT
 
+#TODO: locale specify the scanners output charset.
+locale = "utf-8"
+
 db_host = "localhost"
 db_user = "postgres"
 db_password = ""
@@ -45,8 +48,9 @@ def suffix(filename):
 
 
 def tsprepare(string):
-    relax = re.sub(r'[\.\,\/\\\[\]\(\)\-\:\;]', ' ', string)
-    relax = re.sub(r'([Ss])(\d+)([Ee])(\d+)',
+    relax = unicode(string, locale)
+    relax = re.sub(r'(?u)\W', ' ', relax)
+    relax = re.sub(r'(?u)([Ss])(\d+)([Ee])(\d+)',
                    '\\1\\2\\3\\4 \\2 \\4', relax)
     return relax
 
