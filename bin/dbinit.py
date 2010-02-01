@@ -14,8 +14,8 @@ def drop(db):
     cursor = db.cursor()
     cursor.execute("""
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
-        filenames, files CASCADE
-    """)
+            filenames, files CASCADE
+        """)
 
 
 def ddl(db):
@@ -70,6 +70,22 @@ def ddl(db):
         );
         """)
 
+def ddl_prog(db):
+    cursor = db.cursor()
+    cursor.execute("""
+        CREATE OR REPLACE FUNCTION share_state_change()
+            RETURNS trigger AS
+            $$BEGIN
+                IF NEW.state != OLD.state THEN
+                    NEW.last_state_change = 'now';
+                END IF;
+                RETURN NEW;
+            END;$$
+            LANGUAGE 'plpgsql' VOLATILE COST 100;
+        CREATE TRIGGER share_stage_change_trigger
+            BEFORE UPDATE ON shares FOR EACH ROW
+            EXECUTE PROCEDURE share_state_change();
+	""")
 
 def fill(db):
     cursor = db.cursor()
@@ -105,6 +121,7 @@ except:
 
 drop(db)
 ddl(db)
+ddl_prog(db)
 fill(db)
 db.commit()
 
