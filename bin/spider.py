@@ -11,21 +11,9 @@ import sys
 import string
 import subprocess
 import re
+import socket
 from subprocess import PIPE, STDOUT
-from common import connectdb
-
-#TODO: locale specify the scanners output charset.
-locale = "utf-8"
-
-types = dict(
-    [(x,'audio') for x in ('mp3', 'ogg', 'vaw', 'flac', 'ape')] +
-    [(x,'video') for x in ('mkv', 'avi', 'mp4', 'mov')] +
-    [(x,'document') for x in ('txt', 'doc', 'xls', 'rtf')] +
-    [(x,'archive') for x in ('bz', 'gz', 'bz2', 'tar', 'tbz', 'tgz', 'zip', 'rar', 'arj')] +
-    [(x,'image') for x in ('jpg', 'jpeg', 'gif', 'png', 'bmp', 'tiff')]
-)
-
-path="/home/savrus/devel/uguu/scanners/smbscan"
+from common import connectdb, scanners_locale, scanners_path, filetypes
 
 def suffix(filename):
     dot = filename.rfind(".")
@@ -36,14 +24,14 @@ def suffix(filename):
 
 
 def tsprepare(string):
-    relax = unicode(string, locale)
-    relax = re.sub(r'(?u)\W', ' ', relax)
+    relax = re.sub(r'(?u)\W', ' ', string, re.UNICODE)
     relax = re.sub(r'(?u)([Ss])(\d+)([Ee])(\d+)',
-                   '\\1\\2\\3\\4 \\2 \\4', relax)
+                   '\\1\\2\\3\\4 \\2 \\4', relax, re.UNICODE)
     return relax
 
 
 def scan_line(cursor, share, line):
+    line = unicode(line, scanners_locale)
     if line[0] == "0":
         # 'path' type of line 
         try:
@@ -93,7 +81,7 @@ def scan_line(cursor, share, line):
                 filename, = cursor.fetchone()
             else:
                 suf = suffix(name)
-                type = types.get(suf)
+                type = filetypes.get(suf)
                 cursor.execute("""
                     INSERT INTO filenames (name, type, tsname)
                     VALUES (%(n)s, %(t)s, to_tsvector('uguu', %(r)s))
@@ -116,9 +104,10 @@ def scan_share(db, share_id, host, command):
     cursor = db.cursor()
     cursor.execute("DELETE FROM files WHERE share_id = %(id)s", {'id':share_id})
     cursor.execute("DELETE FROM paths WHERE share_id = %(id)s", {'id':share_id})
-    cmd = path + '/' + command + ' ' + host + ' 2>/dev/null'
+    address = socket.gethostbyname(host)
+    cmd = scanners_path + '/' + command + ' ' + address + ' 2>/dev/null'
     data = subprocess.Popen(cmd, shell=True, stdin=PIPE,
-                            stdout=PIPE, stderr=None, close_fds=True)
+                            stdout=PIPE, stderr=None)
     for line in data.stdout:
         scan_line(cursor, share_id, line.strip('\n'))
     data.stdin.close()
