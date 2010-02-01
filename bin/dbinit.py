@@ -7,19 +7,8 @@
 #
 
 import psycopg2
-from psycopg2.extras import DictConnection
 import sys
-
-db_host = "localhost"
-db_user = "postgres"
-db_password = ""
-db_database = "uguu"
-
-def connectdb():
-    return psycopg2.connect(
-        "host='%(h)s' user='%(u)s' password='%(p)s' dbname='%(d)s'" \
-            % {'h':db_host, 'u':db_user, 'p':db_password, 'd':db_database},
-        connection_factory=DictConnection)
+from common import connectdb
 
 def drop(db):
     cursor = db.cursor()
@@ -81,6 +70,22 @@ def ddl(db):
         );
         """)
 
+def ddl_prog(db):
+    cursor = db.cursor()
+    cursor.execute("""
+        CREATE OR REPLACE FUNCTION share_state_change()
+            RETURNS trigger AS
+            $$BEGIN
+                IF NEW.state != OLD.state THEN
+                    NEW.last_state_change = 'now';
+                END IF;
+                RETURN NEW;
+            END;$$
+            LANGUAGE 'plpgsql' VOLATILE COST 100;
+        CREATE TRIGGER share_stage_change_trigger
+            BEFORE UPDATE ON shares FOR EACH ROW
+            EXECUTE PROCEDURE share_state_change();
+	""")
 
 def fill(db):
     cursor = db.cursor()
@@ -116,6 +121,7 @@ except:
 
 drop(db)
 ddl(db)
+ddl_prog(db)
 fill(db)
 db.commit()
 
