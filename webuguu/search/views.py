@@ -9,22 +9,18 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
-from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, search_items_per_page
+from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, search_items_per_page, usertypes
 
-usertypes = (
-    {'value':'',                        'text':'All'},
-    {'value':'type:video min:300Mb',    'text':'Films'},
-    {'value':'type:video max:400Mb',    'text':'Clips'},
-    {'value':'type:audio',              'text':'Audio'},
-    {'value':'type:archive',            'text':'Archives'},
-    {'value':'type:dir',          'text':'Directories'}
-)
-
+# for types other than recognizable by scanner
 conditions = {
-    'video':    " AND filenames.type = %(type)s",
-    'audio':    " AND filenames.type = %(type)s",
-    'archive':  " AND filenames.type = %(type)s",
     'dir':      " AND files.sharedir_id > 0"
+}
+
+# orders supported by 'order' query extension
+order2query = {
+    'state': "shares.state DESC",
+    'host': "shares.network, shares.netshare_id",
+    'size': "files.size DESC"
 }
 
 def size2byte(size):
@@ -40,12 +36,13 @@ class QueryParser:
     def __init__(self, query):
         self.options = dict()
         self.options['query'] = ""
-        for w in re.findall(r'(?u)(\w+)(:(?:\w|\d|\.)*)?', query):
+        self.order = "shares.state DESC"
+        for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,)*)?', query):
             if w[1] == "":
                 if self.options['query'] != "":
                     self.options['query'] += " & "
                 self.options['query'] += w[0] + ":*"
-            elif w[0] in ['type', 'max', 'min', 'full', 'host', 'proto']:
+            elif w[0] in ['type', 'max', 'min', 'full', 'host', 'proto', 'port', 'net', 'order']:
                 self.options[w[0]] = w[1][1:]
         self.sqlquery = "WHERE"
         fullpath = self.options.get("full","")
@@ -53,8 +50,11 @@ class QueryParser:
             self.sqlquery += " paths.tspath ||"
         self.sqlquery += " filenames.tsname @@ to_tsquery('uguu',%(query)s)"
         type = self.options.get("type", "")
-        if type != "" and conditions.get(type, "") != "":
-            self.sqlquery += conditions[type]
+        if type != "":
+            if conditions.get(type, "") != "":
+                self.sqlquery += conditions[type]
+            else:
+                self.sqlquery += " AND filenames.type = %(type)s"
         max = self.options.get("max")
         if max != None:
             self.sqlquery += " AND files.size < %(max)s"
@@ -69,10 +69,24 @@ class QueryParser:
         proto = self.options.get("proto", "")
         if proto != "":
             self.sqlquery += " AND shares.protocol = %(proto)s"
+        port = self.options.get("port", "")
+        if port != "":
+            self.sqlquery += " AND shares.port = %(port)s"
+        net = self.options.get("net", "")
+        if net != "":
+            self.sqlquery += " AND shares.network = %(net)s"
+        order = self.options.get("order", "")
+        if order != "":
+            orders = [order2query.get(x) for x in string.split(order, ",")]
+            orders = string.join(filter(lambda x: x, orders), ",")
+            if orders != "":
+                self.order = orders
     def setoption(self, opt, val):
         self.options[opt] = val
     def sqlwhere(self):
         return self.sqlquery
+    def sqlorder(self):
+        return self.order
     def sqlcount(self):
         str = ""
         if self.options.get("full", "") != "":
@@ -80,8 +94,10 @@ class QueryParser:
                 JOIN paths ON (files.share_id = paths.share_id
                     AND files.sharepath_id = paths.sharepath_id)
                 """
-        if self.options.get("host", "") != "" or \
-           self.options.get("host", "") != "":
+        if self.options.get("net", "") != "" or \
+           self.options.get("proto", "") != "" or \
+           self.options.get("host", "") != "" or \
+           self.options.get("port", "") != "":
             str += """
                 JOIN shares ON (files.share_id = shares.share_id)
                 """
@@ -132,8 +148,8 @@ def do_search(request, index, searchform):
             AND files.sharepath_id = paths.sharepath_id)
         JOIN shares ON (files.share_id = shares.share_id)
         """ + parsedq.sqlwhere() + """
-        ORDER BY shares.state DESC, files.share_id, files.sharepath_id,
-            files.pathfile_id
+        ORDER BY """ + parsedq.sqlorder() +
+            """, files.share_id, files.sharepath_id, files.pathfile_id
         OFFSET %(offset)s LIMIT %(limit)s
         """, parsedq.sqlsubs())
     if cursor.rowcount == 0:

@@ -4,19 +4,13 @@
 # Read the COPYING file in the root of the source tree.
 #
 
+# database connection settings
 import psycopg2
 from psycopg2.extras import DictConnection
-
 db_host = "localhost"
 db_user = "postgres"
 db_password = ""
 db_database = "uguu"
-
-# number of files in file list, shares in share list, etc
-vfs_items_per_page = 10
-# number of search results per page
-search_items_per_page = 10
-
 def connectdb():
     return psycopg2.connect(
         host = db_host,
@@ -26,6 +20,25 @@ def connectdb():
         connection_factory = DictConnection)
 
 
+# types selectable by user search. 'type:' value corresponds to filetypes
+# table in bin/common.py with single exception for 'type:dir'
+usertypes = (
+    {'value':'',                        'text':'All'},
+    {'value':'type:video min:300Mb',    'text':'Films'},
+    {'value':'type:video max:400Mb',    'text':'Clips'},
+    {'value':'type:audio',              'text':'Audio'},
+    {'value':'type:archive',            'text':'Archives'},
+    {'value':'type:dir',                'text':'Directories'}
+)
+
+
+# number of files in file list, shares in share list, etc
+vfs_items_per_page = 10
+# number of search results per page
+search_items_per_page = 10
+
+
+# gobar generator
 def generate_go_bar(items, offset):
     if items > 0:
         items = items - 1
