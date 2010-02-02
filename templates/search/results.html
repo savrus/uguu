@@ -1,0 +1,22 @@
+{% extends "general.html" %}
+{% block htmltitle %}Search results for {{query}}{% endblock %}
+{% block htmlbody %}
+{% include form %}
+
+<div id="searchresults">
+    <table>
+        {% for r in results %}
+        <tr>
+            <td>{{forloop.counter|add:offset}}.</td>
+            <td>{{r.state}}</td>
+            <td>{{r.type}}</td>
+            <td>{{r.size|filesizeformat}}</td>
+            <td><a href="{{r.pathlink}}">{{r.path}}</a>/<a href="{{r.filelink}}">{{r.filename}}</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+{% include "gobar.html" %}
+{% include "bottominfo.html" %}
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "general.html" %}
+{% block htmltitle %}{{protocol}}://{{urlhost}}{{urlpath}}{% endblock %}
+{% block htmlbody %}
+<div id="title">Contents of <a href="{{urlproto}}://{{urlhost}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
+total items: {{ items }}, total size: {{ size|filesizeformat }}</div>
+<br>
+<div id="uplink"><a href="../{{fastup}}">go up</a></div>
+<div id="filelist">
+    <table>
+        {% for f in files %}
+        <tr>
+            <td> {{forloop.counter|add:offset}}. </td>
+            <td>{% if f.dirid %} &lt;dir&gt; {% endif %}</td>
+            <td> {{ f.size|filesizeformat }} </td> 
+            {% if f.dirid %}
+            <td> <a href = "{{ f.name }}?s={{share_id}}&p={{f.dirid}}"> {{ f.name }} </a></td>
+            {% else %}
+            <td> <a href = "{{urlproto}}://{{urlhost}}{{urlpath}}/{{f.name}}">{{ f.name }}</a> </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+{% include "gobar.html" %}
+
+<br>
+<div id="sharestatus">
+    <a href="{{urlproto}}://{{urlhost}}">{{protocol}}://{{urlhost}}</a>
+    is {{state}} since {{changetime|date:"D d M Y G:i"}}.
+    Last scanned on {{scantime|date:"D d M Y G:i"}}.
+</div>
+{% include "bottominfo.html" %}
+{% endblock %}
