@@ -1,3 +1,6 @@
+{% extends "general.html" %}
+{% block htmltitle %}{{protocol}}://{{urlhost}}{{urlpath}}{% endblock %}
+{% block htmlbody %}
 <div id="title">Contents of <a href="{{urlproto}}://{{urlhost}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
 total items: {{ items }}, total size: {{ size|filesizeformat }}</div>
 <br>
@@ -27,3 +30,5 @@ total items: {{ items }}, total size: {{ size|filesizeformat }}</div>
     is {{state}} since {{changetime|date:"D d M Y G:i"}}.
     Last scanned on {{scantime|date:"D d M Y G:i"}}.
 </div>
+{% include "bottominfo.html" %}
+{% endblock %}

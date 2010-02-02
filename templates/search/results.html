@@ -1,3 +1,6 @@
+{% extends "general.html" %}
+{% block htmltitle %}Search results for {{query}}{% endblock %}
+{% block htmlbody %}
 {% include form %}
 
 <div id="searchresults">
@@ -15,4 +18,5 @@
 </div>
 
 {% include "gobar.html" %}
-
+{% include "bottominfo.html" %}
+{% endblock %}
