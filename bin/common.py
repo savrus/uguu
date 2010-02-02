@@ -43,6 +43,6 @@ default_ports = {'ftp': 21, 'smb': 139}
 #nmap online checking command
 nmap_cmd = "nmap -n -sP -PT%(p)s -iL -"
 #online entry regexp for nmap output
-nmap_online = "^Host (.+?) appears to be up." # Nmap version 4.62 / Debian Lenny
-#nmap_online = "^Host (.+?) is up" # Nmap version 5.00 / WinNT 5.1
+#compatible with Nmap versions 4.62 (Debian Lenny) and 5.00 (WinNT 5.1)
+nmap_online = "^Host (.+?) (?:appears to be|is) up"
 
