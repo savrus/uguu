@@ -13,10 +13,7 @@ import subprocess
 import string
 import re
 from subprocess import PIPE
-from common import connectdb, nmap_cmd, nmap_online
-
-#Default protocols' ports
-default_ports = {'ftp': 21, 'smb': 139}
+from common import connectdb, default_ports, nmap_cmd, nmap_online
 
 def make_dns_cache(db):
     cursor = db.cursor()

@@ -36,6 +36,10 @@ filetypes = dict(
 )
 
 
+#default protocols' ports
+#required by pinger
+default_ports = {'ftp': 21, 'smb': 139}
+
 #nmap online checking command
 nmap_cmd = "nmap -n -sP -PT%(p)s -iL -"
 #online entry regexp for nmap output
