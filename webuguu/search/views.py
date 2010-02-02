@@ -46,7 +46,7 @@ class QueryParser:
                 if self.options['query'] != "":
                     self.options['query'] += " & "
                 self.options['query'] += w[0] + ":*"
-            elif w[0] in ['type', 'max', 'min', 'full']:
+            elif w[0] in ['type', 'max', 'min', 'full', 'host', 'proto']:
                 self.options[w[0]] = w[1][1:]
         self.sqlquery = "WHERE"
         fullpath = self.options.get("full","")
@@ -58,12 +58,18 @@ class QueryParser:
             self.sqlquery += conditions[type]
         max = self.options.get("max")
         if max != None:
-            self.sqlquery += "AND files.size < %(max)s"
+            self.sqlquery += " AND files.size < %(max)s"
             self.options['max'] = size2byte(max)
         min = self.options.get("min")
         if min != None:
-            self.sqlquery += "AND files.size > %(min)s"
+            self.sqlquery += " AND files.size > %(min)s"
             self.options['min'] = size2byte(min)
+        host = self.options.get("host", "")
+        if host != "":
+            self.sqlquery += " AND shares.hostname = %(host)s"
+        proto = self.options.get("proto", "")
+        if proto != "":
+            self.sqlquery += " AND shares.protocol = %(proto)s"
     def setoption(self, opt, val):
         self.options[opt] = val
     def sqlwhere(self):
@@ -73,7 +79,12 @@ class QueryParser:
         if self.options.get("full", "") != "":
             str += """
                 JOIN paths ON (files.share_id = paths.share_id
-                AND files.sharepath_id = paths.sharepath_id)
+                    AND files.sharepath_id = paths.sharepath_id)
+                """
+        if self.options.get("host", "") != "" or \
+           self.options.get("host", "") != "":
+            str += """
+                JOIN shares ON (files.share_id = shares.share_id)
                 """
         return str + self.sqlquery
     def sqlsubs(self):
