@@ -40,14 +40,30 @@ def network(request, network):
             {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     cursor.execute("""
+        SELECT total FROM networks WHERE network = %(n)s
+        """, {'n': network})
+    try:
+        items, = cursor.fetchone()
+    except:
+        return render_to_response('vfs/error.html',
+            {'error':"Unknown network " + network})
+    page_offset = int(request.GET.get('o', 0))
+    page_offset = max(0, min((items - 1)/ vfs_items_per_page, page_offset))
+    offset = page_offset * vfs_items_per_page
+    gobar = generate_go_bar(items, page_offset)
+    cursor.execute("""
         SELECT share_id, size, protocol, hostname, port
         FROM shares
-        WHERE network = %(n)s
-        ORDER BY hostname
-        """, {'n':network})
+        WHERE network = %(n)s AND netshare_id >= %(o)s
+        ORDER BY netshare_id
+        LIMIT %(l)s
+        """, {'n':network, 'o':offset, 'l':vfs_items_per_page})
+    fastselflink = "./?"
     return render_to_response('vfs/network.html', \
         {'shares': cursor.fetchall(),
-         'network': network})
+         'network': network,
+         'fastself': fastselflink,
+         'gobar': gobar})
 
 
 def host(request, proto, hostname):
@@ -58,14 +74,29 @@ def host(request, proto, hostname):
             {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     cursor.execute("""
+        SELECT count(*) FROM shares WHERE hostname = %(h)s
+        """, {'h': hostname})
+    try:
+        items, = cursor.fetchone()
+    except:
+        items = 0
+    page_offset = int(request.GET.get('o', 0))
+    page_offset = max(0, min((items - 1)/ vfs_items_per_page, page_offset))
+    offset = page_offset * vfs_items_per_page
+    gobar = generate_go_bar(items, page_offset)
+    cursor.execute("""
         SELECT share_id, size, network, protocol, hostname, port
         FROM shares
         WHERE hostname = %(n)s
         ORDER BY share_id
-        """, {'n':hostname})
+        OFFSET %(o)s LIMIT %(l)s
+        """, {'n':hostname, 'o':offset, 'l':vfs_items_per_page})
+    fastselflink = "./?"
     return render_to_response('vfs/host.html', \
         {'shares': cursor.fetchall(),
-         'hostname': hostname})
+         'hostname': hostname,
+         'fastself': fastselflink,
+         'gobar': gobar})
 
 
 def share(request, proto, hostname, port, path=""):
