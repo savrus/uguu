@@ -4,7 +4,6 @@
 # Read the COPYING file in the root of the source tree.
 #
 
-from django.http import HttpResponse
 from django.utils.http import urlencode
 from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
@@ -100,7 +99,8 @@ def do_search(request, index, searchform):
     try:
         db = connectdb()
     except:
-        return HttpResponse("Unable to connect to the database.")
+        return render_to_response('search/error.html',
+            {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     type = request.GET.get('t', "")
     types = []
@@ -137,8 +137,9 @@ def do_search(request, index, searchform):
         OFFSET %(offset)s LIMIT %(limit)s
         """, parsedq.sqlsubs())
     if cursor.rowcount == 0:
-        return render_to_response('search/noresults.html',
-            {'form': searchform, 'types': types, 'query': query})
+        return render_to_response('search/error.html',
+            {'form': searchform, 'types': types, 'query': query,
+             'error':"Sorry, nothing found."})
     else:
         res = cursor.fetchall()
         result = []

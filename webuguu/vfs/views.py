@@ -4,7 +4,6 @@
 # Read the COPYING file in the root of the source tree.
 #
 
-from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.utils.http import urlencode
 from django.shortcuts import render_to_response
@@ -16,7 +15,8 @@ def index(request):
     try:
         db = connectdb()
     except:
-        return HttpResponse("Unable to connect to the database.")
+        return render_to_response('vfs/error.html',
+            {'error':"Unable to connect to the database."})
     return render_to_response('vfs/index.html')
 
 
@@ -24,7 +24,8 @@ def net(request):
     try:
         db = connectdb()
     except:
-        return HttpResponse("Unable to connect to the database.")
+        return render_to_response('vfs/error.html',
+            {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     cursor.execute("SELECT network FROM networks")
     return render_to_response('vfs/net.html', \
@@ -35,7 +36,8 @@ def network(request, network):
     try:
         db = connectdb()
     except:
-        return HttpResponse("Unable to connect to the database.")
+        return render_to_response('vfs/error.html',
+            {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     cursor.execute("""
         SELECT share_id, size, protocol, hostname, port
@@ -52,7 +54,8 @@ def host(request, proto, hostname):
     try:
         db = connectdb()
     except:
-        return HttpResponse("Unable to connect to the database.")
+        return render_to_response('vfs/error.html',
+            {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     cursor.execute("""
         SELECT share_id, size, network, protocol, hostname, port
@@ -69,7 +72,8 @@ def share(request, proto, hostname, port, path=""):
     try:
         db = connectdb()
     except:
-        return HttpResponse("Unable to connect to the database.")
+        return render_to_response('vfs/error.html',
+            {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     try:
         share_id = int(request.GET.get('s', 0))
@@ -80,7 +84,8 @@ def share(request, proto, hostname, port, path=""):
         url['path'] = [('p', path_id)]
         url['offset'] = [('o', page_offset)] if page_offset > 0 else []
     except:
-        return HttpResponse("Wrong GET paremeters.")
+        return render_to_response('vfs/error.html',
+            {'error':"Wrong parameters."})
     # detect share
     if share_id != 0:
         cursor.execute("""
@@ -106,9 +111,11 @@ def share(request, proto, hostname, port, path=""):
         try:
             share_id, state, scantime, changetime = cursor.fetchone()
         except:
-            return HttpResponse("Unknown share");
+            return render_to_response('vfs/error.html',
+                {'error':"Unknown share."})
     if scantime == None:
-        return HttpResponse("Sorry, this share hasn't been scanned yet.")
+        return render_to_response('vfs/error.html',
+            {'error':"Sorry, this share hasn't been scanned yet."})
     # detect path
     if path_id != 0:
         redirect_url = "./?" + urlencode(dict(url['share'] + url['offset']))
@@ -132,7 +139,8 @@ def share(request, proto, hostname, port, path=""):
         try:
             path_id, parent_id, parentfile_id, items, size = cursor.fetchone()
         except:
-            return HttpResponse("No such file or directory '" + path + "'")
+            return render_to_response('vfs/error.html',
+                {'error':"No such file or directory: '" + path + "'"})
     # detect offset in file list and fill offset bar
     page_offset = max(0, min((items - 1)/ vfs_items_per_page, page_offset))
     offset = page_offset * vfs_items_per_page
