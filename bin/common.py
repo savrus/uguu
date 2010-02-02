@@ -2,6 +2,7 @@
 # common.py - common functions and setting for all uguu server scripts
 #
 # Copyright (c) 2010, Radist <radist.nt@gmail.com>
+# Copyright (c) 2010, savrus
 # Read the COPYING file in the root of the source tree.
 #
 
