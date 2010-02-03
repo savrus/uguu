@@ -40,7 +40,7 @@ def network(request, network):
             {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     cursor.execute("""
-        SELECT total FROM networks WHERE network = %(n)s
+        SELECT count(*) FROM shares WHERE network = %(n)s
         """, {'n': network})
     try:
         items, = cursor.fetchone()
@@ -54,9 +54,9 @@ def network(request, network):
     cursor.execute("""
         SELECT share_id, size, protocol, hostname, port
         FROM shares
-        WHERE network = %(n)s AND netshare_id >= %(o)s
+        WHERE network = %(n)s
         ORDER BY netshare_id
-        LIMIT %(l)s
+        OFFSET %(o)s LIMIT %(l)s
         """, {'n':network, 'o':offset, 'l':vfs_items_per_page})
     fastselflink = "./?"
     return render_to_response('vfs/network.html', \
