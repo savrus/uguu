@@ -25,7 +25,7 @@ struct smbwk_dir {
     char *share_list;
     int subdir;
     HANDLE find;
-	WIN32_FIND_DATA data;
+    WIN32_FIND_DATA data;
 };
 
 typedef enum {

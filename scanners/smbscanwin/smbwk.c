@@ -183,9 +183,9 @@ struct dt_dentry * smbwk_readdir(void *curdir)
 		while (!d && INVALID_HANDLE_VALUE != c->find) {
 			if (wcscmp(c->data.cFileName, L".") && wcscmp(c->data.cFileName, L"..") &&
 				(len = WideCharToMultiByte(CP_UTF8, 0, c->data.cFileName, -1, NULL, 0, NULL, NULL)) > 0) {
-				d = (struct dt_dentry *)calloc(1, sizeof(struct dt_dentry));
+				d = dt_alloc();
 				if (d == NULL) {
-					LOG_ERR("calloc() returned NULL\n");
+					LOG_ERR("dt_alloc() returned NULL\n");
 					return NULL;
 				}
 				d->type = c->data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY ? DT_DIR : DT_FILE;
@@ -206,9 +206,9 @@ struct dt_dentry * smbwk_readdir(void *curdir)
 			}
 		}
 	} else if (name = smbwk_getshare(c)) {
-		d = (struct dt_dentry *)calloc(1, sizeof(struct dt_dentry));
+		d = dt_alloc();
 		if (d == NULL) {
-			LOG_ERR("calloc() returned NULL\n");
+			LOG_ERR("dt_alloc() returned NULL\n");
 			return NULL;
 		}
 		d->type = DT_DIR;
@@ -296,6 +296,7 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
 	memset(&conn, 0, sizeof(NETRESOURCE));
 	conn.dwDisplayType = RESOURCETYPE_DISK;
 	conn.lpRemoteName = c->url;
+	c->share_list = NULL;
 	switch (WNetAddConnection2(&conn, password, username, 0)) {
 	case NO_ERROR:
 	case ERROR_SESSION_CREDENTIAL_CONFLICT://already connected under other username, let's scan using it
@@ -305,7 +306,6 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
 		smbwk_close(c);
 		return -1;
 	}
-	c->share_list = NULL;
 	if (!(
 		ENUM_SKIP_DOLLAR == enum_hidden_shares ?
 			(int(*)(struct smbwk_dir *, int))smbwk_fillshares :
