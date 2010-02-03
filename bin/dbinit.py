@@ -141,12 +141,12 @@ def ddl_prog(db):
                     RETURN NEW;
                 ELSIF (TG_OP = 'DELETE') THEN
                     UPDATE networks SET total = total - 1
-                        WHERE networks.network = NEW.network;
+                        WHERE networks.network = OLD.network;
                     RETURN OLD;
                 ELSIF (TG_OP = 'UPDATE') THEN
                     IF ( NEW.network != OLD.network ) THEN
                         UPDATE networks SET total = total - 1
-                            WHERE networks.network = NEW.network;
+                            WHERE networks.network = OLD.network;
                         UPDATE networks SET total = total + 1
                             WHERE networks.network = NEW.network;
                     END IF;
