@@ -12,6 +12,7 @@ import socket
 import subprocess
 import string
 import re
+import collections
 from subprocess import PIPE
 from common import connectdb, default_ports, nmap_cmd, nmap_online
 
@@ -19,7 +20,7 @@ def make_dns_cache(db):
     cursor = db.cursor()
     cursor.execute("SELECT DISTINCT(hostname) FROM shares")
     cache = dict([(share[0], socket.gethostbyname(share[0])) for share in cursor.fetchall()])
-    uncache = dict([(item, []) for item in frozenset(cache.values())])
+    uncache = collections.defaultdict(list)
     for (k, v) in cache.iteritems():
         uncache[v].append(k)
     return cache, uncache
