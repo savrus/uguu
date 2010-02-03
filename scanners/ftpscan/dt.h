@@ -29,7 +29,7 @@ struct dt_dentry {
     int stamp;
     unsigned int id;
     unsigned int fid;
-    unsigned int total;
+    unsigned int items;
 };
 
 typedef enum {
@@ -88,6 +88,10 @@ struct dt_walker {
 /* root must have it's type, name and size set */
 void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir);
 void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir);
+
+/* walker should use the following function to allocate dt_dentry struct */
+struct dt_dentry * dt_alloc();
+void dt_free(struct dt_dentry *d);
 
 #ifdef __cplusplus
 }

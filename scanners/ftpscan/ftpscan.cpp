@@ -40,6 +40,9 @@ class CFtpControlEx
 {
 public:
 	CFtpControlEx() : curpath("/"), do_list(true), errors(10) {}
+	~CFtpControlEx() {
+		if (!do_list) FindClose(findinfo);
+	}
 	std::string curpath;
 	bool do_list;
 	FtpFindInfo findinfo;
@@ -61,8 +64,15 @@ public:
 static void TryReconnect(CFtpControlEx *ftp)
 {
 	ftp->Quit();
-	if( !ftp->tryconn() )
+	if( !ftp->tryconn() ) {
+		LOG_ERR("Cannot connect %d.%d.%d.%d:%d\n", 
+			 ftp->ServerIP        & 0xFF,
+			(ftp->ServerIP >>  8) & 0xFF,
+			(ftp->ServerIP >> 16) & 0xFF,
+			 ftp->ServerIP >> 24,
+			 ftp->ServerPORT);
 		throw CFtpControl::NetworkError();
+	}
 	if( !ftp->Logon() ) {
 		LOG_ERR("Cannot logon: %s\n", ftp->GetLastResponse());
 		throw CFtpControl::NetworkError();
@@ -72,7 +82,7 @@ static void TryReconnect(CFtpControlEx *ftp)
 
 static struct dt_dentry *fill_dentry(FtpFindInfo &fi)
 {
-	struct dt_dentry *result = (struct dt_dentry*)calloc(1, sizeof(struct dt_dentry));
+	struct dt_dentry *result = dt_alloc();
 	result->type = fi.Data.flagtrycwd?DT_DIR:DT_FILE;
 	result->name = strdup(fi.Data.name);
 	if( DT_FILE == result->type )
@@ -132,9 +142,14 @@ static struct dt_walker walker = {
 
 static void usage(char *binname, int err)
 {
-	//todo: this should be rewritten
-    fprintf(stderr, "Usage: %s [-f] host_ip\n", binname);
+    fprintf(stderr, "Usage: %s [-l] [-f] [(-c|-C) cp_name] [-P<port>] [-t<timeout>] [-u username] [-p password] host_ip\n", binname);
+    fprintf(stderr, "\t-l\tlookup mode (detect if there is anything available)\n");
     fprintf(stderr, "\t-f\tprint full paths (debug output)\n");
+    fprintf(stderr, "\t-C cp_name\tuse codepage cp_name if server doesn't support utf-8\n");
+    fprintf(stderr, "\t-c cp_name\tforce server codepage to cp_name\n");
+    fprintf(stderr, "\t-P<port>\tuse non-default port for ftp control connection\n");
+    fprintf(stderr, "\t-t<timeout>\t connection timeout in miliseconds\n");
+
     exit(err);
 }
 
@@ -149,43 +164,69 @@ int main(int argc, char *argv[])
 
     struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0};
     CFtpControlEx curdir;
-    bool full = false;
+    bool full = false, lookup = false;
     char *host;
 
-    CFtpControl::DefaultAnsiCP = "cp1251";
+    CFtpControl::DefaultAnsiCP = "latin1";
 
-    //todo: this should be rewritten
-    if (argc < 2)
-        usage(argv[0], EXIT_FAILURE);
-    
-    host = argv[1];
-
-    if (strcmp(argv[1], "-f") == 0) {
-        if (argc < 3)
-            usage(argv[0], EXIT_FAILURE);
-
-        host = argv[2];
-		full = true;
-    }
+	int i = 0;
+	while (++i < argc) {
+		if (argv[i][0] != '-')
+			break;
+		if (argv[i][1] == '-') {
+			i++;
+			break;
+		}
+		switch (argv[i][1]) {
+			case 'l':
+				lookup = true;
+				break;
+			case 'f':
+				full = true;
+				break;
+			case 'C':
+				CFtpControl::DefaultAnsiCP = argv[++i];
+				break;
+			case 'c':
+				curdir.SetConnCP(argv[++i]);
+				break;
+			case 'P':
+				curdir.ServerPORT = atoi(argv[i]+2);
+				break;
+			case 't':
+				curdir.timeouts = atoi(argv[i]+2);
+				break;
+			case 'u':
+				curdir.login = argv[++i];
+				break;
+			case 'p':
+				curdir.pass = argv[++i];//TODO: read from stdin
+				break;
+			default:
+				usage(argv[0], EXIT_FAILURE);
+		}
+	}
+	if (i+1 != argc)
+		usage(argv[0], EXIT_FAILURE);
+	host = argv[i];
 
 	curdir.ServerIP = inet_addr(host);
-	//curdir.ServerPORT;
-	//curdir.login;
-	//curdir.pass;
-	//curdir.timeouts;
-	//curdir.SetConnCP(const char *cpId);
 
 	try {
 		TryReconnect(&curdir);
+		if (lookup) {
+			if (struct dt_dentry *probe = walker.readdir(&curdir))
+				return dt_free(probe), EXIT_SUCCESS;
+			else
+				return EXIT_FAILURE;
+		}
 		if (full)
 			dt_full(&walker, &d, &curdir);
 		else
 			dt_reverse(&walker, &d, &curdir);
 	} catch(const CFtpControl::NetworkError&) {
-		curdir.Quit();
 		return EXIT_FAILURE;
 	}
-	curdir.Quit();
 
     return EXIT_SUCCESS;
 }
