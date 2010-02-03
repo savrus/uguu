@@ -22,7 +22,7 @@ def ddl(db):
     cursor = db.cursor()
     cursor.execute("""
         CREATE TABLE networks (
-            network varchar(32) PRIMARY KEY,
+            network varchar(32) PRIMARY KEY
         );
         CREATE TABLE scantypes (
             scantype_id SERIAL PRIMARY KEY,
