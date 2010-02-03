@@ -32,6 +32,8 @@ int main(int argc, char **argv)
     for (i = 1; i < argc; i++) {
         if (argv[i][0] != '-')
             break;
+        if (argv[i][1] == '-' && argv[i][2] == 0)
+            break;
         switch (argv[i][1]) {
             case 'f':
                 full = 1;
@@ -39,9 +41,8 @@ int main(int argc, char **argv)
             case 'l':
                 lookup = 1;
                 break;
-            case '-':
-                break;
             case 'h':
+                usage(argv[0], EXIT_SUCCESS);
             default:
                 usage(argv[0], EXIT_FAILURE);
         }
