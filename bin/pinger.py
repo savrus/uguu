@@ -19,10 +19,19 @@ def make_dns_cache(db):
     cursor = db.cursor()
     cursor.execute("SELECT DISTINCT(hostname) FROM shares")
     cache = dict([(share[0], socket.gethostbyname(share[0])) for share in cursor.fetchall()])
-    return cache, dict([(v, k) for (k, v) in cache.iteritems()])
+    uncache = dict([(item, []) for item in frozenset(cache.values())])
+    for (k, v) in cache.iteritems():
+        uncache[v].append(k)
+    return cache, uncache
+
+def get_names_list(ips):
+    res = []
+    for ip in ips:
+        res.extend(ip2name[ip])
+    return res
 
 def check_online_shares(hostlist, port):
-    iplist = set([name2ip[host] for host in hostlist])
+    iplist = frozenset([name2ip[host] for host in hostlist])
     nmap = subprocess.Popen(nmap_cmd % {'p': port}, shell=True,
                             stdin=PIPE, stdout=PIPE, stderr=None)
     nmap.stdin.write(string.join(iplist,"\n"))
@@ -35,12 +44,14 @@ def check_online_shares(hostlist, port):
             continue
         online.add(on.group(1))
     nmap.wait()
-    return [ip2name[item] for item in online], [ip2name[item] for item in iplist - online]
+    return get_names_list(online), get_names_list(iplist - online)
 
 def update_shares_state(db, selwhere, port):
     cursor = db.cursor()
     cursor.execute("SELECT share_id, hostname FROM shares WHERE %s" % selwhere)
     itemdict = dict([(row['hostname'], row['share_id']) for row in cursor.fetchall()])
+    if len(itemdict) == 0:
+        return
     online, offline = check_online_shares(itemdict.keys(), port)
     if len(online):
         cursor.execute("UPDATE shares SET state=True  WHERE share_id IN (%s)" % \
