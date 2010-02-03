@@ -22,6 +22,7 @@ static void usage(char *binname, int err)
 int main(int argc, char **argv)
 {
     struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0};
+    struct dt_dentry *probe;
     struct smbwk_dir curdir;
     int full = 0;
     int lookup = 0;
@@ -38,10 +39,15 @@ int main(int argc, char **argv)
             case 'l':
                 lookup = 1;
                 break;
+            case '-':
+                break;
+            case 'h':
+            default:
+                usage(argv[0], EXIT_FAILURE);
         }
     }
     
-    if (i == argc)
+    if (i + 1 != argc)
         usage(argv[0], EXIT_FAILURE);
 
     host = argv[i];
@@ -50,10 +56,10 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
 
     if (lookup) {
-        if (smbwk_walker.readdir(&curdir) != NULL)
-            exit(EXIT_SUCCESS);
-        else
-            exit(EXIT_FAILURE);
+        probe = smbwk_walker.readdir(&curdir);
+        dt_free(probe);
+        smbwk_close(&curdir);
+        return (probe != NULL) ? EXIT_SUCCESS : EXIT_FAILURE;
     }
 
     if (full)
@@ -63,6 +69,6 @@ int main(int argc, char **argv)
 
     smbwk_close(&curdir);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
