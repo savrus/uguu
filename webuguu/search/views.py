@@ -9,7 +9,7 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
-from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes
+from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols
 
 # for types other than recognizable by scanner
 qopt_type = {
@@ -47,7 +47,7 @@ class QueryParser:
                         't':1024*1024*1024*1024, 'tb':1024*1024*1024*1024}
         m =  re.match(r'(?u)(\d+)(\w+)', size, re.UNICODE)
         if m == None:
-            self.error += "Bad size argument '%s'.\n" % size
+            self.error += "Bad size argument: '%s'.\n" % size
             return 0
         m = m.groups()
         s = int(m[0])
@@ -69,7 +69,7 @@ class QueryParser:
             elif t in known_filetypes:
                 common.append(t)
             else:
-                self.error += "Unknown type option argument '%s'.\n" % t
+                self.error += "Unknown type option argument: '%s'.\n" % t
         if len(common) > 0:
             sqlcommon = "filenames.type IN %%(%s)s" % option
             conds.append(sqlcommon)
@@ -88,6 +88,14 @@ class QueryParser:
         args = string.split(arg, ",")
         if option == "port":
             args = [int(x) for x in args]
+        if option == "proto":
+            nargs = []
+            for x in args:
+                if x not in known_protocols:
+                    self.error += "Unknown protocol '%s'.\n" % x
+                else:
+                    nargs.append(x)
+            args = nargs
         if forshare.get(option) == None:
             self.error += "Not aware of query option: '%s'.\n" % option
             return
