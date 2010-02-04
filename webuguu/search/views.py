@@ -16,16 +16,21 @@ conditions = {
     'dir':      "files.sharedir_id > 0"
 }
 
-def size2byte(size):
-    sizenotatios = {'b':1, 'k':1024, 'm':1024*1024, 'g':1024*1024*1024,
-                    'kb':1024, 'mb':1024*1024, 'gb':1024*1024*1024}
-    m =  re.match(r'(?u)(\d+)(\w+)', size, re.UNICODE).groups()
-    s = int(m[0])
-    if m[1]:
-        s *= sizenotatios.get(string.lower(m[1]), 1)
-    return s
 
 class QueryParser:
+    def size2byte(self, size):
+        sizenotatios = {'b':1, 'k':1024, 'm':1024*1024, 'g':1024*1024*1024,
+                        'kb':1024, 'mb':1024*1024, 'gb':1024*1024*1024,
+                        't':1024*1024*1024*1024, 'tb':1024*1024*1024*1024}
+        m =  re.match(r'(?u)(\d+)(\w+)', size, re.UNICODE)
+        if m == None:
+            self.error = "Bad size option '" + size + "'.\n"
+            return 0
+        m = m.groups()
+        s = int(m[0])
+        if m[1]:
+            s *= sizenotatios.get(string.lower(m[1]), 1)
+        return s
     def parse_option_full(self, option, arg):
         self.sqltsquery = " paths.tspath ||" + self.sqltsquery
         self.sqlcount_joinpath = True
@@ -45,7 +50,7 @@ class QueryParser:
     def parse_option_forsize(self, option, arg):
         forsize = {'min':">", 'max':"<"}
         self.sqlcond.append("files.size " + forsize[option] +" %(" + option +")s")
-        self.options[option] = size2byte(arg)
+        self.options[option] = self.size2byte(arg)
     def parse_option_forshare(self, option, arg):
         forshare = {'proto':"protocol", 'host':"hostname",
                     'port':"port", 'net':"network"}
@@ -87,7 +92,7 @@ class QueryParser:
             'proto': self.parse_option_forshare,
             'port':  self.parse_option_forshare,
             'net':   self.parse_option_forshare,
-            'sort': self.parse_option_order,
+            'sort':  self.parse_option_order,
         }
         qext_executed = dict()
         words = []
