@@ -4,6 +4,9 @@
 # Read the COPYING file in the root of the source tree.
 #
 
+import re
+import string
+
 # database connection settings
 import psycopg2
 from psycopg2.extras import DictConnection
@@ -81,4 +84,12 @@ def offset_prepare(request, items, items_per_page):
     gobar = generate_go_bar(items, page_offset)
     return offset, gobar
 
+
+def protocol_prepare(request, protocol):
+    if protocol == "smb":
+        if re.search(r'(?u)windows',
+                string.lower(request.META['HTTP_USER_AGENT']), re.UNICODE):
+            return "file"
+    return protocol
+             
 

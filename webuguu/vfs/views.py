@@ -8,7 +8,7 @@ from django.http import HttpResponseRedirect
 from django.utils.http import urlencode
 from django.shortcuts import render_to_response
 import string
-from webuguu.common import connectdb, vfs_items_per_page, offset_prepare
+from webuguu.common import connectdb, vfs_items_per_page, offset_prepare, protocol_prepare
 
 
 def index(request):
@@ -184,12 +184,7 @@ def share(request, proto, hostname, port, path=""):
         hostname += ":" + port
     if path != "":
         path = "/" + path
-    ##change 'smb' to 'file' here
-    #if proto == "smb":
-    #    urlproto = "file"
-    #else:
-    #    urlproto = proto
-    urlproto = proto
+    urlproto = protocol_prepare(request, proto)
     if parent_id != 0:
         uplink_offset = int(parentfile_id) / vfs_items_per_page
         fastuplink = "?" + urlencode(dict(
