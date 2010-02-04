@@ -43,8 +43,9 @@ def ddl(db):
             port smallint DEFAULT 0,
             state boolean DEFAULT FALSE,
             size bigint DEFAULT 0,
-            last_state_change timestamp,
+            last_state_change timestamp DEFAULT now(),
             last_scan timestamp,
+            next_scan timestamp,
             UNIQUE (protocol, hostname, port)
         );
         CREATE TABLE paths (
