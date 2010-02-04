@@ -12,10 +12,31 @@ import re
 from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, search_items_per_page, usertypes
 
 # for types other than recognizable by scanner
-conditions = {
+qopt_type = {
     'dir':      "files.sharedir_id > 0"
 }
 
+# for ordering query option 
+qopt_order = {
+    'online':   "shares.state DESC",
+    'online.d': "shares.state",
+    'scan':     "shares.last_scan DESC",
+    'scan.d':   "shares.last_scan",
+    'uptime':   "shares.last_state_change",
+    'uptime.d': "shares.last_state_change DESC",
+    'proto':    "shares.protocol",
+    'proto.d':  "shares.protocol DESC",
+    'net':      "shares.network",
+    'net.d':    "shares.network DESC",
+    'host':     "shares.hostname",
+    'host.d':   "shares.hostname DESC",
+    'size':     "files.size DESC",
+    'size.d':   "files.size",
+    'name':     "filenames.name",
+    'name.d':   "filenames.name DESC",
+    'type':     "filenames.type",
+    'type.d':   "filenames.type DESC"
+}
 
 class QueryParser:
     def size2byte(self, size):
@@ -38,8 +59,8 @@ class QueryParser:
         conds = []
         common = []
         for t in string.split(arg, ","):
-            if conditions.get(t):
-                conds.append(conditions[t])
+            if qopt_type.get(t):
+                conds.append(qopt_type[t])
             else:
                 common.append(t)
         if len(common) > 0:
@@ -49,6 +70,9 @@ class QueryParser:
         self.sqlcond.append("(" + string.join(conds, " OR ") + ")")
     def parse_option_forsize(self, option, arg):
         forsize = {'min':">", 'max':"<"}
+        if forsize.get(option) == None:
+            self.error += "Not aware of query option: '" + option + "'.\n"
+            return
         self.sqlcond.append("files.size " + forsize[option] +" %(" + option +")s")
         self.options[option] = self.size2byte(arg)
     def parse_option_forshare(self, option, arg):
@@ -58,23 +82,22 @@ class QueryParser:
         if option == "port":
             args = [int(x) for x in args]
         if forshare.get(option) == None:
-            self.error += "Not aware of query extension: '" + option + "'.\n"
+            self.error += "Not aware of query option: '" + option + "'.\n"
             return
         self.sqlcond.append("shares." + forshare[option] + " IN %(" + option +")s")
         self.options[option] = tuple(args)
         self.sqlcount_joinshares = True
     def parse_option_order(self, option, arg):
-        order2query = {
-            'online': "shares.state DESC",
-            'online.d': "shares.state",
-            'host': "shares.network, shares.hostname",
-            'host.d': "shares.network DESC, shares.hostname DESC",
-            'size': "files.size DESC",
-            'size.d': "files.size"}
-        orders = [order2query.get(x) for x in string.split(arg, ",")]
-        orders = string.join(filter(lambda x: x, orders), ",")
-        if orders != "":
-            self.order = orders
+        orders = []
+        for x in string.split(arg, ","):
+            if qopt_order.get(x):
+                orders.append(qopt_order[x])
+            else:
+                self.error += "Unknown sorting parameter: '" + x + "'.\n"
+        orders = string.join(orders, ",")
+        self.order = orders
+    def parse_option_onlyonce_plug(self, option, arg):
+        self.error += "Query option '" + option + "' appears more than once.\n"
     def __init__(self, query):
         self.options = dict()
         self.order = "shares.state DESC"
@@ -92,25 +115,22 @@ class QueryParser:
             'proto': self.parse_option_forshare,
             'port':  self.parse_option_forshare,
             'net':   self.parse_option_forshare,
-            'sort':  self.parse_option_order,
+            'order': self.parse_option_order,
         }
         qext_executed = dict()
         words = []
         for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,)*)?', query, re.UNICODE):
             if w[1] == "":
                 words.append(w[0] + ":*")
-            elif w[0] in qext.keys():
-                if qext_executed.get(w[0]):
-                    self.error += "Query extension '" + w[0] + "' appears more than once.\n"
-                    continue
+            elif qext.get(w[0]):
                 arg = w[1][1:]
                 if arg != "":
                     qext[w[0]](w[0],arg)
-                    qext_executed[w[0]] = True
+                    qext[w[0]] = self.parse_option_onlyonce_plug
                 else:
-                    self.error += "No arguments for query extension '" + w[0] + "'.\n"
+                    self.error += "No arguments for query option '" + w[0] + "'.\n"
             else:
-                self.error += "Unknown query extension: '" + w[0] + "'.\n"
+                self.error += "Unknown query option: '" + w[0] + "'.\n"
         self.options['query'] = string.join(words, " & ")
         self.sqlcond.append(self.sqltsquery)
         self.sqlquery = "WHERE " + string.join(self.sqlcond, " AND ")
@@ -132,7 +152,7 @@ class QueryParser:
                 JOIN shares ON (files.share_id = shares.share_id)
                 """
         return str + self.sqlquery
-    def sqlsubs(self):
+    def getoptions(self):
         return self.options
     def geterror(self):
         return self.error
@@ -165,7 +185,7 @@ def do_search(request, index, searchform):
         SELECT count(*) as count
         FROM filenames
         JOIN files on (filenames.filename_id = files.filename_id)
-        """ + parsedq.sqlcount(), parsedq.sqlsubs())
+        """ + parsedq.sqlcount(), parsedq.getoptions())
     items = int(cursor.fetchone()['count'])
     page_offset = int(request.GET.get('o', 0))
     offset = page_offset * search_items_per_page
@@ -187,7 +207,7 @@ def do_search(request, index, searchform):
         ORDER BY """ + parsedq.sqlorder() +
             """, files.share_id, files.sharepath_id, files.pathfile_id
         OFFSET %(offset)s LIMIT %(limit)s
-        """, parsedq.sqlsubs())
+        """, parsedq.getoptions())
     if cursor.rowcount == 0:
         return render_to_response('search/error.html',
             {'form': searchform, 'types': types, 'query': query,
