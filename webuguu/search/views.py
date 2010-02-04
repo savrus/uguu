@@ -13,74 +13,102 @@ from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, searc
 
 # for types other than recognizable by scanner
 conditions = {
-    'dir':      " AND files.sharedir_id > 0"
-}
-
-# orders supported by 'order' query extension
-order2query = {
-    'state': "shares.state DESC",
-    'host': "shares.network, shares.netshare_id",
-    'size': "files.size DESC"
+    'dir':      "files.sharedir_id > 0"
 }
 
 def size2byte(size):
     sizenotatios = {'b':1, 'k':1024, 'm':1024*1024, 'g':1024*1024*1024,
                     'kb':1024, 'mb':1024*1024, 'gb':1024*1024*1024}
-    m =  re.match(r'(\d+)(\w+)', size).groups()
+    m =  re.match(r'(?u)(\d+)(\w+)', size, re.UNICODE).groups()
     s = int(m[0])
     if m[1]:
         s *= sizenotatios.get(string.lower(m[1]), 1)
     return s
 
 class QueryParser:
+    def parse_option_full(self, option, arg):
+        self.sqltsquery = " paths.tspath ||" + self.sqltsquery
+        self.sqlcount_joinpath = True
+    def parse_option_type(self, option, arg):
+        conds = []
+        common = []
+        for t in string.split(arg, ","):
+            if conditions.get(t):
+                conds.append(conditions[t])
+            else:
+                common.append(t)
+        if len(common) > 0:
+            sqlcommon = "filenames.type IN %(" + option +")s"
+            conds.append(sqlcommon)
+            self.options[option] = tuple(common)
+        self.sqlcond.append("(" + string.join(conds, " OR ") + ")")
+    def parse_option_forsize(self, option, arg):
+        forsize = {'min':">", 'max':"<"}
+        self.sqlcond.append("files.size " + forsize[option] +" %(" + option +")s")
+        self.options[option] = size2byte(arg)
+    def parse_option_forshare(self, option, arg):
+        forshare = {'proto':"protocol", 'host':"hostname",
+                    'port':"port", 'net':"network"}
+        args = string.split(arg, ",")
+        if option == "port":
+            args = [int(x) for x in args]
+        if forshare.get(option) == None:
+            self.error += "Not aware of query extension: '" + option + "'.\n"
+            return
+        self.sqlcond.append("shares." + forshare[option] + " IN %(" + option +")s")
+        self.options[option] = tuple(args)
+        self.sqlcount_joinshares = True
+    def parse_option_order(self, option, arg):
+        order2query = {
+            'online': "shares.state DESC",
+            'online.d': "shares.state",
+            'host': "shares.network, shares.hostname",
+            'host.d': "shares.network DESC, shares.hostname DESC",
+            'size': "files.size DESC",
+            'size.d': "files.size"}
+        orders = [order2query.get(x) for x in string.split(arg, ",")]
+        orders = string.join(filter(lambda x: x, orders), ",")
+        if orders != "":
+            self.order = orders
     def __init__(self, query):
         self.options = dict()
-        self.options['query'] = ""
         self.order = "shares.state DESC"
-        for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,)*)?', query):
+        self.error = ""
+        self.sqltsquery = " filenames.tsname @@ to_tsquery('uguu',%(query)s)"
+        self.sqlcond = []
+        self.sqlcount_joinpath = False;
+        self.sqlcount_joinshares = False;
+        qext = {
+            'type':  self.parse_option_type,
+            'max':   self.parse_option_forsize,
+            'min':   self.parse_option_forsize,
+            'full':  self.parse_option_full,
+            'host':  self.parse_option_forshare,
+            'proto': self.parse_option_forshare,
+            'port':  self.parse_option_forshare,
+            'net':   self.parse_option_forshare,
+            'sort': self.parse_option_order,
+        }
+        qext_executed = dict()
+        words = []
+        for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,)*)?', query, re.UNICODE):
             if w[1] == "":
-                if self.options['query'] != "":
-                    self.options['query'] += " & "
-                self.options['query'] += w[0] + ":*"
-            elif w[0] in ['type', 'max', 'min', 'full', 'host', 'proto', 'port', 'net', 'order']:
-                self.options[w[0]] = w[1][1:]
-        self.sqlquery = "WHERE"
-        fullpath = self.options.get("full","")
-        if fullpath != "":
-            self.sqlquery += " paths.tspath ||"
-        self.sqlquery += " filenames.tsname @@ to_tsquery('uguu',%(query)s)"
-        type = self.options.get("type", "")
-        if type != "":
-            if conditions.get(type, "") != "":
-                self.sqlquery += conditions[type]
+                words.append(w[0] + ":*")
+            elif w[0] in qext.keys():
+                if qext_executed.get(w[0]):
+                    self.error += "Query extension '" + w[0] + "' appears more than once.\n"
+                    continue
+                arg = w[1][1:]
+                if arg != "":
+                    qext[w[0]](w[0],arg)
+                    qext_executed[w[0]] = True
+                else:
+                    self.error += "No arguments for query extension '" + w[0] + "'.\n"
             else:
-                self.sqlquery += " AND filenames.type = %(type)s"
-        max = self.options.get("max")
-        if max != None:
-            self.sqlquery += " AND files.size < %(max)s"
-            self.options['max'] = size2byte(max)
-        min = self.options.get("min")
-        if min != None:
-            self.sqlquery += " AND files.size > %(min)s"
-            self.options['min'] = size2byte(min)
-        host = self.options.get("host", "")
-        if host != "":
-            self.sqlquery += " AND shares.hostname = %(host)s"
-        proto = self.options.get("proto", "")
-        if proto != "":
-            self.sqlquery += " AND shares.protocol = %(proto)s"
-        port = self.options.get("port", "")
-        if port != "":
-            self.sqlquery += " AND shares.port = %(port)s"
-        net = self.options.get("net", "")
-        if net != "":
-            self.sqlquery += " AND shares.network = %(net)s"
-        order = self.options.get("order", "")
-        if order != "":
-            orders = [order2query.get(x) for x in string.split(order, ",")]
-            orders = string.join(filter(lambda x: x, orders), ",")
-            if orders != "":
-                self.order = orders
+                self.error += "Unknown query extension: '" + w[0] + "'.\n"
+        self.options['query'] = string.join(words, " & ")
+        self.sqlcond.append(self.sqltsquery)
+        self.sqlquery = "WHERE " + string.join(self.sqlcond, " AND ")
     def setoption(self, opt, val):
         self.options[opt] = val
     def sqlwhere(self):
@@ -89,22 +117,20 @@ class QueryParser:
         return self.order
     def sqlcount(self):
         str = ""
-        if self.options.get("full", "") != "":
+        if self.sqlcount_joinpath:
             str += """
                 JOIN paths ON (files.share_id = paths.share_id
                     AND files.sharepath_id = paths.sharepath_id)
                 """
-        if self.options.get("net", "") != "" or \
-           self.options.get("proto", "") != "" or \
-           self.options.get("host", "") != "" or \
-           self.options.get("port", "") != "":
+        if self.sqlcount_joinshares:
             str += """
                 JOIN shares ON (files.share_id = shares.share_id)
                 """
         return str + self.sqlquery
     def sqlsubs(self):
         return self.options
-
+    def geterror(self):
+        return self.error
 
 def do_search(request, index, searchform):
     try:
@@ -116,7 +142,8 @@ def do_search(request, index, searchform):
         db = connectdb()
     except:
         return render_to_response('search/error.html',
-            {'error':"Unable to connect to the database."})
+            {'form': searchform, 'types': types, 'query': query,
+             'error':"Unable to connect to the database."})
     cursor = db.cursor()
     type = request.GET.get('t', "")
     types = []
@@ -125,6 +152,10 @@ def do_search(request, index, searchform):
         nt['selected'] = 'selected="selected"' if nt['value'] == type else ""
         types.append(nt)
     parsedq = QueryParser(query + " " + type)
+    if parsedq.geterror() != "":
+        return render_to_response('search/error.html',
+            {'form': searchform, 'types': types, 'query': query,
+             'error': parsedq.geterror()})
     cursor.execute("""
         SELECT count(*) as count
         FROM filenames
