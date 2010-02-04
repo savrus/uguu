@@ -8,19 +8,25 @@
 
 import psycopg2
 import sys
-from common import connectdb
+from common import connectdb, known_filetypes, known_protocols
 
 def drop(db):
     cursor = db.cursor()
     cursor.execute("""
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
-            filenames, files CASCADE
+            filenames, files CASCADE;
+        DROP FUNCTION IF EXISTS share_state_change() CASCADE;
+        DROP TYPE IF EXISTS filetype, proto CASCADE;
+        DROP TEXT SEARCH CONFIGURATION IF EXISTS uguu CASCADE;
+        DROP LANGUAGE IF EXISTS 'plpgsql' CASCADE;
         """)
 
 
 def ddl(db):
     cursor = db.cursor()
     cursor.execute("""
+        CREATE TYPE filetype AS ENUM %(filetypes)s;
+        CREATE TYPE proto AS ENUM %(protocols)s;
         CREATE TABLE networks (
             network varchar(32) PRIMARY KEY
         );
@@ -32,7 +38,7 @@ def ddl(db):
             share_id SERIAL PRIMARY KEY,
             scantype_id integer REFERENCES scantypes ON DELETE RESTRICT,
             network varchar(32) REFERENCES networks ON DELETE CASCADE,
-            protocol varchar(8) NOT NULL,
+            protocol proto NOT NULL,
             hostname varchar(64) NOT NULL,
             port smallint DEFAULT 0,
             state boolean DEFAULT FALSE,
@@ -55,7 +61,7 @@ def ddl(db):
         CREATE TABLE filenames (
             filename_id BIGSERIAL PRIMARY KEY,
             name text NOT NULL,
-            type varchar(16),
+            type filetype,
             tsname tsvector
         );
         CREATE TABLE files (
@@ -69,13 +75,15 @@ def ddl(db):
                 ON DELETE CASCADE,
             PRIMARY KEY (share_id, sharepath_id, pathfile_id)
         );
-        """)
+        """, {'filetypes': known_filetypes,
+              'protocols': known_protocols})
 
 # Warning: you may need to execute
 # "CREATE LANGUAGE 'plpgsql';" before calling this
 def ddl_prog(db):
     cursor = db.cursor()
     cursor.execute("""
+        CREATE LANGUAGE 'plpgsql'; 
         CREATE OR REPLACE FUNCTION share_state_change()
             RETURNS trigger AS
             $$BEGIN
@@ -109,7 +117,7 @@ def fill(db):
 def textsearch(db):
     cursor = db.cursor()
     cursor.execute("""
-        CREATE TEXT SEARCH CONFIGURATION public.uguu
+        CREATE TEXT SEARCH CONFIGURATION uguu
         (COPY = pg_catalog.english);
 
         ALTER TEXT SEARCH CONFIGURATION uguu
@@ -130,5 +138,6 @@ drop(db)
 ddl(db)
 ddl_prog(db)
 fill(db)
+textsearch(db)
 db.commit()
 
