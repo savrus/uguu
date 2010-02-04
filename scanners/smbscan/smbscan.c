@@ -27,7 +27,7 @@ int main(int argc, char **argv)
     struct smbwk_dir curdir;
     int full = 0;
     int lookup = 0;
-    int skip_bucks;
+    int skip_bucks = 0;
     char *host;
     int i;
 
