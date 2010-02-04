@@ -9,7 +9,7 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
-from webuguu.common import connectdb, offset_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols
+from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols
 
 # for types other than recognizable by scanner
 qopt_type = {
@@ -237,12 +237,7 @@ def do_search(request, index, searchform):
             urlpath = "/" + row['path'] if row['path'] != "" else ""
             urlhost = row['hostname']
             urlhost += ":" + str(row['port']) if row['port'] != 0 else ""
-            ##change 'smb' to 'file' here
-            #if row['protocol'] == "smb":
-            #    urlproto = "file"
-            #else:
-            #    urlproto = row['protocol']
-            urlproto = row['protocol']
+            urlproto = protocol_prepare(request, row['protocol'])
             viewargs = [row['protocol'], row['hostname'], row['port']]
             if row['path'] != "":
                 viewargs.append(row['path'])
