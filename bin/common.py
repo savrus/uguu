@@ -73,3 +73,9 @@ nmap_cmd = "nmap -n -sP -PT%(p)s -iL -"
 #compatible with Nmap versions 4.62 (Debian Lenny) and 5.00 (WinNT 5.1)
 nmap_online = "^Host (.+?) (?:appears to be|is) up"
 
+
+# Time period to wait until next scan
+# required by spider.py
+#wait_until_next_scan = "6 hour"
+wait_until_next_scan = "10 second"
+
