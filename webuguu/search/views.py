@@ -9,7 +9,7 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
-from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols
+from webuguu.common import connectdb, offset_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols
 
 # for types other than recognizable by scanner
 qopt_type = {
@@ -206,9 +206,7 @@ def do_search(request, index, searchform):
         JOIN files on (filenames.filename_id = files.filename_id)
         """ + parsedq.sqlcount(), parsedq.getoptions())
     items = int(cursor.fetchone()['count'])
-    page_offset = int(request.GET.get('o', 0))
-    offset = page_offset * search_items_per_page
-    gobar = generate_go_bar(items, page_offset)
+    offset, gobar = offset_prepare(request, items, search_items_per_page)
     parsedq.setoption("offset", offset)
     parsedq.setoption("limit", search_items_per_page)
     cursor.execute("""
