@@ -8,7 +8,7 @@ from django.http import HttpResponseRedirect
 from django.utils.http import urlencode
 from django.shortcuts import render_to_response
 import string
-from webuguu.common import connectdb, vfs_items_per_page, generate_go_bar
+from webuguu.common import connectdb, vfs_items_per_page, offset_prepare
 
 
 def index(request):
@@ -47,10 +47,7 @@ def network(request, network):
     except:
         return render_to_response('vfs/error.html',
             {'error':"Unknown network " + network})
-    page_offset = int(request.GET.get('o', 0))
-    page_offset = max(0, min((items - 1)/ vfs_items_per_page, page_offset))
-    offset = page_offset * vfs_items_per_page
-    gobar = generate_go_bar(items, page_offset)
+    offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     cursor.execute("""
         SELECT share_id, size, protocol, hostname, port
         FROM shares
@@ -80,10 +77,7 @@ def host(request, proto, hostname):
         items, = cursor.fetchone()
     except:
         items = 0
-    page_offset = int(request.GET.get('o', 0))
-    page_offset = max(0, min((items - 1)/ vfs_items_per_page, page_offset))
-    offset = page_offset * vfs_items_per_page
-    gobar = generate_go_bar(items, page_offset)
+    offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     cursor.execute("""
         SELECT share_id, size, network, protocol, hostname, port
         FROM shares
@@ -173,9 +167,7 @@ def share(request, proto, hostname, port, path=""):
             return render_to_response('vfs/error.html',
                 {'error':"No such file or directory: '" + path + "'"})
     # detect offset in file list and fill offset bar
-    page_offset = max(0, min((items - 1)/ vfs_items_per_page, page_offset))
-    offset = page_offset * vfs_items_per_page
-    gobar = generate_go_bar(items, page_offset)
+    offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     # get file list
     cursor.execute("""
         SELECT sharedir_id AS dirid, size, name

@@ -73,3 +73,12 @@ def generate_go_bar(items, offset):
     go['after'] = range(offset + 1, right + 1)
     return go
 
+
+def offset_prepare(request, items, items_per_page):
+    page_offset = int(request.GET.get('o', 0))
+    page_offset = max(0, min((items - 1)/ items_per_page, page_offset))
+    offset = page_offset * vfs_items_per_page
+    gobar = generate_go_bar(items, page_offset)
+    return offset, gobar
+
+
