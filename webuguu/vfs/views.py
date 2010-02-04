@@ -55,7 +55,7 @@ def network(request, network):
         SELECT share_id, size, protocol, hostname, port
         FROM shares
         WHERE network = %(n)s
-        ORDER BY netshare_id
+        ORDER BY hostname
         OFFSET %(o)s LIMIT %(l)s
         """, {'n':network, 'o':offset, 'l':vfs_items_per_page})
     fastselflink = "./?"
