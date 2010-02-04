@@ -21,10 +21,11 @@ struct smbwk_dir {
     size_t url_len;
     int fd;
     int fd_real;
+    int skip_bucks;
 };
 
 /* initialise the walker */
-int smbwk_open(struct smbwk_dir *c, char *host);
+int smbwk_open(struct smbwk_dir *c, char *host, int skip_bucks);
 /* close the walker */
 int smbwk_close(struct smbwk_dir *c);
 
