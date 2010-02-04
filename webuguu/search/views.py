@@ -34,8 +34,8 @@ qopt_order = {
     'size.d':   "files.size",
     'name':     "filenames.name",
     'name.d':   "filenames.name DESC",
-    'type':     "filenames.type",
-    'type.d':   "filenames.type DESC"
+    'type':     "filenames.type DESC",
+    'type.d':   "filenames.type"
 }
 
 class QueryParser:
