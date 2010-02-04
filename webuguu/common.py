@@ -20,6 +20,9 @@ def connectdb():
         connection_factory = DictConnection)
 
 
+
+# this must be the same as in bin/common.py
+known_filetypes = ( 'audio', 'video', 'document', 'archive', 'image')
 # types selectable by user search. 'type:' value corresponds to filetypes
 # table in bin/common.py with single exception for 'type:dir'
 usertypes = (

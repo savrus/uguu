@@ -9,7 +9,7 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
-from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, search_items_per_page, usertypes
+from webuguu.common import connectdb, generate_go_bar, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes
 
 # for types other than recognizable by scanner
 qopt_type = {
@@ -35,7 +35,9 @@ qopt_order = {
     'name':     "filenames.name",
     'name.d':   "filenames.name DESC",
     'type':     "filenames.type DESC",
-    'type.d':   "filenames.type"
+    'type.d':   "filenames.type",
+    'sharesize':     "shares.size DESC",
+    'sharesize.d':   "shares.size",
 }
 
 class QueryParser:
@@ -45,7 +47,7 @@ class QueryParser:
                         't':1024*1024*1024*1024, 'tb':1024*1024*1024*1024}
         m =  re.match(r'(?u)(\d+)(\w+)', size, re.UNICODE)
         if m == None:
-            self.error = "Bad size option '" + size + "'.\n"
+            self.error += "Bad size argument '%s'.\n" % size
             return 0
         m = m.groups()
         s = int(m[0])
@@ -53,27 +55,32 @@ class QueryParser:
             s *= sizenotatios.get(string.lower(m[1]), 1)
         return s
     def parse_option_full(self, option, arg):
-        self.sqltsquery = " paths.tspath ||" + self.sqltsquery
-        self.sqlcount_joinpath = True
+        if arg.lower() in ["yes", "true", "y", "t", "1"]:
+            self.sqltsquery = " paths.tspath ||" + self.sqltsquery
+            self.sqlcount_joinpath = True
+        elif arg.lower() not in ["no", "false", "n", "f", "0"]:
+            self.error += "Unsupported full option argument: '%s'.\n" % arg
     def parse_option_type(self, option, arg):
         conds = []
         common = []
         for t in string.split(arg, ","):
             if qopt_type.get(t):
                 conds.append(qopt_type[t])
-            else:
+            elif t in known_filetypes:
                 common.append(t)
+            else:
+                self.error += "Unknown type option argument '%s'.\n" % t
         if len(common) > 0:
-            sqlcommon = "filenames.type IN %(" + option +")s"
+            sqlcommon = "filenames.type IN %%(%s)s" % option
             conds.append(sqlcommon)
             self.options[option] = tuple(common)
         self.sqlcond.append("(" + string.join(conds, " OR ") + ")")
     def parse_option_forsize(self, option, arg):
         forsize = {'min':">", 'max':"<"}
         if forsize.get(option) == None:
-            self.error += "Not aware of query option: '" + option + "'.\n"
+            self.error += "Not aware of query option: '%s'.\n" % option
             return
-        self.sqlcond.append("files.size " + forsize[option] +" %(" + option +")s")
+        self.sqlcond.append("files.size %s %%(%s)s" % (forsize[option],option))
         self.options[option] = self.size2byte(arg)
     def parse_option_forshare(self, option, arg):
         forshare = {'proto':"protocol", 'host':"hostname",
@@ -82,9 +89,9 @@ class QueryParser:
         if option == "port":
             args = [int(x) for x in args]
         if forshare.get(option) == None:
-            self.error += "Not aware of query option: '" + option + "'.\n"
+            self.error += "Not aware of query option: '%s'.\n" % option
             return
-        self.sqlcond.append("shares." + forshare[option] + " IN %(" + option +")s")
+        self.sqlcond.append("shares.%s IN %%(%s)s" % (forshare[option],option))
         self.options[option] = tuple(args)
         self.sqlcount_joinshares = True
     def parse_option_order(self, option, arg):
@@ -93,11 +100,11 @@ class QueryParser:
             if qopt_order.get(x):
                 orders.append(qopt_order[x])
             else:
-                self.error += "Unknown sorting parameter: '" + x + "'.\n"
+                self.error += "Unknown sorting parameter: '%s'.\n" % x
         orders = string.join(orders, ",")
         self.order = orders
     def parse_option_onlyonce_plug(self, option, arg):
-        self.error += "Query option '" + option + "' appears more than once.\n"
+        self.error += "Query option '%s' appears more than once.\n" % option
     def __init__(self, query):
         self.options = dict()
         self.order = "shares.state DESC"
@@ -128,9 +135,9 @@ class QueryParser:
                     qext[w[0]](w[0],arg)
                     qext[w[0]] = self.parse_option_onlyonce_plug
                 else:
-                    self.error += "No arguments for query option '" + w[0] + "'.\n"
+                    self.error += "No arguments for query option '%s'.\n" % w[0]
             else:
-                self.error += "Unknown query option: '" + w[0] + "'.\n"
+                self.error += "Unknown query option: '%s'.\n" % w[0]
         self.options['query'] = string.join(words, " & ")
         self.sqlcond.append(self.sqltsquery)
         self.sqlquery = "WHERE " + string.join(self.sqlcond, " AND ")
