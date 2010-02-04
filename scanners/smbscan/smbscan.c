@@ -32,8 +32,10 @@ int main(int argc, char **argv)
     for (i = 1; i < argc; i++) {
         if (argv[i][0] != '-')
             break;
-        if (argv[i][1] == '-' && argv[i][2] == 0)
+        if (argv[i][1] == '-' && argv[i][2] == 0) {
+            i++;
             break;
+        }
         switch (argv[i][1]) {
             case 'f':
                 full = 1;
