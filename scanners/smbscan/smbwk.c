@@ -69,7 +69,7 @@ void smbwk_auth(const char *srv,
 {
 }
 
-int smbwk_open(struct smbwk_dir *c, char *host)
+int smbwk_open(struct smbwk_dir *c, char *host, int skip_bucks)
 {
     if (strnlen(host, SMBWK_PATH_MAX_LEN) > SMBWK_PATH_MAX_LEN - 10) {
         LOG_ERR("bad argument. host is too long\n");
@@ -110,6 +110,8 @@ int smbwk_open(struct smbwk_dir *c, char *host)
     }
     c->fd_real = 1;
 
+    c->skip_bucks = skip_bucks;
+
     return 1;
 }
 
@@ -143,6 +145,10 @@ struct dt_dentry * smbwk_readdir(void *curdir)
     while ((de = smbc_readdir(c->fd)) != NULL) {
         if (!strcmp(de->name,".") || !strcmp(de->name,".."))
            continue;
+        if (c->skip_bucks 
+            && strlen(de->name) > 0
+            && de->name[strlen(de->name) - 1] == '$')
+            continue;
         if ((de->smbc_type == SMBC_FILE_SHARE)
             || (de->smbc_type == SMBC_DIR)
             || (de->smbc_type == SMBC_FILE))
@@ -234,6 +240,7 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
     
     c->fd = fd;
     c->fd_real = fd_real;
+    c->skip_bucks = 0;
     return 1;
 }
 
