@@ -16,12 +16,15 @@
 
 static void usage(wchar_t *binname, int err)
 {
+    wchar_t *bin = wcsrchr(binname, L'\\');
+    if (bin) binname = bin + 1;
 	setlocale(LC_ALL, ".OCP");
-	fprintf(stderr, "Usage: %S [-l] [-f] [-u username] [-p password] [-a|-h] host\n", binname);
+	fprintf(stderr, "Usage: %S [-l] [-f] [-u username] [-p password] [-a|-d] [-h] host_ip\n", binname);
 	fprintf(stderr, "\t-l\tlookup mode (detect if there is anything available)\n");
 	fprintf(stderr, "\t-f\tprint full paths (debug output)\n");
 	fprintf(stderr, "\t-a\tskip admin shares\n");
-	fprintf(stderr, "\t-h\tskip hidden shares\n");
+	fprintf(stderr, "\t-d\tskip shares with trailing dollar (hidden)\n");
+	fprintf(stderr, "\t-h\tprint this help\n");
 	exit(err);
 }
 
@@ -44,7 +47,7 @@ int wmain(int argc, wchar_t **argv)
     for (i = 1; i < argc; i++) {
         if (argv[i][0] != L'-')
             break;
-        if (argv[i][1] == L'-') {
+        if (argv[i][1] == L'-' && argv[i][2] == 0) {
             i++;
             break;
         }
@@ -62,11 +65,13 @@ int wmain(int argc, wchar_t **argv)
                 pass = argv[++i];//TODO: read from stdin
                 break;
             case L'a':
-            case L'h':
+            case L'd':
                 if (ENUM_ALL != etype)
                     usage(argv[0], EXIT_FAILURE);
                 etype = (L'a'==argv[i][1]) ? ENUM_SKIP_ADMIN : ENUM_SKIP_DOLLAR;
                 break;
+            case L'h':
+                usage(argv[0], EXIT_SUCCESS);
             default:
                 usage(argv[0], EXIT_FAILURE);
         }
