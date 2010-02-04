@@ -147,8 +147,12 @@ class QueryParser:
             else:
                 self.error += "Unknown query option: '%s'.\n" % w[0]
         self.options['query'] = string.join(words, " & ")
-        self.sqlcond.append(self.sqltsquery)
-        self.sqlquery = "WHERE " + string.join(self.sqlcond, " AND ")
+        if len(words) > 0:
+            self.sqlcond.append(self.sqltsquery)
+        if len(self.sqlcond) > 0:
+            self.sqlquery = "WHERE " + string.join(self.sqlcond, " AND ")
+        else:
+            self.sqlquery = ""
     def setoption(self, opt, val):
         self.options[opt] = val
     def sqlwhere(self):
