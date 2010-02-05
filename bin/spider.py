@@ -12,6 +12,7 @@ import string
 import subprocess
 import re
 import socket
+import time
 from subprocess import PIPE, STDOUT
 from common import connectdb, scanners_locale, scanners_path, filetypes, wait_until_next_scan, wait_until_next_scan_failed
 
@@ -102,10 +103,12 @@ def scan_line(cursor, share, line):
 
 def scan_share(db, share_id, proto, host, port, command):
     cursor = db.cursor()
+    hoststr = "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
+    print "[%s] Scanning %s ..." % (time.ctime(), hoststr)
     cursor.execute("DELETE FROM files WHERE share_id = %(id)s", {'id':share_id})
     cursor.execute("DELETE FROM paths WHERE share_id = %(id)s", {'id':share_id})
     address = socket.gethostbyname(host)
-    cmd = scanners_path + '/' + command + ' ' + address + ' 2>/dev/null'
+    cmd = "%s/%s %s" % (scanners_path, command, address)
     data = subprocess.Popen(cmd, shell=True, stdin=PIPE,
                             stdout=PIPE, stderr=None)
     for line in data.stdout:
@@ -120,16 +123,14 @@ def scan_share(db, share_id, proto, host, port, command):
             WHERE share_id = %(s)s;
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         db.commit()
-        print "Scanning %s://%s%s failed" % \
-            (proto, host, port if port != 0 else "" )
+        print "[%s] Scanning %s failed." % (time.ctime(), hoststr)
     else:
         cursor.execute("""
             UPDATE shares SET last_scan = now() + %(w)s
             WHERE share_id = %(s)s
             """, {'s':share_id, 'w': wait_until_next_scan})
         db.commit()
-        print "Scanning %s://%s%s succeded" % \
-            (proto, host, port if port != 0 else "" )
+        print "[%s] Scanning %s succeded." % (time.ctime(), hoststr)
 
 
 if __name__ == "__main__":
