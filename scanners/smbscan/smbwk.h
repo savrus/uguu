@@ -11,7 +11,7 @@
 #include "dt.h"
 
 /* we omit paths which length exceeds this. */
-#define SMBWK_PATH_MAX_LEN 1024
+#define SMBWK_PATH_MAX_LEN 4096
 /* assume most filenames don't exceed this. */
 #define SMBWK_FILENAME_LEN 256
 

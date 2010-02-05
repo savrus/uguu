@@ -65,9 +65,13 @@ int main(int argc, char **argv)
 
     if (lookup) {
         probe = smbwk_walker.readdir(&curdir);
-        dt_free(probe);
         smbwk_close(&curdir);
-        return (probe != NULL) ? EXIT_SUCCESS : EXIT_FAILURE;
+        if (probe != NULL) {
+            dt_free(probe);
+            exit(EXIT_SUCCESS);
+        }
+        else
+            exit(EXIT_FAILURE);
     }
 
     if (full)
