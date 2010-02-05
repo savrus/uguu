@@ -76,7 +76,6 @@ nmap_online = "^Host (.+?) (?:appears to be|is) up"
 
 # Time period to wait until next scan
 # required by spider.py
-#wait_until_next_scan = "6 hour"
-wait_until_next_scan = "10 second"
-wait_until_next_scan_failed = "1 second"
+wait_until_next_scan = "12 hour"
+wait_until_next_scan_failed = "2 hour"
 
