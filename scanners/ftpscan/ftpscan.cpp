@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
 	_CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF | _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
 #endif // _DEBUG
 
-    struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0};
+    struct dt_dentry d = {DT_DIR, const_cast<char*>(""), 0, NULL, NULL, NULL, 0};
     CFtpControlEx curdir;
     bool full = false, lookup = false;
     char *host;
