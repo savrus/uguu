@@ -44,9 +44,9 @@ usertypes = (
 
 
 # number of files in file list, shares in share list, etc
-vfs_items_per_page = 100
+vfs_items_per_page = 50
 # number of search results per page
-search_items_per_page = 100
+search_items_per_page = 50
 
 
 # gobar generator
