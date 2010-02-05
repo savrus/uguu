@@ -109,14 +109,27 @@ def fill(db):
     cursor = db.cursor()
     cursor.execute("""
         INSERT INTO networks (network)
-        VALUES ('localnet');
+        VALUES ('official');
 
         INSERT INTO scantypes (protocol, scan_command)
-        VALUES ('smb', 'smbscan/smbscan');
+        VALUES ('smb', 'smbscan/smbscan'),
+               ('ftp', 'ftpscan/ftpscan');
+        """)
 
+def fillshares_melchior(db):
+    cursor = db.cursor()
+    cursor.execute("""
         INSERT INTO shares (scantype_id, network, protocol, hostname)
-        VALUES (1, 'localnet', 'smb', '127.0.0.1'),
-               (1, 'localnet', 'smb', 'localhost');
+        VALUES (1, 'official', 'smb', 'melchior.msu'),
+               (2, 'official', 'ftp', 'melchior.msu');
+        """)
+
+def fillshares_localhost(db):
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO shares (scantype_id, network, protocol, hostname)
+        VALUES (1, 'official', 'smb', '127.0.0.1'),
+               (1, 'official', 'smb', 'localhost');
         """)
 
 
@@ -145,6 +158,7 @@ if __name__ == "__main__":
     ddl(db)
     ddl_prog(db)
     fill(db)
+    fillshares_localhost(db)
     textsearch(db)
     db.commit()
 

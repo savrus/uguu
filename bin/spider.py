@@ -120,15 +120,15 @@ def scan_share(db, share_id, proto, host, port, command):
             WHERE share_id = %(s)s;
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         db.commit()
-        print "Scanning %s://%s%s failed" %
+        print "Scanning %s://%s%s failed" % \
             (proto, host, port if port != 0 else "" )
     else:
         cursor.execute("""
-            UPDATE shares SET last_scan = now()
+            UPDATE shares SET last_scan = now() + %(w)s
             WHERE share_id = %(s)s
-            """, {'s':share_id})
+            """, {'s':share_id, 'w': wait_until_next_scan})
         db.commit()
-        print "Scanning %s://%s%s succeded" %
+        print "Scanning %s://%s%s succeded" % \
             (proto, host, port if port != 0 else "" )
 
 
@@ -144,10 +144,10 @@ if __name__ == "__main__":
         shares.execute("""
             LOCK TABLE shares IN SHARE ROW EXCLUSIVE MODE;
             
-            SELECT share_id, protocol, hostname, port, scan_command
+            SELECT share_id, shares.protocol, hostname, port, scan_command
             FROM shares
             LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
-            WHERE next_scan IS NULL OR next_scan < now() AND state = True
+            WHERE state = True AND (next_scan IS NULL OR next_scan < now())
             ORDER BY next_scan LIMIT 1
             """)
         if shares.rowcount == 0:
