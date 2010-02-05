@@ -180,6 +180,12 @@ def do_search(request, index, searchform):
     except:
         return render_to_response(index,
             {'form': searchform, 'types': usertypes})
+    type = request.GET.get('t', "")
+    types = []
+    for t in usertypes:
+        nt = dict(t)
+        nt['selected'] = 'selected="selected"' if nt['value'] == type else ""
+        types.append(nt)
     try:
         db = connectdb()
     except:
@@ -187,12 +193,6 @@ def do_search(request, index, searchform):
             {'form': searchform, 'types': types, 'query': query,
              'error':"Unable to connect to the database."})
     cursor = db.cursor()
-    type = request.GET.get('t', "")
-    types = []
-    for t in usertypes:
-        nt = dict(t)
-        nt['selected'] = 'selected="selected"' if nt['value'] == type else ""
-        types.append(nt)
     parsedq = QueryParser(query + " " + type)
     if parsedq.geterror() != "":
         return render_to_response('search/error.html',
