@@ -34,7 +34,7 @@ def ddl(db):
         );
         CREATE TABLE scantypes (
             scantype_id SERIAL PRIMARY KEY,
-            scan_command text NOT NULL
+            scan_command text NOT NULL,
             protocol proto NOT NULL,
             priority smallint NOT NULL DEFAULT -1
         );
