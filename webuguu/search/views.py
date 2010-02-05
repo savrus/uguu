@@ -44,15 +44,15 @@ class QueryParser:
     def size2byte(self, size):
         sizenotatios = {'b':1, 'k':2**10, 'm':2**20, 'g':2**30, 't':2**40,
                         'kb':2**10, 'mb':2**20, 'gb':2**30, 'tb':2**40}
-        m =  re.match(r'(?u)(\d+)(\w+)', size, re.UNICODE)
+        m =  re.match(r'(?u)(\d+(?:\.\d+)?)(\w+)', size, re.UNICODE)
         if m == None:
             self.error += "Bad size argument: '%s'.\n" % size
             return 0
         m = m.groups()
-        s = int(m[0])
+        s = float(m[0])
         if m[1]:
             s *= sizenotatios.get(string.lower(m[1]), 1)
-        return s
+        return int(s)
     def parse_option_full(self, option, arg):
         if arg.lower() in ["yes", "true", "y", "t", "1"]:
             self.sqltsquery = " paths.tspath ||" + self.sqltsquery
@@ -75,7 +75,7 @@ class QueryParser:
             self.options[option] = tuple(common)
         self.sqlcond.append("(" + string.join(conds, " OR ") + ")")
     def parse_option_forsize(self, option, arg):
-        forsize = {'min':">", 'max':"<"}
+        forsize = {'min':">=", 'max':"<="}
         if forsize.get(option) == None:
             self.error += "Not aware of query option: '%s'.\n" % option
             return
