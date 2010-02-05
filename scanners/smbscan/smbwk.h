@@ -15,6 +15,12 @@
 /* assume most filenames don't exceed this. */
 #define SMBWK_FILENAME_LEN 256
 
+enum {
+    SKIP_BUCKS_NONE,
+    SKIP_BUCKS_ADMIN,
+    SKIP_BUCKS_ALL
+};
+
 struct smbwk_dir {
     SMBCCTX *ctx;
     char *url;
