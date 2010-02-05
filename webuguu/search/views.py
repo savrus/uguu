@@ -42,9 +42,8 @@ qopt_order = {
 
 class QueryParser:
     def size2byte(self, size):
-        sizenotatios = {'b':1, 'k':1024, 'm':1024*1024, 'g':1024*1024*1024,
-                        'kb':1024, 'mb':1024*1024, 'gb':1024*1024*1024,
-                        't':1024*1024*1024*1024, 'tb':1024*1024*1024*1024}
+        sizenotatios = {'b':1, 'k':2**10, 'm':2**20, 'g':2**30, 't':2**40,
+                        'kb':2**10, 'mb':2**20, 'gb':2**30, 'tb':2**40}
         m =  re.match(r'(?u)(\d+)(\w+)', size, re.UNICODE)
         if m == None:
             self.error += "Bad size argument: '%s'.\n" % size
