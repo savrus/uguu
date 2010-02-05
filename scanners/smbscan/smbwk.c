@@ -71,7 +71,7 @@ void smbwk_auth(const char *srv,
 
 int smbwk_open(struct smbwk_dir *c, char *host, int skip_bucks)
 {
-    if (strnlen(host, SMBWK_PATH_MAX_LEN) > SMBWK_PATH_MAX_LEN - 10) {
+    if (strlen(host) > SMBWK_PATH_MAX_LEN - 10) {
         LOG_ERR("bad argument. host is too long\n");
         return -1;
     }
