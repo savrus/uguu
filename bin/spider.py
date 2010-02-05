@@ -100,7 +100,7 @@ def scan_line(cursor, share, line):
                       'fn':filename })
 
 
-def scan_share(db, share_id, host, command):
+def scan_share(db, share_id, proto, host, port, command):
     cursor = db.cursor()
     cursor.execute("DELETE FROM files WHERE share_id = %(id)s", {'id':share_id})
     cursor.execute("DELETE FROM paths WHERE share_id = %(id)s", {'id':share_id})
@@ -120,14 +120,16 @@ def scan_share(db, share_id, host, command):
             WHERE share_id = %(s)s;
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         db.commit()
-        print "Scanning", host, "failed"
+        print "Scanning %s://%s%s failed" %
+            (proto, host, port if port != 0 else "" )
     else:
         cursor.execute("""
             UPDATE shares SET last_scan = now()
             WHERE share_id = %(s)s
             """, {'s':share_id})
         db.commit()
-        print "Scanning", host, "succeeded"
+        print "Scanning %s://%s%s succeded" %
+            (proto, host, port if port != 0 else "" )
 
 
 if __name__ == "__main__":
@@ -142,7 +144,7 @@ if __name__ == "__main__":
         shares.execute("""
             LOCK TABLE shares IN SHARE ROW EXCLUSIVE MODE;
             
-            SELECT share_id, hostname, scan_command
+            SELECT share_id, protocol, hostname, port, scan_command
             FROM shares
             LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
             WHERE next_scan IS NULL OR next_scan < now()
@@ -152,13 +154,13 @@ if __name__ == "__main__":
             proceed = False
             db.rollback()
             break
-        id, host, command = shares.fetchone()
+        id, proto, host, port, command = shares.fetchone()
         shares.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
             WHERE share_id = %(s)s;
             """, {'s':id, 'w': wait_until_next_scan})
         # release lock on commit
         db.commit()
-        scan_share(db, id, host, command)
+        scan_share(db, id, proto, host, port, command)
 
 

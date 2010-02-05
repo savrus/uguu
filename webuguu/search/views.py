@@ -134,7 +134,9 @@ class QueryParser:
         words = []
         for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,)*)?', query, re.UNICODE):
             if w[1] == "":
-                words.append(w[0] + ":*")
+                # prefix search (available in postgres 8.4)
+                # words.append(w[0] + ":*")
+                words.append(w[0])
             elif qext.get(w[0]):
                 arg = w[1][1:]
                 if arg != "":
