@@ -74,33 +74,32 @@ class QueryParser:
             conds.append(sqlcommon)
             self.options[option] = tuple(common)
         self.sqlcond.append("(" + string.join(conds, " OR ") + ")")
-    def parse_option_forsize(self, option, arg):
-        forsize = {'min':">=", 'max':"<="}
-        if forsize.get(option) == None:
-            self.error += "Not aware of query option: '%s'.\n" % option
-            return
-        self.sqlcond.append("files.size %s %%(%s)s" % (forsize[option],option))
+    def parse_option_forsize(self, option, arg, direction):
+        self.sqlcond.append("files.size %s %%(%s)s" % (direction, option))
         self.options[option] = self.size2byte(arg)
-    def parse_option_forshare(self, option, arg):
-        forshare = {'proto':"protocol", 'host':"hostname",
-                    'port':"port", 'net':"network"}
-        args = string.split(arg, ",")
-        if option == "port":
-            args = [int(x) for x in args]
-        if option == "proto":
-            nargs = []
-            for x in args:
-                if x not in known_protocols:
-                    self.error += "Unknown protocol '%s'.\n" % x
-                else:
-                    nargs.append(x)
-            args = nargs
-        if forshare.get(option) == None:
-            self.error += "Not aware of query option: '%s'.\n" % option
-            return
-        self.sqlcond.append("shares.%s IN %%(%s)s" % (forshare[option],option))
+    def parse_option_min(self, option, arg):
+        self.parse_option_forsize(option, arg, ">=")
+    def parse_option_max(self, option, arg):
+        self.parse_option_forsize(option, arg, "<=")
+    def parse_option_forshare(self, option, args, column):
+        self.sqlcond.append("shares.%s IN %%(%s)s" % (column, option))
         self.options[option] = tuple(args)
         self.sqlcount_joinshares = True
+    def parse_option_host(self, option, arg):
+        self.parse_option_forshare(option, string.split(arg, ','), "hostname")
+    def parse_option_net(self, option, arg):
+        self.parse_option_forshare(option, string.split(arg, ','), "network")
+    def parse_option_port(self, option, arg):
+        args = [int(x) for x in string.split(arg, ',')]
+        self.parse_option_forshare(option, args, "port")
+    def parse_option_proto(self, option, arg):
+        args = []
+        for x in string.split(arg, ','):
+            if x in known_protocols:
+                args.append(x)
+            else:
+                self.error += "Unknown protocol '%s'.\n" % x
+        self.parse_option_forshare(option, args, "protocol")
     def parse_option_order(self, option, arg):
         orders = []
         for x in string.split(arg, ","):
@@ -122,13 +121,13 @@ class QueryParser:
         self.sqlcount_joinshares = False;
         qext = {
             'type':  self.parse_option_type,
-            'max':   self.parse_option_forsize,
-            'min':   self.parse_option_forsize,
+            'max':   self.parse_option_max,
+            'min':   self.parse_option_min,
             'full':  self.parse_option_full,
-            'host':  self.parse_option_forshare,
-            'proto': self.parse_option_forshare,
-            'port':  self.parse_option_forshare,
-            'net':   self.parse_option_forshare,
+            'host':  self.parse_option_host,
+            'proto': self.parse_option_proto,
+            'port':  self.parse_option_port,
+            'net':   self.parse_option_net,
             'order': self.parse_option_order,
         }
         qext_executed = dict()

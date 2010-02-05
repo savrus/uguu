@@ -34,14 +34,14 @@ def ddl(db):
         );
         CREATE TABLE scantypes (
             scantype_id SERIAL PRIMARY KEY,
-            scan_command text,
+            scan_command text NOT NULL
             protocol proto NOT NULL,
             priority smallint NOT NULL DEFAULT -1
         );
         CREATE TABLE shares (
             share_id SERIAL PRIMARY KEY,
-            scantype_id integer REFERENCES scantypes ON DELETE RESTRICT,
-            network varchar(32) REFERENCES networks ON DELETE CASCADE,
+            scantype_id integer REFERENCES scantypes ON DELETE RESTRICT NOT NULL,
+            network varchar(32) REFERENCES networks ON DELETE CASCADE NOT NULL,
             protocol proto NOT NULL,
             hostname varchar(64) NOT NULL,
             port smallint DEFAULT 0,
