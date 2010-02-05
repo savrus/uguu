@@ -63,9 +63,9 @@ filetypes = dict(
 )
 
 
-#default protocols' ports
+#default protocols' ports, keep in conformance with known_protocols
 #required by pinger
-default_ports = {'ftp': 21, 'smb': 139}
+default_ports = dict(zip(known_protocols, (139, 21,)))
 
 #nmap online checking command
 nmap_cmd = "nmap -n -sP -PT%(p)s -iL -"
