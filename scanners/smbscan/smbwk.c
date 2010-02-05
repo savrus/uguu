@@ -134,6 +134,21 @@ int smbwk_close(struct smbwk_dir *c)
     return ret;
 }
 
+int smbwk_skip_bucks(int skip, char *name)
+{
+    switch (skip) {
+        case SKIP_BUCKS_ALL:
+            return (strlen(name) > 0 && name[strlen(name) - 1] == '$');
+        case SKIP_BUCKS_ADMIN:
+            if (!strcmp(name, "ADMIN$"))
+                return 1;
+            if (name[0] >= 'A' && name[0] <= 'Z'
+                && name[1] == '$' && name[2] == 0)
+                return 1;
+    }
+    return 0;
+}
+            
 struct dt_dentry * smbwk_readdir(void *curdir)
 {
     struct smbwk_dir *c = (struct smbwk_dir*) curdir;
@@ -145,9 +160,8 @@ struct dt_dentry * smbwk_readdir(void *curdir)
     while ((de = smbc_readdir(c->fd)) != NULL) {
         if (!strcmp(de->name,".") || !strcmp(de->name,".."))
            continue;
-        if (c->skip_bucks 
-            && strlen(de->name) > 0
-            && de->name[strlen(de->name) - 1] == '$')
+        if (c->skip_bucks != SKIP_BUCKS_NONE
+            && smbwk_skip_bucks(c->skip_bucks, de->name))
             continue;
         if ((de->smbc_type == SMBC_FILE_SHARE)
             || (de->smbc_type == SMBC_DIR)
@@ -240,7 +254,7 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
     
     c->fd = fd;
     c->fd_real = fd_real;
-    c->skip_bucks = 0;
+    c->skip_bucks = SKIP_BUCKS_NONE;
     return 1;
 }
 

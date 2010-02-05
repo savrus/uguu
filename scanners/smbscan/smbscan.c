@@ -13,8 +13,9 @@
 
 static void usage(char *binname, int err)
 {
-    fprintf(stderr, "Usage: %s [-l] [-f] [-d] host\n", binname);
+    fprintf(stderr, "Usage: %s [-l] [-f] [-a|-d] host\n", binname);
     fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
+    fprintf(stderr, "  -a\tskip 'admin shares' in root directory\n");
     fprintf(stderr, "  -d\tskip files ended with bucks in root directory\n");
     fprintf(stderr, "  -f\tprint full paths (debug output)\n");
     exit(err);
@@ -27,7 +28,7 @@ int main(int argc, char **argv)
     struct smbwk_dir curdir;
     int full = 0;
     int lookup = 0;
-    int skip_bucks = 0;
+    int skip_bucks = SKIP_BUCKS_NONE;
     char *host;
     int i;
 
@@ -45,8 +46,12 @@ int main(int argc, char **argv)
             case 'l':
                 lookup = 1;
                 break;
+            case 'a':
             case 'd':
-                skip_bucks = 1;
+                if (skip_bucks != SKIP_BUCKS_NONE)
+                    usage(argv[0], EXIT_FAILURE);
+                skip_bucks = (argv[i][1] == 'a') ? SKIP_BUCKS_ADMIN
+                                                 : SKIP_BUCKS_ALL;
                 break;
             case 'h':
                 usage(argv[0], EXIT_SUCCESS);
