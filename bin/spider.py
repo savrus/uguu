@@ -13,7 +13,7 @@ import subprocess
 import re
 import socket
 from subprocess import PIPE, STDOUT
-from common import connectdb, scanners_locale, scanners_path, filetypes, wait_until_next_scan
+from common import connectdb, scanners_locale, scanners_path, filetypes, wait_until_next_scan, wait_until_next_scan_failed
 
 def suffix(filename):
     dot = filename.rfind(".")
@@ -113,6 +113,13 @@ def scan_share(db, share_id, host, command):
     data.stdin.close()
     if data.wait() != 0:
         db.rollback()
+        # assume next_scan is far away from now and we do not have to
+        # acquire lock on the shares table again
+        shares.execute("""
+            UPDATE shares SET next_scan = now() + %(w)s
+            WHERE share_id = %(s)s;
+            """, {'s':share_id, 'w': wait_until_next_scan_failed})
+        db.commit()
         print "Scanning", host, "failed"
     else:
         cursor.execute("""
