@@ -142,7 +142,8 @@ while proceed:
         """)
     if shares.rowcount == 0:
         proceed = False
-        continue
+        db.rollback()
+        break
     id, host, command = shares.fetchone()
     shares.execute("""
         UPDATE shares SET next_scan = now() + %(w)s
