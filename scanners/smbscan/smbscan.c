@@ -13,9 +13,9 @@
 
 static void usage(char *binname, int err)
 {
-    fprintf(stderr, "Usage: %s [-l] [-f] [-a] host\n", binname);
+    fprintf(stderr, "Usage: %s [-l] [-f] [-d] host\n", binname);
     fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
-    fprintf(stderr, "  -a\tskip files ended with bucks in root directory\n");
+    fprintf(stderr, "  -d\tskip files ended with bucks in root directory\n");
     fprintf(stderr, "  -f\tprint full paths (debug output)\n");
     exit(err);
 }
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
             case 'l':
                 lookup = 1;
                 break;
-            case 'a':
+            case 'd':
                 skip_bucks = 1;
                 break;
             case 'h':
