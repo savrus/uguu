@@ -67,18 +67,19 @@ def get_shares_ports(db):
     cursor.execute("SELECT DISTINCT(port) FROM shares WHERE port>0")
     return [p[0] for p in cursor.fetchall()]
 
-try:
-    db = connectdb()
-except:
-    print "I am unable to connect to the database, exiting."
-    sys.exit()
+if __name__ == "__main__":
+    try:
+        db = connectdb()
+    except:
+        print "I am unable to connect to the database, exiting."
+        sys.exit()
 
-name2ip, ip2name = make_dns_cache(db)
+    name2ip, ip2name = make_dns_cache(db)
 
-for proto in default_ports.iteritems():
-    update_shares_state(db, "protocol='%s' AND port=0" % proto[0], proto[1])
+    for proto in default_ports.iteritems():
+        update_shares_state(db, "protocol='%s' AND port=0" % proto[0], proto[1])
 
-for port in get_shares_ports(db):
-    update_shares_state(db, "port=%d" % port, port)
+    for port in get_shares_ports(db):
+        update_shares_state(db, "port=%d" % port, port)
 
-db.commit()
+    db.commit()

@@ -129,16 +129,17 @@ def textsearch(db):
         """)
 
 
-try:
-    db = connectdb()
-except:
-    print "I am unable to connect to the database, exiting."
-    sys.exit()
+if __name__ == "__main__":
+    try:
+        db = connectdb()
+    except:
+        print "I am unable to connect to the database, exiting."
+        sys.exit()
 
-drop(db)
-ddl(db)
-ddl_prog(db)
-fill(db)
-textsearch(db)
-db.commit()
+    drop(db)
+    ddl(db)
+    ddl_prog(db)
+    fill(db)
+    textsearch(db)
+    db.commit()
 

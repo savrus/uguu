@@ -123,34 +123,35 @@ def scan_share(db, share_id, host, command):
         print "Scanning", host, "succeeded"
 
 
-try:
-    db = connectdb()
-except:
-    print "Unable to connect to the database, exiting."
-    sys.exit()
-shares = db.cursor()
-proceed = True
-while proceed:
-    shares.execute("""
-        LOCK TABLE shares IN SHARE ROW EXCLUSIVE MODE;
-        
-        SELECT share_id, hostname, scan_command
-        FROM shares
-        LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
-        WHERE next_scan IS NULL OR next_scan < now()
-        ORDER BY next_scan LIMIT 1
-        """)
-    if shares.rowcount == 0:
-        proceed = False
-        db.rollback()
-        break
-    id, host, command = shares.fetchone()
-    shares.execute("""
-        UPDATE shares SET next_scan = now() + %(w)s
-        WHERE share_id = %(s)s;
-        """, {'s':id, 'w': wait_until_next_scan})
-    # release lock on commit
-    db.commit()
-    scan_share(db, id, host, command)
+if __name__ == "__main__":
+    try:
+        db = connectdb()
+    except:
+        print "Unable to connect to the database, exiting."
+        sys.exit()
+    shares = db.cursor()
+    proceed = True
+    while proceed:
+        shares.execute("""
+            LOCK TABLE shares IN SHARE ROW EXCLUSIVE MODE;
+            
+            SELECT share_id, hostname, scan_command
+            FROM shares
+            LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
+            WHERE next_scan IS NULL OR next_scan < now()
+            ORDER BY next_scan LIMIT 1
+            """)
+        if shares.rowcount == 0:
+            proceed = False
+            db.rollback()
+            break
+        id, host, command = shares.fetchone()
+        shares.execute("""
+            UPDATE shares SET next_scan = now() + %(w)s
+            WHERE share_id = %(s)s;
+            """, {'s':id, 'w': wait_until_next_scan})
+        # release lock on commit
+        db.commit()
+        scan_share(db, id, host, command)
 
 
