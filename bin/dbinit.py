@@ -28,11 +28,15 @@ def ddl(db):
         CREATE TYPE filetype AS ENUM %(filetypes)s;
         CREATE TYPE proto AS ENUM %(protocols)s;
         CREATE TABLE networks (
-            network varchar(32) PRIMARY KEY
+            network varchar(32) PRIMARY KEY,
+            lookup_engines varchar(64),
+            lookup_data text
         );
         CREATE TABLE scantypes (
             scantype_id SERIAL PRIMARY KEY,
-            scan_command text
+            scan_command text,
+            protocol proto NOT NULL,
+            priority smallint NOT NULL DEFAULT -1
         );
         CREATE TABLE shares (
             share_id SERIAL PRIMARY KEY,
@@ -46,6 +50,7 @@ def ddl(db):
             last_state_change timestamp DEFAULT now(),
             last_scan timestamp,
             next_scan timestamp,
+            last_lookup timestamp DEFAULT now(),
             UNIQUE (protocol, hostname, port)
         );
         CREATE TABLE paths (
@@ -106,8 +111,8 @@ def fill(db):
         INSERT INTO networks (network)
         VALUES ('localnet');
 
-        INSERT INTO scantypes (scan_command)
-        VALUES ('smbscan/smbscan');
+        INSERT INTO scantypes (protocol, scan_command)
+        VALUES ('smb', 'smbscan/smbscan');
 
         INSERT INTO shares (scantype_id, network, protocol, hostname)
         VALUES (1, 'localnet', 'smb', '127.0.0.1'),
