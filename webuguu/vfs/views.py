@@ -8,7 +8,7 @@ from django.http import HttpResponseRedirect
 from django.utils.http import urlencode
 from django.shortcuts import render_to_response
 import string
-from webuguu.common import connectdb, vfs_items_per_page, offset_prepare, protocol_prepare
+from webuguu.common import connectdb, vfs_items_per_page, offset_prepare, protocol_prepare, known_protocols
 
 
 def index(request):
@@ -99,6 +99,9 @@ def share(request, proto, hostname, port, path=""):
     except:
         return render_to_response('vfs/error.html',
             {'error':"Unable to connect to the database."})
+    if proto not in known_protocols:
+        return render_to_response('vfs/error.html',
+            {'error':"Unsupported protocol: '%s'" % proto})
     cursor = db.cursor()
     try:
         share_id = int(request.GET.get('s', 0))
