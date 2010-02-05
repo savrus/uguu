@@ -20,19 +20,20 @@ def make_dns_cache(db):
     cursor = db.cursor()
     cursor.execute("SELECT DISTINCT(hostname) FROM shares")
     cache = dict([(share[0], socket.gethostbyname(share[0])) for share in cursor.fetchall()])
-    uncache = collections.defaultdict(list)
+    uncache = collections.defaultdict(set)
     for (k, v) in cache.iteritems():
-        uncache[v].append(k)
+        uncache[v].add(k)
     return cache, uncache
 
 def get_names_list(ips):
-    res = []
+    res = set()
     for ip in ips:
-        res.extend(ip2name[ip])
+        res|=ip2name[ip]
     return res
 
 def check_online_shares(hostlist, port):
     iplist = frozenset([name2ip[host] for host in hostlist])
+    hostlist = frozenset(hostlist)
     nmap = subprocess.Popen(nmap_cmd % {'p': port}, shell=True,
                             stdin=PIPE, stdout=PIPE, stderr=None)
     nmap.stdin.write(string.join(iplist,"\n"))
@@ -45,7 +46,7 @@ def check_online_shares(hostlist, port):
             continue
         online.add(on.group(1))
     nmap.wait()
-    return get_names_list(online), get_names_list(iplist - online)
+    return get_names_list(online) & hostlist, get_names_list(iplist - online) & hostlist
 
 def update_shares_state(db, selwhere, port):
     cursor = db.cursor()
@@ -55,11 +56,11 @@ def update_shares_state(db, selwhere, port):
         return
     online, offline = check_online_shares(itemdict.keys(), port)
     if len(online):
-        cursor.execute("UPDATE shares SET state=True  WHERE share_id IN (%s)" % \
-            string.join([str(itemdict[host]) for host in online],',') )
+        cursor.execute("UPDATE shares SET state=True WHERE share_id IN %s", \
+        	(tuple(itemdict[host] for host in online),))
     if len(offline):
-        cursor.execute("UPDATE shares SET state=False WHERE share_id IN (%s)" % \
-            string.join([str(itemdict[host]) for host in offline],',') )
+        cursor.execute("UPDATE shares SET state=False WHERE share_id IN %s", \
+        	(tuple(itemdict[host] for host in offline),))
 
 def get_shares_ports(db):
     cursor = db.cursor()
