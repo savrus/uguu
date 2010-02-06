@@ -18,8 +18,8 @@ qopt_type = {
 
 # for ordering query option 
 qopt_order = {
-    'online':   "shares.state DESC",
-    'online.d': "shares.state",
+    'avl':      "shares.state",
+    'avl.d':    "shares.state DESC",
     'scan':     "shares.last_scan DESC",
     'scan.d':   "shares.last_scan",
     'uptime':   "shares.last_state_change",
@@ -100,6 +100,14 @@ class QueryParser:
             else:
                 self.error += "Unknown protocol '%s'.\n" % x
         self.parse_option_forshare(option, args, "protocol")
+    def parse_option_avl(self, option, arg):
+        args = []
+        for x in string.split(arg, ','):
+            if x in ('online', 'offline'):
+                args.append(x)
+            else:
+                self.error += "Unknown availability '%s'.\n" % x
+        self.parse_option_forshare(option, args, "state")
     def parse_option_order(self, option, arg):
         orders = []
         for x in string.split(arg, ","):
@@ -128,6 +136,7 @@ class QueryParser:
             'proto': self.parse_option_proto,
             'port':  self.parse_option_port,
             'net':   self.parse_option_net,
+            'avl':   self.parse_option_avl,
             'order': self.parse_option_order,
         }
         qext_executed = dict()
