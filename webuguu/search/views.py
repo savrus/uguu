@@ -85,6 +85,14 @@ class QueryParser:
         self.sqlcond.append("shares.%s IN %%(%s)s" % (column, option))
         self.options[option] = tuple(args)
         self.sqlcount_joinshares = True
+    def parse_option_forshare_check(self, option, arg, column, known, optstr):
+        args = []
+        for x in string.split(arg, ','):
+            if x in known:
+                args.append(x)
+            else:
+                self.error += "Unknown %s '%s'.\n" % (optstr, x)
+        self.parse_option_forshare(option, args, column)
     def parse_option_host(self, option, arg):
         self.parse_option_forshare(option, string.split(arg, ','), "hostname")
     def parse_option_net(self, option, arg):
@@ -93,21 +101,11 @@ class QueryParser:
         args = [int(x) for x in string.split(arg, ',')]
         self.parse_option_forshare(option, args, "port")
     def parse_option_proto(self, option, arg):
-        args = []
-        for x in string.split(arg, ','):
-            if x in known_protocols:
-                args.append(x)
-            else:
-                self.error += "Unknown protocol '%s'.\n" % x
-        self.parse_option_forshare(option, args, "protocol")
+        self.parse_option_forshare_check(option, arg, "protocol",
+            known_protocols, "protocol")
     def parse_option_avl(self, option, arg):
-        args = []
-        for x in string.split(arg, ','):
-            if x in ('online', 'offline'):
-                args.append(x)
-            else:
-                self.error += "Unknown availability '%s'.\n" % x
-        self.parse_option_forshare(option, args, "state")
+        self.parse_option_forshare_check(option, arg, "state",
+            ('online', 'offline'), "availability")
     def parse_option_order(self, option, arg):
         orders = []
         for x in string.split(arg, ","):
