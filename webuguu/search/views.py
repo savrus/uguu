@@ -119,7 +119,7 @@ class QueryParser:
         self.error += "Query option '%s' appears more than once.\n" % option
     def __init__(self, query):
         self.options = dict()
-        self.order = "shares.state DESC"
+        self.order = "shares.state"
         self.error = ""
         self.sqltsquery = " filenames.tsname @@ to_tsquery('uguu',%(query)s)"
         self.sqlcond = []
