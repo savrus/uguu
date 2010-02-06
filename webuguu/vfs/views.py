@@ -49,7 +49,7 @@ def network(request, network):
             {'error':"Unknown network " + network})
     offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     cursor.execute("""
-        SELECT share_id, size, protocol, hostname, port
+        SELECT share_id, state, size, protocol, hostname, port
         FROM shares
         WHERE network = %(n)s
         ORDER BY hostname
@@ -79,7 +79,7 @@ def host(request, proto, hostname):
         items = 0
     offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     cursor.execute("""
-        SELECT share_id, size, network, protocol, hostname, port
+        SELECT share_id, state, size, network, protocol, hostname, port
         FROM shares
         WHERE hostname = %(n)s
         ORDER BY share_id
@@ -196,7 +196,6 @@ def share(request, proto, hostname, port, path=""):
     else:
         fastuplink = ""
     fastselflink = "./?" + urlencode(dict(url['share'] + url['path']))
-    state = "online" if int(state) else "offline"
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,
