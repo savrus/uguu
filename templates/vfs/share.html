@@ -1,21 +1,21 @@
 {% extends "general.html" %}
 {% block htmltitle %}{{protocol}}://{{urlhost}}{{urlpath}}{% endblock %}
 {% block htmlbody %}
-<div id="title">Contents of <a href="{{urlproto}}://{{urlhost}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
+<div id="title">Contents of <a class="share" href="{{urlproto}}://{{urlhost}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
 total items: {{ items }}, total size: <span class="filesize">{{ size|filesizeformat }}</span></div>
 <br>
-<div id="uplink"><a href="../{{fastup}}">go up</a></div>
+<div id="uplink"><a class="share" href="../{{fastup}}">go up</a></div>
 <div id="filelist">
     <table>
         {% for f in files %}
         <tr>
-            <td>{{forloop.counter|add:offset}}.</td>
-            <td>{% if f.dirid %} &lt;dir&gt; {% endif %}</td>
+            <td><span class="rownum">{{forloop.counter|add:offset}}.</span></td>
+            <td><span class="filetype">{% if f.dirid %} &lt;dir&gt; {% endif %}</span></td>
             <td><span class="filesize">{{ f.size|filesizeformat }}</span></td> 
             {% if f.dirid %}
-            <td><a href = "{{ f.name }}?s={{share_id}}&p={{f.dirid}}"> {{ f.name }} </a></td>
+            <td><a class="share" href = "{{ f.name }}?s={{share_id}}&p={{f.dirid}}"> {{ f.name }} </a></td>
             {% else %}
-            <td><a href = "{{urlproto}}://{{urlhost}}{{urlpath}}/{{f.name}}">{{ f.name }}</a></td>
+            <td><a class="share" href = "{{urlproto}}://{{urlhost}}{{urlpath}}/{{f.name}}">{{ f.name }}</a></td>
             {% endif %}
         </tr>
         {% endfor %}
@@ -26,8 +26,8 @@ total items: {{ items }}, total size: <span class="filesize">{{ size|filesizefor
 
 <br>
 <div id="sharestatus">
-    <a href="{{urlproto}}://{{urlhost}}">{{protocol}}://{{urlhost}}</a>
-    is {{state}} since {{changetime|date:"D d M Y G:i"}}.
+    <a class="share" href="{{urlproto}}://{{urlhost}}">{{protocol}}://{{urlhost}}</a>
+    is <span class="state" id="{{state}}">{{state}}</span> since {{changetime|date:"D d M Y G:i"}}.
     Last scanned on {{scantime|date:"D d M Y G:i"}}.
 </div>
 {% endblock %}
