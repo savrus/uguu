@@ -108,12 +108,12 @@ def ddl_prog(db):
 def fill(db):
     cursor = db.cursor()
     cursor.execute("""
-        INSERT INTO networks (network)
-        VALUES ('official');
+        INSERT INTO networks (network, lookup_engines)
+        VALUES ('official', 'msu_default');
 
-        INSERT INTO scantypes (protocol, scan_command)
-        VALUES ('smb', 'smbscan/smbscan'),
-               ('ftp', 'ftpscan/ftpscan');
+        INSERT INTO scantypes (protocol, scan_command, priority)
+        VALUES ('smb', 'smbscan/smbscan', 1),
+               ('ftp', 'ftpscan/ftpscan', 1);
         """)
 
 def fillshares_melchior(db):
