@@ -43,7 +43,7 @@ def scan_line(cursor, share, line):
         id = int(id)
         cursor.execute("""
             INSERT INTO paths (share_id, sharepath_id, path, tspath)
-            VALUES (%(s)s, %(id)s, %(p)s, %(t)s)
+            VALUES (%(s)s, %(id)s, %(p)s, to_tsvector(%(t)s))
             """, {'s':share, 'id':id, 'p':path, 't':tsprepare(path)})
     else:
         # 'file' type of line

@@ -41,7 +41,7 @@ filetypes = dict(
                            'ra', 'wma', 'mid', 'midi', 'mpc')] +
     [(x,'video') for x in ('mkv', 'avi', 'mp4', 'mov', 'mpeg', 'mpg', 'asf',
                            'ogm', 'vob', 'm2v', 'ts', 'wmv', 'rm', 'mov',
-                           'qt', 'mpe', 'divx', 'flv')] +
+                           'qt', 'mpe', 'divx', 'flv', 'm2ts')] +
     [(x,'archive') for x in ('bz', 'gz', 'bz2', 'tar', 'tbz', 'tgz', 'zip',
                              'rar', 'arj', 'zip', 'rar', 'ace', 'cab', 'z',
                              'tbz2', '7z', 'ha', 'jar', 'lzh', 'lzma', 'j')] +
