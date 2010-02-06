@@ -3,15 +3,15 @@
 {% block htmlbody %}
 {% include form %}
 
-<div id="searchresults">
+<div class="searchresults">
     <table>
         {% for r in results %}
         <tr>
-            <td>{{forloop.counter|add:offset}}.</td>
-            <td>{{r.state}}</td>
-            <td>{{r.type}}</td>
+            <td><span class="rownum">{{forloop.counter|add:offset}}.</span></td>
+            <td><span class="state" id="{{r.state}}">{{r.state}}</span></td>
+            <td><span class="filetype">{{r.type}}</span></td>
             <td><span class="filesize">{{r.size|filesizeformat}}</span></td>
-            <td><a href="{{r.pathlink}}">{{r.path}}</a>/<a href="{{r.filelink}}">{{r.filename}}</a></td>
+            <td><a class="share" href="{{r.pathlink}}">{{r.path}}</a>/<a class="share" href="{{r.filelink}}">{{r.filename}}</a></td>
         </tr>
         {% endfor %}
     </table>
