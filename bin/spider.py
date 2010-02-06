@@ -148,7 +148,7 @@ if __name__ == "__main__":
             SELECT share_id, shares.protocol, hostname, port, scan_command
             FROM shares
             LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
-            WHERE state = True AND (next_scan IS NULL OR next_scan < now())
+            WHERE state = 'online' AND (next_scan IS NULL OR next_scan < now())
             ORDER BY next_scan LIMIT 1
             """)
         if shares.rowcount == 0:
