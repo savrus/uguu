@@ -11,7 +11,7 @@
             <td><span class="state" id="{{r.state}}">{{r.state}}</span></td>
             <td><span class="filetype">{{r.type}}</span></td>
             <td align="right"><span class="filesize">{{r.size|filesizeformat}}</span></td>
-            <td><a class="share" href="{{r.pathlink}}">{{r.path}}/</a><a class="share" href="{{r.filelink}}">{{r.filename}}</a></td>
+            <td class="file"><a class="share" href="{{r.pathlink}}">{{r.path}}/</a><a class="share" href="{{r.filelink}}">{{r.filename}}</a></td>
         </tr>
         {% endfor %}
     </table>
