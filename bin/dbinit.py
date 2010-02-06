@@ -16,7 +16,7 @@ def drop(db):
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
             filenames, files CASCADE;
         DROP FUNCTION IF EXISTS share_state_change() CASCADE;
-        DROP TYPE IF EXISTS filetype, proto CASCADE;
+        DROP TYPE IF EXISTS filetype, proto, availability CASCADE;
         DROP TEXT SEARCH CONFIGURATION IF EXISTS uguu CASCADE;
         DROP LANGUAGE IF EXISTS 'plpgsql' CASCADE;
         """)
@@ -27,6 +27,7 @@ def ddl(db):
     cursor.execute("""
         CREATE TYPE filetype AS ENUM %(filetypes)s;
         CREATE TYPE proto AS ENUM %(protocols)s;
+        CREATE TYPE availability AS ENUM ('online', 'offline');
         CREATE TABLE networks (
             network varchar(32) PRIMARY KEY,
             lookup_engines varchar(64),
@@ -45,7 +46,7 @@ def ddl(db):
             protocol proto NOT NULL,
             hostname varchar(64) NOT NULL,
             port smallint DEFAULT 0,
-            state boolean DEFAULT FALSE,
+            state availability DEFAULT 'online',
             size bigint DEFAULT 0,
             last_state_change timestamp DEFAULT now(),
             last_scan timestamp,

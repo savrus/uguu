@@ -257,7 +257,7 @@ def do_search(request, index, searchform):
                     urlhost + urlpath + "/" + newrow['filename']
             newrow['path'] = row['protocol'] + "://" + urlhost + urlpath
             newrow['size'] = row['size']
-            newrow['state'] = "online" if row['state'] else "offline"
+            newrow['state'] = row['state']
             result.append(newrow)
             del row
         del res

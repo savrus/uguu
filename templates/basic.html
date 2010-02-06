@@ -1,9 +1,32 @@
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
     "http://www.w3.org/TR/html4/strict.dtd">
 <HTML>
    <HEAD>
+   <META http-equiv="Content-Type" content="text/html;charset=utf-8">
       <TITLE>{%block basictitle %}Uguu Search{% endblock %}</TITLE>
+      <STYLE type="text/css">
+          SPAN.filesize { font-size: small; }
+          SPAN.shareholder { font-weight: bold; }
+          SPAN.state#online { color: green; }
+          SPAN.state#offline { color: red; }
+          DIV.topinfo { font-size: small; }
+          DIV.bottominfo { font-size: small; color: gray; }
+          DIV.searchresults { margin-top: 5pt; }
+          A.solid:link { color: blue; text-decoration: none; }
+          A.solid:hover { color: blue; text-decoration: none; }
+          A.solid:visited { color: blue; text-decoration: none; }
+          A.solid:active { color: blue; text-decoration: none; }
+          A.share:link { text-decoration: none; }
+          A.share:hover { text-decoration: none; }
+          A.share:visited { text-decoration: none; }
+          A.share:active { text-decoration: none; }
+          A.gobar:link { color: blue; text-decoration: none; }
+          A.gobar:hover { color: blue; text-decoration: none; }
+          A.gobar:visited { color: blue; text-decoration: none; }
+          A.gobar:active { color: blue; text-decoration: none; }
+
+          BODY, HTML {height: 100%; margin-top: 0; margin-bottom:0; padding: 0;}
+      </STYLE>
    </HEAD>
    <BODY>
       {% block basicbody %}
