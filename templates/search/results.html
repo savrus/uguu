@@ -1,9 +1,10 @@
 {% extends "general.html" %}
 {% block htmltitle %}Search results for {{query}}{% endblock %}
 {% block htmlbody %}
-{% include form %}
-
-<div class="searchresults">
+<div class="margintop" id="searchform">
+    {% include form %}
+</div>
+<div class="margintop" id="searchresults">
     <table>
         {% for r in results %}
         <tr>
@@ -16,6 +17,5 @@
         {% endfor %}
     </table>
 </div>
-
 {% include "gobar.html" %}
 {% endblock %}

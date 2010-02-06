@@ -1,7 +1,6 @@
 {% extends "general.html" %}
 {% block htmltitle %}Virtual Browser{% endblock %}
 {% block htmlbody %}
-Welcome to uguu virtual network browser.
-<br>
-<div><a href="{% url webuguu.vfs.views.net %}">list of networks</a></div>
+<div class="margintop" id="title">Welcome to uguu virtual network browser.</div>
+<div class="margintop" id="netlist"><a class="share" href="{% url webuguu.vfs.views.net %}">list of networks</a></div>
 {% endblock %}
