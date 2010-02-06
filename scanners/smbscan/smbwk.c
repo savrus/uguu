@@ -140,10 +140,11 @@ int smbwk_skip_bucks(int skip, char *name)
         case SKIP_BUCKS_ALL:
             return (strlen(name) > 0 && name[strlen(name) - 1] == '$');
         case SKIP_BUCKS_ADMIN:
-            if (!strcmp(name, "ADMIN$"))
-                return 1;
-            if (name[0] >= 'A' && name[0] <= 'Z'
+            if (((name[0] >= 'A' && name[0] <= 'Z')
+                 || (name[0] >= 'a' && name[0] <= 'z'))
                 && name[1] == '$' && name[2] == 0)
+                return 1;
+            if (!strcasecmp(name, "admin$"))
                 return 1;
     }
     return 0;
