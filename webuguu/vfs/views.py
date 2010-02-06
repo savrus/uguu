@@ -138,6 +138,7 @@ def share(request, proto, hostname, port, path=""):
             """, {'p': proto, 'h': hostname, 'port': port})
         try:
             share_id, state, scantime, changetime = cursor.fetchone()
+            url['share'] = [('s', share_id)] 
         except:
             return render_to_response('vfs/error.html',
                 {'error':"Unknown share."})
@@ -166,6 +167,7 @@ def share(request, proto, hostname, port, path=""):
             """, {'s': share_id, 'p': path})
         try:
             path_id, parent_id, parentfile_id, items, size = cursor.fetchone()
+            url['path'] = [('p', path_id)]
         except:
             return render_to_response('vfs/error.html',
                 {'error':"No such file or directory: '" + path + "'"})
