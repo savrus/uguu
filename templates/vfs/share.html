@@ -2,7 +2,7 @@
 {% block htmltitle %}{{protocol}}://{{urlhost}}{{urlpath}}{% endblock %}
 {% block htmlbody %}
 <div id="title">Contents of <a href="{{urlproto}}://{{urlhost}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
-total items: {{ items }}, total size: <span id="filesize" style="font-size:small">{{ size|filesizeformat }}</span></div>
+total items: {{ items }}, total size: <span class="filesize">{{ size|filesizeformat }}</span></div>
 <br>
 <div id="uplink"><a href="../{{fastup}}">go up</a></div>
 <div id="filelist">
@@ -11,7 +11,7 @@ total items: {{ items }}, total size: <span id="filesize" style="font-size:small
         <tr>
             <td>{{forloop.counter|add:offset}}.</td>
             <td>{% if f.dirid %} &lt;dir&gt; {% endif %}</td>
-            <td><span id="filesize" style="font-size:small">{{ f.size|filesizeformat }}</span></td> 
+            <td><span class="filesize">{{ f.size|filesizeformat }}</span></td> 
             {% if f.dirid %}
             <td><a href = "{{ f.name }}?s={{share_id}}&p={{f.dirid}}"> {{ f.name }} </a></td>
             {% else %}
