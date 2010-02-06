@@ -134,7 +134,7 @@ int smbwk_close(struct smbwk_dir *c)
     return ret;
 }
 
-int smbwk_skip_bucks(int skip, char *name)
+static int smbwk_skip_bucks(int skip, char *name)
 {
     switch (skip) {
         case SKIP_BUCKS_ALL:
