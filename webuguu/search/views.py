@@ -34,8 +34,8 @@ qopt_order = {
     'size.d':   "files.size",
     'name':     "filenames.name",
     'name.d':   "filenames.name DESC",
-    'type':     "filenames.type DESC, files.sharedir_id DESC",
-    'type.d':   "filenames.type, files.sharedir_id",
+    'type':     "filenames.type DESC, (files.sharedir_id != 0) DESC",
+    'type.d':   "filenames.type, (files.sharedir_id != 0)",
     'sharesize':     "shares.size DESC",
     'sharesize.d':   "shares.size",
 }
