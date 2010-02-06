@@ -10,8 +10,8 @@
     <tr>
         <td>{{ forloop.counter}}.</td>
         <td>{{s.protocol}}</td>
-        <td> <a href = "{%url webuguu.vfs.views.share s.protocol, s.hostname, s.port %}?s={{s.share_id}}&p=1"> {{s.hostname}} </a> {% if s.port %}:{{s.port}}{% endif %}</td> 
-        <td>{{s.size|filesizeformat}} </td> 
+        <td><a href = "{%url webuguu.vfs.views.share s.protocol, s.hostname, s.port %}?s={{s.share_id}}&p=1"> {{s.hostname}} </a> {% if s.port %}:{{s.port}}{% endif %}</td> 
+        <td><span id="filesize" style="font-size:small">{{s.size|filesizeformat}}</span></td> 
     </tr>
     {% endfor %}
     {% endblock %}

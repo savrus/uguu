@@ -10,7 +10,7 @@
             <td>{{forloop.counter|add:offset}}.</td>
             <td>{{r.state}}</td>
             <td>{{r.type}}</td>
-            <td>{{r.size|filesizeformat}}</td>
+            <td><span id="filesize" style="font-size:small">{{r.size|filesizeformat}}</span></td>
             <td><a href="{{r.pathlink}}">{{r.path}}</a>/<a href="{{r.filelink}}">{{r.filename}}</a></td>
         </tr>
         {% endfor %}
