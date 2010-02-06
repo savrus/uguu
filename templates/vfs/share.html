@@ -12,7 +12,7 @@ total items: {{ items }}, total size: <span class="filesize">{{ size|filesizefor
             <td><span class="filetype">{% if f.dirid %} &lt;dir&gt; {% endif %}</span></td>
             <td align="right"><span class="filesize">{{ f.size|filesizeformat }}</span></td> 
             <td class="file">{% spaceless %}{% if f.dirid %}
-            <a class="share" href="{{f.name}}?s={{share_id}}&p={{f.dirid}}"> {{f.name}} </a>{% else %}
+            <a class="share" href="{{f.name}}/?s={{share_id}}&p={{f.dirid}}"> {{f.name}} </a>{% else %}
             <a class="share" href="{{urlproto}}://{{urlhost}}{{urlpath}}/{{f.name}}">{{f.name}}</a>{% endif %}</td>{% endspaceless %}
         </tr>
         {% endfor %}
