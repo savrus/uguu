@@ -1,0 +1,6 @@
+{% extends "general.html" %}
+{% block htmltitle %}{{error}}{% endblock %}
+{% block htmlbody %}
+{% include form %}
+<div class="error">{{error}}</div>
+{% endblock %}
