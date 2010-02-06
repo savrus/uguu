@@ -22,12 +22,19 @@ def drop(db):
         """)
 
 
-def ddl(db):
+def ddl_types(db):
     cursor = db.cursor()
     cursor.execute("""
         CREATE TYPE filetype AS ENUM %(filetypes)s;
         CREATE TYPE proto AS ENUM %(protocols)s;
         CREATE TYPE availability AS ENUM ('online', 'offline');
+        """, {'filetypes': known_filetypes,
+              'protocols': known_protocols})
+
+
+def ddl(db):
+    cursor = db.cursor()
+    cursor.execute("""
         CREATE TABLE networks (
             network varchar(32) PRIMARY KEY,
             lookup_engines varchar(64),
@@ -46,7 +53,7 @@ def ddl(db):
             protocol proto NOT NULL,
             hostname varchar(64) NOT NULL,
             port smallint DEFAULT 0,
-            state availability DEFAULT 'online',
+            state availability DEFAULT 'offline',
             size bigint DEFAULT 0,
             last_state_change timestamp DEFAULT now(),
             last_scan timestamp,
@@ -82,8 +89,7 @@ def ddl(db):
                 ON DELETE CASCADE,
             PRIMARY KEY (share_id, sharepath_id, pathfile_id)
         );
-        """, {'filetypes': known_filetypes,
-              'protocols': known_protocols})
+        """)
 
 # Warning: you may need to execute
 # "CREATE LANGUAGE 'plpgsql';" before calling this
@@ -156,6 +162,7 @@ if __name__ == "__main__":
         sys.exit()
 
     drop(db)
+    ddl_types(db)
     ddl(db)
     ddl_prog(db)
     fill(db)

@@ -56,10 +56,10 @@ def update_shares_state(db, selwhere, port):
         return
     online, offline = check_online_shares(itemdict.keys(), port)
     if len(online):
-        cursor.execute("UPDATE shares SET state=True WHERE share_id IN %s", \
+        cursor.execute("UPDATE shares SET state='online' WHERE share_id IN %s", \
         	(tuple(itemdict[host] for host in online),))
     if len(offline):
-        cursor.execute("UPDATE shares SET state=False WHERE share_id IN %s", \
+        cursor.execute("UPDATE shares SET state='offline' WHERE share_id IN %s", \
         	(tuple(itemdict[host] for host in offline),))
 
 def get_shares_ports(db):
