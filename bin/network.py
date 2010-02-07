@@ -1,4 +1,11 @@
-# python portable port scanner
+#!/usr/bin/python
+#
+# network.py - python portable port scanner
+#
+# Copyright 2010, savrus
+# Read the COPYING file in the root of the source tree.
+#
+
 
 import socket
 import select
