@@ -21,8 +21,8 @@ def scan_hosts(hosts):
     for h in hosts:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(0)
-        err = s.connect_ex(h)
         try:
+            err = s.connect_ex(h)
             if err == errno.EINPROGRESS:
                 socks.append(s)
         except:
