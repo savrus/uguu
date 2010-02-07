@@ -71,7 +71,7 @@ def scan_by_mask(ip_range, port):
     ipmask = (0xffffffff << (32 - mask)) & 0xffffffff
     low = low & ipmask
     high = low + (1 << (32 - mask))
-    hosts = [(int_to_ipv4(x), port) for x in range(low, high + 1)]
+    hosts = [(int_to_ipv4(x), port) for x in range(low, high)]
     return scan_hosts(hosts)
 
 def scan_host(ip, port):
