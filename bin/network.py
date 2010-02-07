@@ -57,7 +57,7 @@ def scan_by_range(ip_range, port):
         return scan_hosts((ip_range, port))
     ip_range = string.split(ip_range, '-')
     [low, high] = map(ipv4_to_int, ip_range)
-    hosts = [(int_to_ipv4(x), port) for x in range(low, high)]
+    hosts = [(int_to_ipv4(x), port) for x in range(low, high + 1)]
     return scan_hosts(hosts)
 
 def scan_by_mask(ip_range, port):
@@ -71,7 +71,7 @@ def scan_by_mask(ip_range, port):
     ipmask = (0xffffffff << (32 - mask)) & 0xffffffff
     low = low & ipmask
     high = low + (1 << (32 - mask))
-    hosts = [(int_to_ipv4(x), port) for x in range(low, high)]
+    hosts = [(int_to_ipv4(x), port) for x in range(low, high + 1)]
     return scan_hosts(hosts)
 
 def scan_host(ip, port):
