@@ -26,7 +26,7 @@ def scan_hosts(hosts):
     while socks:
         r_read, r_write, r_err = select.select([], socks, [])
         for s in r_write:
-            if not s.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR):
+            if s.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
                 host = s.getpeername()
                 up.append(host)
         socks = list(set(socks) - set(r_write))
