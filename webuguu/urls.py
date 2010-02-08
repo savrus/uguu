@@ -9,6 +9,7 @@ urlpatterns = patterns('',
     (r'^search/',   include('webuguu.search.urls')),
     (r'^light/$',   'webuguu.search.views.light'),
     (r'^vfs/',      include('webuguu.vfs.urls')),
+    (r'^faq/',      include('webuguu.faq.urls')),
 
     # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
     # to INSTALLED_APPS to enable admin documentation:
