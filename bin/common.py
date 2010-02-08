@@ -64,15 +64,17 @@ filetypes = dict(
 
 
 #default protocols' ports, keep in conformance with known_protocols
-#required by pinger
+#required by pinger.py, lookup.py
 default_ports = dict(zip(known_protocols, (139, 21,)))
 
-#nmap online checking command
-nmap_cmd = "nmap -n -sP -PT%(p)s -iL -"
-#online entry regexp for nmap output
-#compatible with Nmap versions 4.62 (Debian Lenny) and 5.00 (WinNT 5.1)
-nmap_online = "^Host (.+?) (?:appears to be|is) up"
-
+#DNS listing command
+#required by network.py
+# for WinNT using nslookup
+nsls_cmd = "echo ls -t %(t)s %(d)s|nslookup - %(s)s"
+nsls_entry = "^\s(\S+)+\s+%s\s+(\S+)"
+# for Unix using host
+#nsls_cmd = "host -v -t %(t)s -l %(d)s %(s)s"
+#nsls_entry = "^(\S+)\.\S+\s+\d+\s+IN\s+%s\s+(\S+)"
 
 # Time period to wait until next scan
 # required by spider.py

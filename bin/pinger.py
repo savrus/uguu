@@ -12,40 +12,19 @@ import socket
 import subprocess
 import string
 import re
-import collections
-from subprocess import PIPE
-from common import connectdb, default_ports, nmap_cmd, nmap_online
-
-def make_dns_cache(db):
-    cursor = db.cursor()
-    cursor.execute("SELECT DISTINCT(hostname) FROM shares")
-    cache = dict([(share[0], socket.gethostbyname(share[0])) for share in cursor.fetchall()])
-    uncache = collections.defaultdict(set)
-    for (k, v) in cache.iteritems():
-        uncache[v].add(k)
-    return cache, uncache
+from network import nscache, scan_all_hosts
+from common import connectdb, default_ports
 
 def get_names_list(ips):
     res = set()
     for ip in ips:
-        res|=ip2name[ip]
+        res|=nscache(None, ip)
     return res
 
 def check_online_shares(hostlist, port):
-    iplist = frozenset([name2ip[host] for host in hostlist])
+    iplist = frozenset([nscache(host) for host in hostlist])
     hostlist = frozenset(hostlist)
-    nmap = subprocess.Popen(nmap_cmd % {'p': port}, shell=True,
-                            stdin=PIPE, stdout=PIPE, stderr=None)
-    nmap.stdin.write(string.join(iplist,"\n"))
-    nmap.stdin.close()
-    re_online = re.compile(nmap_online)
-    online = set()
-    for line in nmap.stdout:
-        on = re_online.search(line)
-        if not on:
-            continue
-        online.add(on.group(1))
-    nmap.wait()
+    online = set(ip for (ip, port) in scan_all_hosts([(ip, port) for ip in iplist]))
     return get_names_list(online) & hostlist, get_names_list(iplist - online) & hostlist
 
 def update_shares_state(db, selwhere, port):
@@ -73,8 +52,6 @@ if __name__ == "__main__":
     except:
         print "I am unable to connect to the database, exiting."
         sys.exit()
-
-    name2ip, ip2name = make_dns_cache(db)
 
     for proto in default_ports.iteritems():
         update_shares_state(db, "protocol='%s' AND port=0" % proto[0], proto[1])
