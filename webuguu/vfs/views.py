@@ -7,6 +7,7 @@
 from django.http import HttpResponseRedirect
 from django.utils.http import urlencode
 from django.shortcuts import render_to_response
+from django.core.urlresolvers import reverse
 import string
 from webuguu.common import connectdb, vfs_items_per_page, offset_prepare, protocol_prepare, known_protocols
 
@@ -31,8 +32,7 @@ def net(request):
     return render_to_response('vfs/net.html', \
         {'networks': cursor.fetchall()})
 
-
-def network(request, network):
+def sharelist(request, column, name, is_this_host):
     try:
         db = connectdb()
     except:
@@ -40,57 +40,38 @@ def network(request, network):
             {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     cursor.execute("""
-        SELECT count(*) FROM shares WHERE network = %(n)s
-        """, {'n': network})
+        SELECT count(*) FROM shares WHERE %s = %%(n)s
+        """ % column, {'n': name})
     try:
         items, = cursor.fetchone()
+        if items == 0:
+            raise
     except:
         return render_to_response('vfs/error.html',
-            {'error':"Unknown network " + network})
-    offset, gobar = offset_prepare(request, items, vfs_items_per_page)
-    cursor.execute("""
-        SELECT share_id, state, size, protocol, hostname, port
-        FROM shares
-        WHERE network = %(n)s
-        ORDER BY hostname
-        OFFSET %(o)s LIMIT %(l)s
-        """, {'n':network, 'o':offset, 'l':vfs_items_per_page})
-    fastselflink = "./?"
-    return render_to_response('vfs/network.html', \
-        {'shares': cursor.fetchall(),
-         'network': network,
-         'fastself': fastselflink,
-         'gobar': gobar})
-
-
-def host(request, proto, hostname):
-    try:
-        db = connectdb()
-    except:
-        return render_to_response('vfs/error.html',
-            {'error':"Unable to connect to the database."})
-    cursor = db.cursor()
-    cursor.execute("""
-        SELECT count(*) FROM shares WHERE hostname = %(h)s
-        """, {'h': hostname})
-    try:
-        items, = cursor.fetchone()
-    except:
-        items = 0
+            {'error':"Unknown %s '%s'" % (column, name)})
     offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     cursor.execute("""
         SELECT share_id, state, size, network, protocol, hostname, port
         FROM shares
-        WHERE hostname = %(n)s
-        ORDER BY share_id
-        OFFSET %(o)s LIMIT %(l)s
-        """, {'n':hostname, 'o':offset, 'l':vfs_items_per_page})
+        WHERE %s = %%(n)s
+        ORDER BY hostname
+        OFFSET %%(o)s LIMIT %%(l)s
+        """ % column, {'n':name, 'o':offset, 'l':vfs_items_per_page})
     fastselflink = "./?"
-    return render_to_response('vfs/host.html', \
-        {'shares': cursor.fetchall(),
-         'hostname': hostname,
+    return render_to_response("vfs/sharelist.html", \
+        {'name': name,
+         'ishost': is_this_host,
+         'shares': cursor.fetchall(),
          'fastself': fastselflink,
          'gobar': gobar})
+
+
+def network(request, network):
+    return sharelist(request, "network", network, 0)
+
+
+def host(request, proto, hostname):
+    return sharelist(request, "hostname", hostname, 1)
 
 
 def share(request, proto, hostname, port, path=""):

@@ -1,8 +1,13 @@
 {% extends "general.html" %}
 {% block htmltitle %}List of shares{% endblock %}
 {% block htmlbody %}
-{% block title %}{% endblock %}
-{% block uplink %}{% endblock %}
+{% if ishost %}
+    <div class="margintop" id="title">List of shares at host <span class="shareholder">{{name}}</span></div>
+    <div class="margintop"><a class="share" href="{%url webuguu.vfs.views.network shares.0.network %}">go up</a></div>
+{% else %}
+    <div class="margintop" id="title">List of shares in network <span class="shareholder">{{name}}</span></div>
+    <div class="margintop"><a class="share" href="{%url webuguu.vfs.views.net %}">go up</a></div>
+{% endif %}
 <table>
     {% block sharelist %}
     {% for s in shares %}
