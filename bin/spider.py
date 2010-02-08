@@ -9,12 +9,10 @@
 import psycopg2
 import sys
 import string
-import subprocess
 import re
 import socket
 import time
-from subprocess import PIPE, STDOUT
-from common import connectdb, scanners_locale, scanners_path, filetypes, wait_until_next_scan, wait_until_next_scan_failed
+from common import connectdb, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed
 
 def suffix(filename):
     dot = filename.rfind(".")
@@ -108,15 +106,9 @@ def scan_share(db, share_id, proto, host, port, command):
     cursor.execute("DELETE FROM files WHERE share_id = %(id)s", {'id':share_id})
     cursor.execute("DELETE FROM paths WHERE share_id = %(id)s", {'id':share_id})
     address = socket.gethostbyname(host)
-    if port == 0:
-        cmd = "%s%s %s" % (scanners_path, command, address)
-    else:
-        cmd = "%s%s -P%s %s" % (scanners_path, command, str(port), address)
-    data = subprocess.Popen(cmd, shell=True, stdin=PIPE,
-                            stdout=PIPE, stderr=None)
+    data = run_scanner(command, address, proto, port)
     for line in data.stdout:
         scan_line(cursor, share_id, line.strip('\n'))
-    data.stdin.close()
     if data.wait() != 0:
         db.rollback()
         # assume next_scan is far away from now and we do not have to
