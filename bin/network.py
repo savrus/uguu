@@ -16,14 +16,22 @@ import errno
 import sys
 import os
 from subprocess import PIPE
-from common import nsls_cmd, nsls_entry
 
-#online checking parameters
-#required by pinger.py, lookup.py
+# online checking parameters
 #connection timeout in seconds
 scan_timeout = 5
 #maximum simultanius connections
-max_connections = 10
+max_connections = 30
+
+# DNS listing command and parse regexp
+if os.name == 'nt':
+    #for WinNT using nslookup
+    nsls_cmd = "echo ls -t %(t)s %(d)s|nslookup - %(s)s"
+    nsls_entry = "^\s(\S+)+\s+%s\s+(\S+)"
+else:
+    #for Unix using host
+    nsls_cmd = "host -v -t %(t)s -l %(d)s %(s)s"
+    nsls_entry = "^(\S+)\.\S+\s+\d+\s+IN\s+%s\s+(\S+)"
 
 if os.name == 'nt': nbconnect_ok = errno.WSAEWOULDBLOCK
 else:               nbconnect_ok = errno.EINPROGRESS

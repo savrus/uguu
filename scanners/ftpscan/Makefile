@@ -8,6 +8,9 @@ LDFLAGS +=
 CCCMD = $(CC) $(CFLAGS)
 CXXCMD = $(CXX) $(CXXFLAGS)
 
+dist: ftpscan
+	cp ftpscan ../../bin/
+
 ftpscan: dt.o ftpparse.o FtpSockLib.o vs_s.o ftpscan.o
 	$(CXXCMD) dt.o ftpparse.o FtpSockLib.o vs_s.o ftpscan.o -o ftpscan
 
@@ -27,4 +30,4 @@ ftpscan.o: ftpscan.cpp FtpSockLib.h dt.h logpp.h
 	$(CXXCMD) -c ftpscan.cpp -o ftpscan.o
 
 clean:
-	rm -f dt.o ftpscan.o ftpparse.o FtpSockLib.o vs_s.o smbscan
+	rm -f dt.o ftpscan.o ftpparse.o FtpSockLib.o vs_s.o ftpscan ../../bin/ftpscan
