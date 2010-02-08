@@ -119,8 +119,8 @@ def fill(db):
         VALUES ('official', 'msu_default');
 
         INSERT INTO scantypes (protocol, scan_command, priority)
-        VALUES ('smb', 'smbscan/smbscan', 1),
-               ('ftp', 'ftpscan/ftpscan', 1);
+        VALUES ('smb', 'smbscan', 1),
+               ('ftp', 'ftpscan', 1);
         """)
 
 def fillshares_melchior(db):

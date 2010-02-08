@@ -109,9 +109,9 @@ def scan_share(db, share_id, proto, host, port, command):
     cursor.execute("DELETE FROM paths WHERE share_id = %(id)s", {'id':share_id})
     address = socket.gethostbyname(host)
     if port == 0:
-        cmd = "%s/%s %s" % (scanners_path, command, address)
+        cmd = "%s%s %s" % (scanners_path, command, address)
     else:
-        cmd = "%s/%s -P%s %s" % (scanners_path, command, str(port), address)
+        cmd = "%s%s -P%s %s" % (scanners_path, command, str(port), address)
     data = subprocess.Popen(cmd, shell=True, stdin=PIPE,
                             stdout=PIPE, stderr=None)
     for line in data.stdout:

@@ -15,6 +15,7 @@ db_user = "postgres"
 db_password = ""
 db_database = "uguu"
 def connectdb():
+    """ returns psycopg2 connection to the server using settings from common.py """
     return psycopg2.connect(
     	host = db_host,
     	user = db_user,
@@ -25,8 +26,10 @@ def connectdb():
 
 #locale for scanners output
 scanners_locale = "utf-8"
-#path where scanners are
-scanners_path="/home/savrus/devel/uguu/scanners"
+#path where scanners are, with trailing slash
+import sys
+from os.path import split, join
+scanners_path=join(split(sys.argv[0])[0], "")
 
 
 # Fill types, protocols before calling dbinit.py 
@@ -66,15 +69,6 @@ filetypes = dict(
 #default protocols' ports, keep in conformance with known_protocols
 #required by pinger.py, lookup.py
 default_ports = dict(zip(known_protocols, (139, 21,)))
-
-#DNS listing command
-#required by network.py
-# for WinNT using nslookup
-nsls_cmd = "echo ls -t %(t)s %(d)s|nslookup - %(s)s"
-nsls_entry = "^\s(\S+)+\s+%s\s+(\S+)"
-# for Unix using host
-#nsls_cmd = "host -v -t %(t)s -l %(d)s %(s)s"
-#nsls_entry = "^(\S+)\.\S+\s+\d+\s+IN\s+%s\s+(\S+)"
 
 # Time period to wait until next scan
 # required by spider.py
