@@ -8,12 +8,10 @@
 
 import psycopg2
 import sys
-import subprocess
 import socket
 import re
 import collections
-from subprocess import PIPE
-from common import connectdb, default_ports, scanners_path, wait_until_next_lookup, wait_until_delete_share, nmap_cmd
+from common import connectdb, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
 from network import nscache, ns_domain, scan_all_hosts
 
 class Share(object):
@@ -42,15 +40,8 @@ class Share(object):
                     return self.scantype
             sys.stderr.write("Cann't discover scantype for %s:%s\n" % (self.host, self.ProtoOrPort()))
         else:
-            if self.port == 0:
-                cmdline = "%s%s -l %s" % (scanners_path, scantypes[self.proto][self.scantype],
-                                       nscache(self.host))
-            else:
-                cmdline = "%s%s -l -P%s %s" % (scanners_path, scantypes[self.proto][self.scantype],
-                                               str(self.port), nscache(self.host))
-            data = subprocess.Popen(cmdline, shell=True, stdin=PIPE, stdout=PIPE)
-            data.stdin.close()
-            if data.wait() == 0:
+            if run_scanner(scantypes[self.proto][self.scantype], nscache(self.host),
+                           self.proto, self.port, "-l").wait() == 0:
                 return self.scantype
         self.scantype = None
         return None

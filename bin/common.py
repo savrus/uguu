@@ -28,8 +28,20 @@ def connectdb():
 scanners_locale = "utf-8"
 #path where scanners are, with trailing slash
 import sys
+import subprocess
 from os.path import split, join
-scanners_path=join(split(sys.argv[0])[0], "")
+scanners_path=split(sys.argv[0])[0]
+def run_scanner(cmd, ip, proto, port, ext = ""):
+    """ executes scanner, returns subprocess.Popen object """
+    cmd = join(scanners_path, cmd)
+    if port == 0:
+        cmdline = "%s %s %s" % (cmd, ext, ip)
+    else:
+        cmdline = "%s -P%s %s %s" % (cmd, str(port), ext, ip)
+    process = subprocess.Popen(cmdline, shell=True, stdin=subprocess.PIPE,
+                               stdout=subprocess.PIPE, stderr=None)
+    process.stdin.close()
+    return process
 
 
 # Fill types, protocols before calling dbinit.py 
@@ -75,3 +87,8 @@ default_ports = dict(zip(known_protocols, (139, 21,)))
 wait_until_next_scan = "12 hour"
 wait_until_next_scan_failed = "2 hour"
 
+# Time periods required by lookup.py:
+#time period to wait until the next lookup test after successful lookup
+wait_until_next_lookup = "1 week"
+#time period to wait until delete old share
+wait_until_delete_share = "4 month"
