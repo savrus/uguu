@@ -37,8 +37,7 @@ def ddl(db):
     cursor.execute("""
         CREATE TABLE networks (
             network varchar(32) PRIMARY KEY,
-            lookup_engines varchar(64),
-            lookup_data text
+            lookup_config text
         );
         CREATE TABLE scantypes (
             scantype_id SERIAL PRIMARY KEY,
