@@ -1,20 +1,45 @@
 #
-# network.py - python portable port scanner
+# network.py - python portable port scanner and nameserver-related routines
 #
 # Copyright 2010, savrus
+# Copyright (c) 2010, Radist <radist.nt@gmail.com>
 # Read the COPYING file in the root of the source tree.
 #
 
 import socket
 import select
+import subprocess
+import re
+import collections
 import string
 import errno
 import sys
+import os
+from subprocess import PIPE
+from common import nsls_cmd, nsls_entry
 
-scan_timeout = 10
+#online checking parameters
+#required by pinger.py, lookup.py
+#connection timeout in seconds
+scan_timeout = 5
+#maximum simultanius connections
+max_connections = 10
 
-# hosts must be list of tuples (host, ip)
-# returns list of tuple of up hosts
+if os.name == 'nt': nbconnect_ok = errno.WSAEWOULDBLOCK
+else:               nbconnect_ok = errno.EINPROGRESS
+
+name2ip = dict()
+ip2name = collections.defaultdict(set)
+
+def scan_all_hosts(hosts):
+    """hosts must be list of tuples (host, ip),
+returns list of tuples of up hosts"""
+    res = []
+    while hosts:
+        res.extend(scan_hosts(hosts[0:max_connections]))
+        del hosts[0:max_connections]
+    return res
+
 def scan_hosts(hosts):
     socks = []
     up = []
@@ -23,7 +48,7 @@ def scan_hosts(hosts):
         s.setblocking(0)
         try:
             err = s.connect_ex(h)
-            if err == errno.EINPROGRESS:
+            if err == nbconnect_ok:
                 socks.append(s)
         except:
             # catch some rare exceptions like "no such host"
@@ -39,6 +64,34 @@ def scan_hosts(hosts):
         socks = list(set(socks) - set(r_write))
     return up
 
+def nscache(host, ip = None):
+    """usually returns ip (and caches it),
+but if host is None, returns set of hostnames"""
+    if ip is None:
+        if host in name2ip:
+            return name2ip[host]
+        ip = socket.gethostbyname(host)
+    elif host is None:
+        return ip2name[ip]
+    name2ip[host] = ip
+    ip2name[ip].add(host)
+    return ip
+
+def ns_domain(domain, rtype = "A", dns = "", cache = False):
+    """list rtype NS records from domain using provided or default dns,
+optionally caching records, returns dict with hostnames as keys"""
+    hosts = subprocess.Popen(nsls_cmd % {'d': domain, 't': rtype, 's': dns},
+                             stdout=PIPE, shell=True)
+    re_host = re.compile(nsls_entry % rtype)
+    res = dict()
+    for nsentry in hosts.stdout:
+        entry = re_host.search(nsentry)
+        if entry is not None:
+            res[entry.group(1)] = entry.group(2)
+    if cache and rtype == "A":
+        for (host, ip) in res.iteritems():
+            nscache(host + '.' + domain, ip)
+    return res
 
 def ipv4_to_int(ip):
     l = map(int,string.split(ip, '.'))
@@ -58,7 +111,7 @@ def scan_by_range(ip_range, port):
     ip_range = string.split(ip_range, '-')
     [low, high] = map(ipv4_to_int, ip_range)
     hosts = [(int_to_ipv4(x), port) for x in range(low, high + 1)]
-    return scan_hosts(hosts)
+    return scan_all_hosts(hosts)
 
 def scan_by_mask(ip_range, port):
     if string.find(ip_range, '/') == -1:
@@ -72,22 +125,34 @@ def scan_by_mask(ip_range, port):
     low = low & ipmask
     high = low + (1 << (32 - mask))
     hosts = [(int_to_ipv4(x), port) for x in range(low, high)]
-    return scan_hosts(hosts)
+    return scan_all_hosts(hosts)
 
 def scan_host(ip, port):
     return scan_hosts([(ip, port)])
 
 if __name__ == "__main__":
-    if sys.argv[0] == "-h":
-        print "Usage: %s [ip1-ip2 | ip/mask] port" % sys.argv[0]
-    [net, port] = sys.argv[1:3]
-    port = int(port)
-    if string.find(net, '-') != -1:
-        uph = scan_by_range(net, port)
-    elif string.find(net, '/') != -1:
-        uph = scan_by_mask(net, port)
+    if sys.argv[0] == "-h" or len(sys.argv) < 4:
+        print "Usage:"
+        print "\t%s scan {ip1-ip2 | ip/mask} port" % sys.argv[0]
+        print "\t%s list domain type [nserver]" % sys.argv[0]
+        sys.exit(2)
+    if sys.argv[1] == "scan":
+        [net, port] = sys.argv[2:4]
+        port = int(port)
+        if string.find(net, '-') != -1:
+            uph = scan_by_range(net, port)
+        elif string.find(net, '/') != -1:
+            uph = scan_by_mask(net, port)
+        else:
+            uph = scan_host(net, port)
+        for (host, port) in uph:
+            print "Host %s:%s appers to be up" % (host, port)
+    elif sys.argv[1] == "list":
+        [dom, nstype] = sys.argv[2:4]
+        ns = ""
+        if len(sys.argv) > 4:
+            ns = sys.argv[4]
+        for (host, addr) in ns_domain(dom, nstype, ns).iteritems():
+            print "Host %s is %s" % (host, addr)
     else:
-        uph = scan_host(net, port)
-    for (host, port) in uph:
-        print "Host %s:%s appers to be up" % (host, port)
-
+        print "params error"
