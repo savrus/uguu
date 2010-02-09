@@ -12,7 +12,7 @@ import socket
 import re
 import collections
 from common import connectdb, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
-from network import nscache, ns_domain, scan_all_hosts
+from network import dns_cache, ns_domain, scan_all_hosts
 
 class Share(object):
     def __init__(self, host, proto, port=0, scantype=None):
@@ -21,11 +21,12 @@ class Share(object):
         self.proto = proto
         self.port = port
         self.scantype = scantype
+        self.nscache = None # must be set manually
     def ConnectInfo(self):
         port = self.port
         if port == 0:
             port = default_ports[self.proto]
-        return (nscache(self.host), port)
+        return (self.nscache(self.host), port)
     def ProtoOrPort(self):
         if self.port == 0:
             return self.proto
@@ -40,7 +41,7 @@ class Share(object):
                     return self.scantype
             sys.stderr.write("Cann't discover scantype for %s:%s\n" % (self.host, self.ProtoOrPort()))
         else:
-            if run_scanner(scantypes[self.proto][self.scantype], nscache(self.host),
+            if run_scanner(scantypes[self.proto][self.scantype], self.nscache(self.host),
                            self.proto, self.port, "-l").wait() == 0:
                 return self.scantype
         self.scantype = None
@@ -71,6 +72,7 @@ known_hosts is dictionary of "host" : "lookup engine name"
         self.default = None
         self.__checkshares = collections.defaultdict(dict)
         self.__newshares = collections.defaultdict(dict)
+        self.nscache = dns_cache()
     def __len__(self):
         return len(self.__params)
     def __getitem__(self, key):
@@ -88,7 +90,7 @@ known_hosts is dictionary of "host" : "lookup engine name"
             hosts = frozenset(_sharedict.keys())
             online = set()
             for item in scan_all_hosts([_sharedict[host].ConnectInfo() for host in hosts]):
-                online |= nscache(None, item[0])
+                online |= self.nscache(None, item[0])
             for host in (hosts - online):
                 del _sharedict[host]
             for host in _sharedict.keys():
@@ -128,6 +130,7 @@ known_hosts is dictionary of "host" : "lookup engine name"
 add share with optional scantype detection,
 scantype == Ellipsis means "read it from database if possible"
 """
+        share.nscache = self.nscache
         self.__cursor.execute("""
             SELECT share_id, scantype_id, last_lookup + interval '%(interval)s' > now()
             FROM shares
