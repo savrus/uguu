@@ -13,7 +13,9 @@ from common import connectdb, known_filetypes, known_protocols
 def drop(db):
     cursor = db.cursor()
     cursor.execute("""
-        DROP INDEX IF EXISTS filenames_name, filenames_tsname, files_filename;
+        DROP INDEX IF EXISTS filenames_name, filenames_tsname, filenames_type,
+            paths_path, files_filename, files_sharedir, files_size,
+            shares_hostname, shares_network, shares_state;
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
             filenames, files CASCADE;
         DROP FUNCTION IF EXISTS share_state_change() CASCADE;
@@ -119,7 +121,14 @@ def ddl_index(db):
     cursor.execute("""
         CREATE INDEX filenames_name ON filenames USING hash(name);
         CREATE INDEX filenames_tsname ON filenames USING gin(tsname);
+        CREATE INDEX filenames_type ON filenames (type);
+        CREATE INDEX paths_path ON paths USING hash(path);
         CREATE INDEX files_filename ON files (filename_id);
+        CREATE INDEX files_sharedir ON files ((sharedir_id != 0));
+        CREATE INDEX files_size ON files (size);
+        CREATE INDEX shares_hostname ON shares USING hash(hostname);
+        CREATE INDEX shares_network ON shares USING hash(network);
+        CREATE INDEX shares_state ON shares USING hash(state);
         """)
 
 
