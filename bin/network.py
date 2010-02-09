@@ -98,7 +98,7 @@ optionally adding records to dns_cache, returns dict with hostnames as keys"""
         entry = re_host.search(nsentry)
         if entry is not None:
             res[entry.group(1)] = entry.group(2)
-    if cache.__class__ is dns_cache and rtype == "A":
+    if type(cache) is dns_cache and rtype == "A":
         for (host, ip) in res.iteritems():
             cache(host + '.' + domain, ip)
     return res

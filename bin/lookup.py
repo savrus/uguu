@@ -50,7 +50,7 @@ class Share(object):
 class Lookup(object):
     """
 Basic class for lookup engines.
-Descedants should not overlap __init__ method and
+Descedants should not overlap __init__, __del__ methods and
 must define __call__ method with self argument only.
 """
     def __init__(self, db, network, params, known_hosts):
@@ -156,13 +156,13 @@ add/check server to checklist, try to add default shares if default_shares,
 returns permissions to add shares
 """
         if host in self.__hosts and \
-           self.__hosts[host] != self.__class__.__name__:
+           self.__hosts[host] != type(self).__name__:
             return False
         if self.__include.match(host) is None:
             return False
         if self.__exclude.match(host) is not None:
             return False
-        self.__hosts[host] = self.__class__.__name__
+        self.__hosts[host] = type(self).__name__
         if default_shares:
             for proto in default_ports.iterkeys():
                 self.AddShare(Share(host, proto))
@@ -275,9 +275,19 @@ def get_networks(db):
         yield (net[0], net[1])
 
 #####################################
-### Here are comes Lookup  engines
+### Here are comes Lookup engines
 
-#TODO: write Lookup engines
+class SkipHosts(Lookup):
+    """ preserves hosts in 'list' parameter from adding into database """
+    def __call__(self):
+        self.default = tuple()
+        hostlist = self['list']
+        if type(hostlist) is str:
+            hostlist = (hostlist,)
+        for host in hostlist:
+            self.AddServer(host, False)
+
+#TODO: more engines            
 
 #####################################
         
@@ -296,7 +306,7 @@ if __name__ == "__main__":
         try:
             netconfig = ParseConfig(net, config)
             for lookuper in netconfig(db):
-                engine_name = lookuper.__class__.__name__;
+                engine_name = type(lookuper).__name__;
                 try:
                     lookuper()
                     del lookuper
