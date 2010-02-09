@@ -59,6 +59,7 @@ def ddl(db):
             last_scan timestamp,
             next_scan timestamp,
             last_lookup timestamp DEFAULT now(),
+            hash varchar(64),
             UNIQUE (protocol, hostname, port)
         );
         CREATE TABLE paths (
