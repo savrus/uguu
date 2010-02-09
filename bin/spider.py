@@ -74,8 +74,9 @@ def scan_line(cursor, share, line):
         else:
             # not share root
             # save all info into the files table
-            cursor.execute("SELECT filename_id FROM filenames WHERE name = %(n)s",
-                {'n':name})
+            cursor.execute("""
+                SELECT filename_id FROM filenames WHERE name = %(n)s
+                """, {'n':name})
             if cursor.rowcount > 0:
                 filename, = cursor.fetchone()
             else:
@@ -158,5 +159,4 @@ if __name__ == "__main__":
         # release lock on commit
         db.commit()
         scan_share(db, id, proto, host, port, command)
-
 
