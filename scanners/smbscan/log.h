@@ -14,6 +14,7 @@
 do { \
     fprintf(stderr, "%s: ", __func__); \
     fprintf(stderr, __VA_ARGS__); \
+    perror(""); \
 } while (0)
 
 #define LOG_ASSERT(expr, ...) \
