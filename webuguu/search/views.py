@@ -141,7 +141,7 @@ class QueryParser:
         words = []
         for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,)*)?', query, re.UNICODE):
             if w[1] == "":
-                # prefix search (available in postgres 8.4)
+                ## prefix search (available in postgres 8.4)
                 # words.append(w[0] + ":*")
                 words.append(w[0])
             elif qext.get(w[0]):
@@ -154,8 +154,10 @@ class QueryParser:
             else:
                 self.error += "Unknown query option: '%s'.\n" % w[0]
         self.options['query'] = string.join(words, " & ")
-        if len(words) > 0:
-            self.sqlcond.append(self.sqltsquery)
+        ## if you want to allow empty queries...
+        #if len(words) > 0:
+        #    self.sqlcond.append(self.sqltsquery)
+        self.sqlcond.append(self.sqltsquery)
         if len(self.sqlcond) > 0:
             self.sqlquery = "WHERE " + string.join(self.sqlcond, " AND ")
         else:
