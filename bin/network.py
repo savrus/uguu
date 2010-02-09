@@ -36,9 +36,6 @@ else:
 if os.name == 'nt': nbconnect_ok = errno.WSAEWOULDBLOCK
 else:               nbconnect_ok = errno.EINPROGRESS
 
-name2ip = dict()
-ip2name = collections.defaultdict(set)
-
 def scan_all_hosts(hosts):
     """hosts must be list of tuples (host, ip),
 returns list of tuples of up hosts"""
@@ -72,22 +69,27 @@ def scan_hosts(hosts):
         socks = list(set(socks) - set(r_write))
     return up
 
-def nscache(host, ip = None):
-    """usually returns ip (and caches it),
+class dns_cache(object):
+    """incorporates caching of dns records with ability to make reverse call"""
+    def __init__(self):
+        self.name2ip = dict()
+        self.ip2name = collections.defaultdict(set)
+    def __call__(host, ip = None):
+        """usually returns ip (and caches it),
 but if host is None, returns set of hostnames"""
-    if ip is None:
-        if host in name2ip:
-            return name2ip[host]
-        ip = socket.gethostbyname(host)
-    elif host is None:
-        return ip2name[ip]
-    name2ip[host] = ip
-    ip2name[ip].add(host)
-    return ip
+        if ip is None:
+            if host in self.name2ip:
+                return self.name2ip[host]
+            ip = socket.gethostbyname(host)
+        elif host is None:
+            return self.ip2name[ip]
+        self.name2ip[host] = ip
+        self.ip2name[ip].add(host)
+        return ip
 
-def ns_domain(domain, rtype = "A", dns = "", cache = False):
+def ns_domain(domain, rtype = "A", dns = "", cache = None):
     """list rtype NS records from domain using provided or default dns,
-optionally caching records, returns dict with hostnames as keys"""
+optionally adding records to dns_cache, returns dict with hostnames as keys"""
     hosts = subprocess.Popen(nsls_cmd % {'d': domain, 't': rtype, 's': dns},
                              stdout=PIPE, shell=True)
     re_host = re.compile(nsls_entry % rtype)
@@ -96,9 +98,9 @@ optionally caching records, returns dict with hostnames as keys"""
         entry = re_host.search(nsentry)
         if entry is not None:
             res[entry.group(1)] = entry.group(2)
-    if cache and rtype == "A":
+    if cache.__class__ is dns_cache and rtype == "A":
         for (host, ip) in res.iteritems():
-            nscache(host + '.' + domain, ip)
+            cache(host + '.' + domain, ip)
     return res
 
 def ipv4_to_int(ip):
