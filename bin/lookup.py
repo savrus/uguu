@@ -278,7 +278,7 @@ def get_scantypes(db):
         def __init__(self):
             dict.__init__(self)
             self.discovery = list()
-    for proto in known_protocols:
+    for proto in default_ports.keys():
         cursor.execute("""
             SELECT scantype_id, scan_command, priority>0
             FROM scantypes
@@ -316,15 +316,50 @@ class SkipHosts(Lookup):
 #####################################
         
 if __name__ == "__main__":
+    if len(sys.argv) < 2 or 'help' in sys.argv or '-h' in sys.argv:
+        print 'Usage %s [help|confighelp|showengines|showscantypes|shownetworks|showconfig [networkname]|run]' % sys.argv[0]
+        sys.exit()
+    if 'confighelp' in sys.argv:
+        print ParseConfig.__doc__
+        sys.exit()
+        
+    lookup_engines = dict([(cl.__name__, cl) for cl in Lookup.__subclasses__()])
+    if 'showengines' in sys.argv:
+        print 'Known lookup engines:'
+        for eng in lookup_engines.iterkeys():
+            print '%s\t%s' % (eng, lookup_engines[eng].__doc__)
+        sys.exit()
+        
     try:
         db = connectdb()
     except:
         print "I am unable to connect to the database, exiting."
-        sys.exit()
+        sys.exit(1)
 
     scantypes = get_scantypes(db)
+    if 'showscantypes' in sys.argv:
+        for proto in scantypes.iterkeys():
+            print 'Protocol "%s" scantypes (detection sequence %s):' % (proto, scantypes[proto].discovery)
+            for (i, cmd) in scantypes[proto].iteritems():
+                print '%s\t%s' % (i, cmd)
+            print ''
+        sys.exit()
 
-    lookup_engines = dict([(cl.__name__, cl) for cl in Lookup.__subclasses__()])
+    if 'shownetworks' in sys.argv:
+        print 'Known networks are %s' % [net for (net, config) in get_networks(db)]
+        sys.exit()
+
+    if 'showconfig' in sys.argv:
+        n = sys.argv.index('showconfig') + 1
+        for (net, config) in get_networks(db):
+            if n < len(sys.argv) and net != sys.argv[n]:
+                continue
+            print 'Lookup config for network "%s":\n%s\n' % (net, config)
+        sys.exit()
+
+    if len(sys.argv) != 2 or sys.argv[1] != 'run':
+        print 'Unknown parameter, try %s help' % sys.argv[0]
+        sys.exit(1)
 
     for (net, config) in get_networks(db):
         try:
