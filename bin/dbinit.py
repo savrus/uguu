@@ -13,6 +13,7 @@ from common import connectdb, known_filetypes, known_protocols
 def drop(db):
     cursor = db.cursor()
     cursor.execute("""
+        DROP INDEX IF EXISTS filenames_name, filenames_tsname, files_filename;
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
             filenames, files CASCADE;
         DROP FUNCTION IF EXISTS share_state_change() CASCADE;
@@ -90,6 +91,7 @@ def ddl(db):
         );
         """)
 
+
 # Warning: you may need to execute
 # "CREATE LANGUAGE 'plpgsql';" before calling this
 def ddl_prog(db):
@@ -109,6 +111,15 @@ def ddl_prog(db):
             BEFORE UPDATE ON shares FOR EACH ROW
             EXECUTE PROCEDURE share_state_change();
 	""")
+
+
+def ddl_index(db):
+    cursor = db.cursor()
+    cursor.execute("""
+        CREATE INDEX filenames_name ON filenames USING hash(name);
+        CREATE INDEX filenames_tsname ON filenames USING gin(tsname);
+        CREATE INDEX files_filename ON files (filename_id);
+        """)
 
 
 def fill(db):
@@ -164,6 +175,7 @@ if __name__ == "__main__":
     ddl_types(db)
     ddl(db)
     ddl_prog(db)
+    ddl_index(db)
     fill(db)
     fillshares_localhost(db)
     textsearch(db)
