@@ -29,11 +29,11 @@ scanners_locale = "utf-8"
 #path where scanners are, with trailing slash
 import sys
 import subprocess
-from os.path import split, join
-scanners_path=split(sys.argv[0])[0]
+import os.path
+scanners_path = os.path.dirname(os.path.abspath(sys.argv[0]))
 def run_scanner(cmd, ip, proto, port, ext = ""):
     """ executes scanner, returns subprocess.Popen object """
-    cmd = join(scanners_path, cmd)
+    cmd = os.path.join(scanners_path, cmd)
     if port == 0:
         cmdline = "%s %s %s" % (cmd, ext, ip)
     else:
