@@ -123,9 +123,9 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
         print "[%s] Scanning %s failed." % (time.ctime(), hoststr)
     elif hash.hexdigest() == oldhash:
         cursor.execute("""
-            UPDATE shares SET last_scan = now() + %(w)s
+            UPDATE shares SET last_scan = now()
             WHERE share_id = %(s)s
-            """, {'s':share_id, 'w': wait_until_next_scan})
+            """, {'s':share_id})
         db.commit()
         print "[%s] Scanning %s succeded. No changes found." \
               % (time.ctime(), hoststr)
@@ -138,10 +138,9 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             scan_line(cursor, share_id, line)
         cursor.execute("""
             UPDATE shares
-            SET last_scan = now() + %(w)s, hash = %(h)s
+            SET last_scan = now(), hash = %(h)s
             WHERE share_id = %(s)s
             """, {'s':share_id,
-                  'w': wait_until_next_scan,
                   'h': hash.hexdigest()
                   })
         db.commit()
