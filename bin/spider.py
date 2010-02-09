@@ -113,7 +113,6 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
         scan_output.append(line.strip('\n'))
         hash.update(line)
     if data.wait() != 0:
-        db.rollback()
         # assume next_scan is far away from now and we do not have to
         # acquire lock on the shares table again
         shares.execute("""
