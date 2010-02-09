@@ -127,6 +127,7 @@ static int ftp_go_somewhere(dt_go type, char *name, CFtpControlEx *ftp)
 	SAFE_FTP_CALL(
 		if( ftp->ChDir(ftp->curpath.c_str()) ) return 1;
 		else {
+			LOG_ERR("CWD failed for \"%s\", response is\n\t%s", ftp->curpath.c_str(), ftp->GetLastResponse());
 			ftp->curpath = olddir;
 			return -1;
 		}
