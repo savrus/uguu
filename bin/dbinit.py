@@ -125,8 +125,8 @@ def ddl_index(db):
 def fill(db):
     cursor = db.cursor()
     cursor.execute("""
-        INSERT INTO networks (network, lookup_engines)
-        VALUES ('official', 'msu_default');
+        INSERT INTO networks (network, lookup_config)
+        VALUES ('official', '#todo');
 
         INSERT INTO scantypes (protocol, scan_command, priority)
         VALUES ('smb', 'smbscan', 1),
