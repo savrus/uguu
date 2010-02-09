@@ -12,20 +12,22 @@ import socket
 import subprocess
 import string
 import re
-from network import nscache, scan_all_hosts
+from network import dns_cache, scan_all_hosts
 from common import connectdb, default_ports
 
-def get_names_list(ips):
+def get_names_list(ips, nscache):
     res = set()
     for ip in ips:
         res|=nscache(None, ip)
     return res
 
 def check_online_shares(hostlist, port):
+    nscache = dns_cache()
     iplist = frozenset([nscache(host) for host in hostlist])
     hostlist = frozenset(hostlist)
     online = set(ip for (ip, port) in scan_all_hosts([(ip, port) for ip in iplist]))
-    return get_names_list(online) & hostlist, get_names_list(iplist - online) & hostlist
+    return get_names_list(online, nscache) & hostlist, \
+           get_names_list(iplist - online, nscache) & hostlist
 
 def update_shares_state(db, selwhere, port):
     cursor = db.cursor()
