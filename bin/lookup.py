@@ -169,7 +169,26 @@ returns permissions to add shares
         return True
 
 class ParseConfig(object):
-    """ networks.lookup_config parser abstraction """
+    """
+lookup_config syntax:
+#comments
+;comments
+.COMMENT
+Here is
+multiline comments
+.END
+# one engine could be used several times with different settings
+# engines are executed in the same order as they are declared
+[FirstLookupEngineName]
+IntSetting = 0
+StringSetting = "somestring"
+TupleSetting = ("string value", 1231)
+TupleWithSingleIntValue=(123)
+[SecondLookupEngineName]
+# here are standart settings for all engines:
+Include = "if present, include only hosts matching with this regexp"
+Exclude = "if present, exclude hosts matching with this regexp"
+"""
     def __init__(self, netw, text):
         """ initializes callable Lookup-child generator object """
         self.__sections = []
@@ -180,7 +199,7 @@ class ParseConfig(object):
         section = ''
         secdata = {}
         resec = re.compile('^\[(\w+)\]$')
-        repar = re.compile('^(?P<name>\w+)\s*=(?P<type>[isl])\s*(?P<q>")?(?P<value>.*)(?(q)")$')        
+        repar = re.compile('^(?P<name>\w+)\s*=\s*(?P<lst>\()?(?P<value>.*)(?(lst)\))$')
         for line in text.split("\n"):
             LN = LN + 1
             line = string.strip(line)
@@ -191,17 +210,16 @@ class ParseConfig(object):
                 continue
             match = repar.match(line)
             if match is not None:
-                if (match.group('q') is None and match.group['value'][0] == '"') or \
-                   section == "" or not self.__addparam(secdata, match):
+                if section == "" or not self.__addparam(secdata, match):
                     errors.add(LN)
                 continue
             match = resec.match(line)
             if match is not None:
-                if len(secdata) == 0 or section == "":
-                    if len(secdata) == 0 and section == "":
+                if section == "":
+                    if len(secdata) == 0:
                         section = match.group(1)
                     else:
-                        errors.add(LN)
+                        errors.add(LN-1)
                 else:
                     self.__sections.append((section, secdata))
                     section = match.group(1)
@@ -214,8 +232,9 @@ class ParseConfig(object):
             else:
                 errors.add(LN)
         else:
-            if len(secdata) == 0 or section == "":
-                errors.add(LN)
+            if section == "":
+                if len(secdata) > 0:
+                    errors.add(LN)
             else:
                 self.__sections.append((section, secdata))
         if len(errors) > 0:
@@ -224,20 +243,25 @@ class ParseConfig(object):
                              (self.__network, tuple(errors)))
             raise UserWarning()
     def __addparam(self, data, match):
+        def ParseParam(par):
+            par = string.strip(par)
+            if par[0] == par[-1] == '"':
+                return par[1:-1]
+            return int(par)
         name = match.group('name')
         if name in data:
             return False
-        vtype = match.group('type')
         value = match.group('value')
         try:
-            if vtype == 's':
-                data[name] = str(value)
+            if match.group('lst') is None:
+                data[name] = ParseParam(value)
                 return True
-            elif vtype == 'i':
-                data[name] = int(value)
-                return True
-            elif vtype == 'l':
-                data[name] = tuple(s.strip() for s in value.split(','))
+            else:
+                val = []
+                for s in re.split('(".*?")|\s*,\s*', value):
+                    if s:
+                        val.append(ParseParam(s))
+                data[name] = tuple(val)
                 return True
         except:
             pass
