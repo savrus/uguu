@@ -93,7 +93,43 @@ known_hosts is dictionary of "host" : "lookup engine name"
             return self.__params[key]
         else:
             return self.default
-    def __del__(self):
+    def AddShare(self, share):
+        """
+add share with optional scantype detection,
+scantype == Ellipsis means "read it from database if possible"
+"""
+        share.nscache = self.nscache
+        dbshare = None
+        PoP = share.ProtoOrPort()
+        if PoP in self.__dbhosts and \
+           share.host in self.__dbhosts[PoP]:
+            dbshare = self.__dbhosts[PoP][share.host]
+            if dbshare[0].proto != share.proto:
+                dbshare = None
+        if dbshare is not None:
+            share[0].id = dbshare.id
+            if share.scantype is Ellipsis:
+                share.scantype = dbshare[0].scantype
+            if dbshare[1] or share.scantype != dbshare[0].scantype:
+                self.__checkshares[PoP][share.host] = share
+        else:
+            if share.scantype is Ellipsis:
+                share.scantype = None
+            self.__newshares[PoP][share.host] = share
+    def AddServer(self, host, default_shares = True):
+        """
+add/check server to checklist, try to add default shares if default_shares,
+returns permissions to add shares
+"""
+        if host in self.__hosts and \
+           self.__hosts[host] != type(self).__name__:
+            return False
+        self.__hosts[host] = type(self).__name__
+        if default_shares:
+            for proto in default_ports.iterkeys():
+                self.AddShare(Share(host, proto))
+        return True
+    def Commit(self):
         def ListProto(_dict):
             for proto in default_ports.iterkeys():
                 yield (proto, _dict[proto])
@@ -140,42 +176,6 @@ known_hosts is dictionary of "host" : "lookup engine name"
         WalkDict(self.__checkshares, RemoveOfflines)
         WalkDict(self.__checkshares, UpdateHosts)
         self.__commit()
-    def AddShare(self, share):
-        """
-add share with optional scantype detection,
-scantype == Ellipsis means "read it from database if possible"
-"""
-        share.nscache = self.nscache
-        dbshare = None
-        PoP = share.ProtoOrPort()
-        if PoP in self.__dbhosts and \
-           share.host in self.__dbhosts[PoP]:
-            dbshare = self.__dbhosts[PoP][share.host]
-            if dbshare[0].proto != share.proto:
-                dbshare = None
-        if dbshare is not None:
-            share[0].id = dbshare.id
-            if share.scantype is Ellipsis:
-                share.scantype = dbshare[0].scantype
-            if dbshare[1] or share.scantype != dbshare[0].scantype:
-                self.__checkshares[PoP][share.host] = share
-        else:
-            if share.scantype is Ellipsis:
-                share.scantype = None
-            self.__newshares[PoP][share.host] = share
-    def AddServer(self, host, default_shares = True):
-        """
-add/check server to checklist, try to add default shares if default_shares,
-returns permissions to add shares
-"""
-        if host in self.__hosts and \
-           self.__hosts[host] != type(self).__name__:
-            return False
-        self.__hosts[host] = type(self).__name__
-        if default_shares:
-            for proto in default_ports.iterkeys():
-                self.AddShare(Share(host, proto))
-        return True
 
 class ParseConfig(object):
     """
@@ -494,11 +494,10 @@ if __name__ == "__main__":
                 engine_name = type(lookuper).__name__;
                 try:
                     lookuper()
-                    del lookuper
+                    lookuper.commit()
                 except:
                     sys.stderr.write("Exception in lookup engine %s for network %s\n" % \
                                      (engine_name, net))
-            del netconfig
         except:
             sys.stderr.write("Exception during lookup network %s\n" % net)
 
