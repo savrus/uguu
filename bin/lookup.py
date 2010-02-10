@@ -65,14 +65,10 @@ known_hosts is dictionary of "host" : "lookup engine name"
         self.__network = network
         self.__params = params
         self.__hosts = known_hosts
-        self.default = '^.*$'
-        self.__include = re.compile(self['Include'])
-        self.default = '^$'
-        self.__exclude = re.compile(self['Exclude'])
-        self.default = None
         self.__checkshares = collections.defaultdict(dict)
         self.__newshares = collections.defaultdict(dict)
         self.nscache = dns_cache()
+        self.default = None
     def __len__(self):
         return len(self.__params)
     def __getitem__(self, key):
@@ -159,10 +155,6 @@ returns permissions to add shares
 """
         if host in self.__hosts and \
            self.__hosts[host] != type(self).__name__:
-            return False
-        if self.__include.match(host) is None:
-            return False
-        if self.__exclude.match(host) is not None:
             return False
         self.__hosts[host] = type(self).__name__
         if default_shares:
@@ -350,7 +342,7 @@ class KeepDBShares(Lookup):
             self.AddShare(Share(item[0], item[1], port, Ellipsis))
 
 class ManualShares(Lookup):
-    """ implicitly add shares, 'Count' is share number,
+    """ IMPLICITLY add shares, 'Count' is share number,
     '0'..'Count-1' are ("host", "proto"[, port(=0)[, scantype(=auto)]]) """
     def __call__(self):
         self.default = 0
