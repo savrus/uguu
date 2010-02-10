@@ -130,13 +130,6 @@ returns permissions to add shares
                 self.AddShare(Share(host, proto))
         return True
     def commit(self):
-        def ListProto(_dict):
-            for proto in default_ports.iterkeys():
-                yield (proto, _dict[proto])
-        def ListPorts(_dict):
-            for port in _dict.iterkeys():
-                if port not in default_ports:
-                    yield (port, _dict[port])
         def RemoveOfflines(_sharedict):
             hosts = frozenset(_sharedict.keys())
             online = set()
@@ -157,7 +150,7 @@ returns permissions to add shares
                           'proto': share.proto, 'host': share.host, 'port': share.port})
         def UpdateHosts(_sharedict):
             sts = collections.defaultdict(list)
-            for (host, share) in _sharedict:
+            for (host, share) in _sharedict.iteritems():
                 sts[share.scantype].append(share)
             for (st, shares) in sts.iteritems():
                 self.__cursor.execute("""
@@ -166,10 +159,8 @@ returns permissions to add shares
                     WHERE share_id IN %(ids)s
                     """, {'st': st, 'ids': tuple(share.id for share in shares)})
         def WalkDict(_dict, routine):
-            for (proto, hosts) in ListProto(_dict):
-                routine(hosts)
-            for (port, hosts) in ListPorts(_dict):
-                routine(hosts)
+            for portproto in _dict.iterkeys():
+                routine(_dict[portproto])
         WalkDict(self.__newshares, RemoveOfflines)
         WalkDict(self.__newshares, InsertHosts)
         self.__commit()
@@ -495,11 +486,16 @@ if __name__ == "__main__":
                 try:
                     lookuper()
                     lookuper.commit()
+                except UserWarning:
+                    pass
                 except:
-                    sys.stderr.write("Exception in lookup engine %s for network %s\n" % \
+                    #todo: traceback
+                    sys.stderr.write("Exception in lookup engine '%s' for network \"%s\"\n" % \
                                      (engine_name, net))
+        except UserWarning:
+            pass
         except:
-            sys.stderr.write("Exception during lookup network %s\n" % net)
+            sys.stderr.write("Exception during lookup network \"%s\"\n" % net)
 
     db.cursor().execute("DELETE FROM shares WHERE last_lookup + interval %s < now()",
                         (wait_until_delete_share,))
