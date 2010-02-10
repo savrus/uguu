@@ -118,7 +118,7 @@ char *CStrBuf::release(void)
 const char *CFtpControl::DefaultAnsiCP = NULL;
 
 CFtpControl::CFtpControl(): ServerIP(0), ServerPORT(FTP_PORT),
-        login(NULL), pass(NULL), timeouts(DEF_TIMEOUTS),
+        login(NULL), pass(NULL), timeout_sec(DEF_TIMEOUT),
         sock(INVALID_SOCKET), _to_utf8(ICONV_ERROR), _from_utf8(ICONV_ERROR)
 {
 #ifdef _WIN32
@@ -153,26 +153,12 @@ bool CFtpControl::tryconn(void)
 {
   if( INVALID_SOCKET != sock ) return false;
 
-#ifdef _WIN32
-  int on = 1;
-#endif
   struct sockaddr_in sa;
 
   sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if( INVALID_SOCKET == sock ) return false;
 
   do{
-#ifdef _WIN32
-    if( ( setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
-        (const char *)&on, sizeof(on)) == SOCKET_ERROR ) ||
-      ( setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO,
-        (const char *)&timeouts, sizeof(timeouts)) == SOCKET_ERROR )||
-      ( setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO,
-        (const char *)&timeouts, sizeof(timeouts)) == SOCKET_ERROR ))
-      break;
-#endif
-    timeout_sec = timeouts / 1000;
-
     memset(&sa, 0, sizeof(sa));
     sa.sin_family = AF_INET;
     sa.sin_port = htons(ServerPORT);
@@ -180,6 +166,28 @@ bool CFtpControl::tryconn(void)
     //memset(&sa.sin_zero, 0, sizeof(sa.sin_zero));
     if( connect(sock, (struct sockaddr *)&sa, sizeof(sa)) == SOCKET_ERROR )
       break;
+    {
+      timeval timeout;
+      timeout.tv_sec = timeout_sec;
+      timeout.tv_usec = 0;
+      fd_set fdsw, fdse;
+      FD_ZERO(&fdsw);
+      FD_ZERO(&fdse);
+      FD_SET(sock, &fdsw);
+      FD_SET(sock, &fdse);
+      int res = select(sock + 1, NULL, &fdsw, &fdse, &timeout);
+      if( res<0 || !res || FD_ISSET(sock, &fdse) )
+        break;
+#ifdef _WIN32
+	  int len = 4;
+#else
+      socklen_t len = 4;
+#endif
+      res = 0;
+      if( ( getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&res, &len) == SOCKET_ERROR ) ||
+          ( res != 0 ))
+        break;
+    }
 
     try {
     	if( skipresponse() != '2' )
@@ -568,6 +576,8 @@ int CFtpControl::rawread(int nb_start) _throw_NE
     sockwait(true);
     if( ( nb_start = recv(sock, p, i, 0) ) == SOCKET_ERROR )
       LOG_THROW(NetworkError, "Socket read error\n");
+    if( !nb_start )
+      LOG_THROW(NetworkError, "Connection closed by server\n");
     i -= nb_start;
     p += nb_start;
   }

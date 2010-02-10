@@ -15,7 +15,7 @@
 
 #define FTP_PORT 21
 #define VSPRINTF_BUFFER_SIZE 2048
-#define DEF_TIMEOUTS 30000
+#define DEF_TIMEOUT 30
 
 //for find routines
 #include <sys/types.h>
@@ -71,7 +71,7 @@ public:
   unsigned int ServerPORT;
   char *login;//NULL => anonymous
   char *pass;//NULL => some e-mail address if password is requested by server
-  DWORD timeouts;//milliseconds !!!
+  int timeout_sec;
   CFtpControl(void)
 #ifdef _WIN32
     throw(void*)
@@ -103,7 +103,6 @@ public:
   const char *GetLastResponse(void);
 private:
   SOCKET sock;
-  int timeout_sec;
   iconv_t _to_utf8;
   iconv_t _from_utf8;
   char netbuff[__NB_SIZE];
