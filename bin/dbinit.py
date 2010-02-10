@@ -123,7 +123,7 @@ def ddl_prog(db):
                 IF NOT FOUND THEN
                     INSERT INTO filenames (name, type, tsname)
                     VALUES ($1, $2, to_tsvector($3));
-                    id := lastval();
+                    RETURN lastval();
                 END IF;
                 RETURN id;
             END;

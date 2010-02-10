@@ -32,13 +32,20 @@ ru_orders = {
     'sharesize':     u"размер шары целиком",
 }
 
-def ru_order_desc():
-    return string.join([ u"%s (%s)" % (bold(x), ru_orders[x]) for x in ru_orders.keys()], ", ")
+ru_matches = {
+    'norm':     u"полнотекстовый поиск в имени файла",
+    'full':     u"полнотекстовый поиск в полном пути",
+    'exact':    u"точное совпадение имени файла (будьте внимательны, между именем файла в запросе и опциями должен быть ровно один пробел)",
+}
+
+def ru_arg_desc(option):
+    return string.join([ u"%s: %s" % (bold(x), option[x]) for x in option.keys()], ", ")
+
 
 ru_qoptions = (
-    {'option': "fullpath",
-     'args': strargs(["yes", "no"]),
-     'desc': u"Признак поиска в полном пути.",
+    {'option': "match",
+     'args': strargs(["norm", "full", "exact"]),
+     'desc': u"Критерий поиска. Аргументы означают следующее. " + ru_arg_desc(ru_matches) + u"."
     },
     {'option': "max",
      'args': strargs(["100gb", "256.8mb"]),
@@ -75,7 +82,7 @@ ru_qoptions = (
     {'option': "order",
      'args': strargs(tuple(ru_orders.keys()) + \
                      tuple(["%s.d" % x for x in ru_orders.keys()])),
-     'desc': u"Сортировать результаты в заданном порядке. Aргументы с суффиксом <b>.d</b> означают сортировку в обратном порядке." + ru_multiarg + u" Аргументы означают следующее: " + ru_order_desc() + u".",
+     'desc': u"Сортировать результаты в заданном порядке. Aргументы с суффиксом <b>.d</b> означают сортировку в обратном порядке." + ru_multiarg + u" Аргументы означают следующее. " + ru_arg_desc(ru_orders) + u".",
     },
 )
 

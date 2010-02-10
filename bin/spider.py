@@ -7,7 +7,6 @@
 #
 
 import psycopg2
-from psycopg2.extensions import adapt
 import sys
 import string
 import re
@@ -34,27 +33,25 @@ fquery_select = "INSERT INTO files (share_id, sharepath_id, pathfile_id, sharedi
 fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, gfid(%(n)s, %(t)s, %(r)s))"
 
 class PsycoCache:
-    def __init__(self, db, cursor):
+    def __init__(self, cursor):
         self.query = []
         self.fquery = []
-        self.conn = db
         self.cursor = cursor
     def append(self, q, vars):
         self.query.append(self.cursor.mogrify(q, vars))
         if len(self.query) > 1024:
             self.commit()
     def commit(self):
-        if len(self.query) > 0:
-            self.cursor.execute(string.join(self.query,";"))
-            self.query = []
+        self.cursor.execute(string.join(self.query,";"))
+        self.query = []
     def fappend(self, vars):
         self.fquery.append(self.cursor.mogrify(fquery_values, vars))
         if len(self.fquery) > 1024:
             self.fcommit()
     def fcommit(self):
-        self.commit()
-        self.cursor.execute(fquery_select + string.join(self.fquery, ","))
+        self.query.append(fquery_select + string.join(self.fquery, ","))
         self.fquery = []
+        self.commit()
     def allcommit(self):
         self.fcommit()
 
@@ -84,11 +81,11 @@ def scan_line(cursor, share, line, qcache):
         items = int(items)
         if dirid > 0:
             # if directory then update paths table
-            qcache.append("UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s WHERE share_id = %(s)s AND sharepath_id = %(d)s;",
+            qcache.append("UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s WHERE share_id = %(s)s AND sharepath_id = %(d)s",
                 {'p':path, 'f':file, 'i':items, 'sz':size, 's':share, 'd':dirid})
         if path == 0:
             # if share root then it's size is the share size
-            qcache.append("UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s;", {'sz':size, 's':share})
+            qcache.append("UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s", {'sz':size, 's':share})
         else:
             # not share root
             # save all info into the files table
@@ -131,7 +128,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             {'id':share_id})
         cursor.execute("DELETE FROM paths WHERE share_id = %(id)s",
             {'id':share_id})
-        qcache = PsycoCache(db, cursor)
+        qcache = PsycoCache(cursor)
         for line in scan_output:
             scan_line(cursor, share_id, line, qcache)
         qcache.allcommit()

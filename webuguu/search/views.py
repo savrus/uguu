@@ -40,6 +40,12 @@ qopt_order = {
     'sharesize.d':   "shares.size",
 }
 
+qopt_match = {
+    'norm': "filenames.tsname @@ to_tsquery('uguu',%(query)s)",
+    'full': "paths.tspath || filenames.tsname @@ to_tsquery('uguu',%(query)s)",
+    'exact': "filenames.name = %(equery)s",
+}
+
 class QueryParser:
     def size2byte(self, size):
         sizenotatios = {'b':1, 'k':2**10, 'm':2**20, 'g':2**30, 't':2**40,
@@ -53,6 +59,23 @@ class QueryParser:
         if m[1]:
             s *= sizenotatios.get(string.lower(m[1]), 1)
         return int(s)
+    def parse_option_match_norm(self):
+        pass
+    def parse_option_match_full(self):
+        self.sqlcount_joinpath = True
+    def parse_option_match_exact(self):
+        pass
+    def parse_option_match(self, option, arg):
+        matches = {
+            'norm': self.parse_option_match_norm,
+            'full': self.parse_option_match_full,
+            'exact': self.parse_option_match_exact,
+        }
+        if arg in matches.keys():
+            self.sqltsquery = qopt_match[arg]
+            matches[arg]()
+        else:
+            self.error += "Unsupported match argument: '%s'.\n" % arg
     def parse_option_full(self, option, arg):
         if arg.lower() in ["yes", "true", "y", "t", "1"]:
             self.sqltsquery = " paths.tspath ||" + self.sqltsquery
@@ -121,7 +144,8 @@ class QueryParser:
         self.options = dict()
         self.order = "shares.state"
         self.error = ""
-        self.sqltsquery = " filenames.tsname @@ to_tsquery('uguu',%(query)s)"
+        self.sqltsquery = "filenames.tsname @@ to_tsquery('uguu',%(query)s)"
+        self.userquery = query
         self.sqlcond = []
         self.sqlcount_joinpath = False;
         self.sqlcount_joinshares = False;
@@ -129,7 +153,7 @@ class QueryParser:
             'type':  self.parse_option_type,
             'max':   self.parse_option_max,
             'min':   self.parse_option_min,
-            'full':  self.parse_option_full,
+            'match':  self.parse_option_match,
             'host':  self.parse_option_host,
             'proto': self.parse_option_proto,
             'port':  self.parse_option_port,
@@ -154,6 +178,8 @@ class QueryParser:
             else:
                 self.error += "Unknown query option: '%s'.\n" % w[0]
         self.options['query'] = string.join(words, " & ")
+        equery = re.search(r'(?u)(?P<equery>.*) \w+:', query, re.UNICODE)
+        self.options['equery'] = equery.group('equery') if equery else "NULL"
         ## if you want to allow empty queries...
         #if len(words) > 0:
         #    self.sqlcond.append(self.sqltsquery)
