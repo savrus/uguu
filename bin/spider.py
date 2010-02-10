@@ -34,10 +34,9 @@ fquery_select = "INSERT INTO files (share_id, sharepath_id, pathfile_id, sharedi
 fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, gfid(%(n)s, %(t)s, %(r)s))"
 
 class PsycoCache:
-    def __init__(self, db, cursor):
+    def __init__(self, cursor):
         self.query = []
         self.fquery = []
-        self.conn = db
         self.cursor = cursor
     def append(self, q, vars):
         self.query.append(self.cursor.mogrify(q, vars))
@@ -131,7 +130,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             {'id':share_id})
         cursor.execute("DELETE FROM paths WHERE share_id = %(id)s",
             {'id':share_id})
-        qcache = PsycoCache(db, cursor)
+        qcache = PsycoCache(cursor)
         for line in scan_output:
             scan_line(cursor, share_id, line, qcache)
         qcache.allcommit()
