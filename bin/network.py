@@ -31,7 +31,7 @@ if os.name == 'nt':
 else:
     #for Unix using host
     nsls_cmd = "host -v -t %(t)s -l %(d)s %(s)s"
-    nsls_entry = "^(\S+)\.\S+\s+\d+\s+IN\s+%s\s+(\S+)"
+    nsls_entry = "^(\S+?)\.\S+\s+\d+\s+IN\s+%s\s+(\S+)"
 
 if os.name == 'nt': nbconnect_ok = errno.WSAEWOULDBLOCK
 else:               nbconnect_ok = errno.EINPROGRESS
