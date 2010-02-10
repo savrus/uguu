@@ -9,6 +9,7 @@
 import psycopg2
 import sys
 import socket
+import string
 import re
 import collections
 from common import connectdb, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
@@ -69,6 +70,22 @@ known_hosts is dictionary of "host" : "lookup engine name"
         self.__newshares = collections.defaultdict(dict)
         self.nscache = dns_cache()
         self.default = None
+        self.__cursor.execute("""
+            SELECT
+                share_id,
+                scantype_id,
+                protocol,
+                hostname,
+                port,
+                last_lookup + interval %(interval)s < now()
+            FROM shares
+            WHERE network = %(net)s
+            """, {'interval': wait_until_next_lookup, 'net': self.__network})
+        self.__dbhosts = collections.defaultdict(dict)
+        for row in self.__cursor.fetchall():
+            share = Share(row[3], row[2], row[4], row[1])
+            share.id = row[0]
+            self.__dbhosts[share.ProtoOrPort()][share.host] = (share, row[5])
     def __len__(self):
         return len(self.__params)
     def __getitem__(self, key):
@@ -76,7 +93,43 @@ known_hosts is dictionary of "host" : "lookup engine name"
             return self.__params[key]
         else:
             return self.default
-    def __del__(self):
+    def AddShare(self, share):
+        """
+add share with optional scantype detection,
+scantype == Ellipsis means "read it from database if possible"
+"""
+        share.nscache = self.nscache
+        dbshare = None
+        PoP = share.ProtoOrPort()
+        if PoP in self.__dbhosts and \
+           share.host in self.__dbhosts[PoP]:
+            dbshare = self.__dbhosts[PoP][share.host]
+            if dbshare[0].proto != share.proto:
+                dbshare = None
+        if dbshare is not None:
+            share[0].id = dbshare.id
+            if share.scantype is Ellipsis:
+                share.scantype = dbshare[0].scantype
+            if dbshare[1] or share.scantype != dbshare[0].scantype:
+                self.__checkshares[PoP][share.host] = share
+        else:
+            if share.scantype is Ellipsis:
+                share.scantype = None
+            self.__newshares[PoP][share.host] = share
+    def AddServer(self, host, default_shares = True):
+        """
+add/check server to checklist, try to add default shares if default_shares,
+returns permissions to add shares
+"""
+        if host in self.__hosts and \
+           self.__hosts[host] != type(self).__name__:
+            return False
+        self.__hosts[host] = type(self).__name__
+        if default_shares:
+            for proto in default_ports.iterkeys():
+                self.AddShare(Share(host, proto))
+        return True
+    def Commit(self):
         def ListProto(_dict):
             for proto in default_ports.iterkeys():
                 yield (proto, _dict[proto])
@@ -123,44 +176,6 @@ known_hosts is dictionary of "host" : "lookup engine name"
         WalkDict(self.__checkshares, RemoveOfflines)
         WalkDict(self.__checkshares, UpdateHosts)
         self.__commit()
-    def AddShare(self, share):
-        """
-add share with optional scantype detection,
-scantype == Ellipsis means "read it from database if possible"
-"""
-        share.nscache = self.nscache
-        self.__cursor.execute("""
-            SELECT share_id, scantype_id, last_lookup + interval '%(interval)s' > now()
-            FROM shares
-            WHERE hostname = '%(host)s' AND
-                protocol = '%(proto)s' AND port = '%(port)s'
-            """, {'interval': wait_until_next_lookup, 'host': share.host,
-                  'proto': share.proto, 'port': share.port})
-        data = self.__cursor.fetchone()
-        if data is not None:
-            share.id = data[0]
-            if share.scantype is Ellipsis:
-                share.scantype = data[1]
-            if data[2] and share.scantype == data[1]:
-                return
-            self.__checkshares[share.ProtoOrPort()][share.host] = share
-        else:
-            if share.scantype is Ellipsis:
-                share.scantype = None
-            self.__newshares[share.ProtoOrPort()][share.host] = share
-    def AddServer(self, host, default_shares = True):
-        """
-add/check server to checklist, try to add default shares if default_shares,
-returns permissions to add shares
-"""
-        if host in self.__hosts and \
-           self.__hosts[host] != type(self).__name__:
-            return False
-        self.__hosts[host] = type(self).__name__
-        if default_shares:
-            for proto in default_ports.iterkeys():
-                self.AddShare(Share(host, proto))
-        return True
 
 class ParseConfig(object):
     """
@@ -313,7 +328,7 @@ class SkipHosts(Lookup):
         for host in hostlist:
             self.AddServer(host, False)
 
-class ListStdHosts(Lookup):
+class StandardHosts(Lookup):
     """ add standart shares for hosts in 'list' list """
     def __call__(self):
         self.default = tuple()
@@ -384,7 +399,7 @@ class DNSZoneListing(object):
         self.default = '^$'
         keyexclude = re.compile(self['KeyExclude'])
         valexclude = re.compile(self['ValExclude'])
-        for (key, val) in ns_domain(nszone, nstype, dns, nscache):
+        for (key, val) in ns_domain(nszone, nstype, dns, nscache).iteritems():
             if keyinclude.match(key) is None or \
                valinclude.match(val) is None or \
                keyexclude.match(key) is not None or \
@@ -433,7 +448,7 @@ if __name__ == "__main__":
     lookup_engines = dict([(cl.__name__, cl) for cl in Lookup.__subclasses__()])
     if 'showengines' in sys.argv:
         print 'Known lookup engines:'
-        for eng in lookup_engines.iterkeys():
+        for eng in sorted(lookup_engines.keys()):
             print '%s\t%s' % (eng, lookup_engines[eng].__doc__)
         sys.exit()
         
@@ -479,11 +494,10 @@ if __name__ == "__main__":
                 engine_name = type(lookuper).__name__;
                 try:
                     lookuper()
-                    del lookuper
+                    lookuper.commit()
                 except:
                     sys.stderr.write("Exception in lookup engine %s for network %s\n" % \
                                      (engine_name, net))
-            del netconfig
         except:
             sys.stderr.write("Exception during lookup network %s\n" % net)
 
