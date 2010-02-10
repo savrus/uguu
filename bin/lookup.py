@@ -110,6 +110,8 @@ scantype == Ellipsis means "read it from database if possible"
             share.id = dbshare[0].id
             if share.scantype is Ellipsis:
                 share.scantype = dbshare[0].scantype
+            elif share.scantype is None:
+                dbshare[0].scantype = None
             if dbshare[1] or share.scantype != dbshare[0].scantype:
                 self.__checkshares[PoP][share.host] = share
         else:
