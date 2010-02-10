@@ -313,7 +313,7 @@ class SkipHosts(Lookup):
         for host in hostlist:
             self.AddServer(host, False)
 
-class ListStdHosts(Lookup):
+class StandardHosts(Lookup):
     """ add standart shares for hosts in 'list' list """
     def __call__(self):
         self.default = tuple()
@@ -433,7 +433,7 @@ if __name__ == "__main__":
     lookup_engines = dict([(cl.__name__, cl) for cl in Lookup.__subclasses__()])
     if 'showengines' in sys.argv:
         print 'Known lookup engines:'
-        for eng in lookup_engines.iterkeys():
+        for eng in sorted(lookup_engines.keys()):
             print '%s\t%s' % (eng, lookup_engines[eng].__doc__)
         sys.exit()
         
