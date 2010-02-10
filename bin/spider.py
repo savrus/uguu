@@ -51,16 +51,8 @@ class PsycoCache:
     def commit(self):
         self.cursor.execute(string.join(self.query,";"))
         self.query = []
-    def fappend(self, vars):
-        #self.fquery.append(self.cursor.mogrify(fquery_values, vars))
+    def ifile(self, vars):
         self.append(fquery_execute, vars)
-        #if len(self.fquery) > 1024:
-        #    self.fcommit()
-    def fcommit(self):
-        pass
-        #self.query.append(fquery_select + string.join(self.fquery, ","))
-        #self.fquery = []
-        #self.commit()
     def allcommit(self):
         self.commit()
 
@@ -100,7 +92,7 @@ def scan_line(cursor, share, line, qcache):
             # save all info into the files table
             suf = suffix(name)
             type = filetypes.get(suf)
-            qcache.fappend({'s':share, 'p':path, 'f':file, 'did':dirid,
+            qcache.ifile({'s':share, 'p':path, 'f':file, 'did':dirid,
                 'sz':size, 'n':name, 't':type, 'r':tsprepare(name)})
 
 
