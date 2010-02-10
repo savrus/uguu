@@ -154,7 +154,8 @@ def fill(db):
         VALUES ('official', '%s');
 
         INSERT INTO scantypes (protocol, scan_command, priority)
-        VALUES ('smb', 'smbscan', 1),
+        VALUES ('smb', 'smbscan -d', 2),
+               ('smb', 'smbscan -a', 1),
                ('ftp', 'ftpscan', 1);
         """ % """
 ; retrieving computer\\'s DNS records in official MSU network
