@@ -156,16 +156,19 @@ def fill(db):
         INSERT INTO scantypes (protocol, scan_command, priority)
         VALUES ('smb', 'smbscan -d', 2),
                ('smb', 'smbscan -a', 1),
-               ('ftp', 'ftpscan', 1);
+               ('ftp', 'ftpscan -c cp1251', 1);
         """ % """
 ; retrieving computer\\'s DNS records in official MSU network
-[DNSZoneKeys]
-Zone = "msu"
-Type = "CNAME"
-DNSAddr = "ns.msu"
-ValInclude = "^.?+\\\\.a\\\\.msu$"
 [StandardHosts]
-list = ("green.msu")
+list = ("melchior.msu", "green.msu")
+[SkipHosts]
+list=("melchior.a.msu")
+[DNSZoneKeys]
+Zone = "a.msu"
+Type = "A"
+DNSAddr = "ns.msu"
+#ValInclude = "^.+?\\\\.a\\\\.msu$"
+ValExclude="^auto-\\\\w{10}\\\\.a\\\\.msu$"
         """)
 
 def fillshares_melchior(db):
@@ -212,7 +215,7 @@ if __name__ == "__main__":
     ddl_prog(db)
     ddl_index(db)
     fill(db)
-    fillshares_localhost(db)
+    #fillshares_localhost(db)
     textsearch(db)
     db.commit()
 

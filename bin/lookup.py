@@ -129,7 +129,7 @@ returns permissions to add shares
             for proto in default_ports.iterkeys():
                 self.AddShare(Share(host, proto))
         return True
-    def Commit(self):
+    def commit(self):
         def ListProto(_dict):
             for proto in default_ports.iterkeys():
                 yield (proto, _dict[proto])
@@ -148,7 +148,7 @@ returns permissions to add shares
                 if _sharedict[host].CheckScantype() is None:
                     del _sharedict[host]
         def InsertHosts(_sharedict):
-            for (host, share) in _sharedict:
+            for (host, share) in _sharedict.iteritems():
                 self.__cursor.execute("""
                     INSERT INTO shares (scantype_id, network, protocol,
                         hostname, port, state)
