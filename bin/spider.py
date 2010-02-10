@@ -11,6 +11,7 @@ import sys
 import string
 import re
 import socket
+import hashlib
 import time
 from common import connectdb, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed
 
@@ -100,18 +101,18 @@ def scan_line(cursor, share, line):
                       'fn':filename })
 
 
-def scan_share(db, share_id, proto, host, port, command):
+def scan_share(db, share_id, proto, host, port, oldhash, command):
     cursor = db.cursor()
     hoststr = "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
-    print "[%s] Scanning %s ..." % (time.ctime(), hoststr)
-    cursor.execute("DELETE FROM files WHERE share_id = %(id)s", {'id':share_id})
-    cursor.execute("DELETE FROM paths WHERE share_id = %(id)s", {'id':share_id})
     address = socket.gethostbyname(host)
+    print "[%s] Scanning %s (%s) ..." % (time.ctime(), hoststr, address)
     data = run_scanner(command, address, proto, port)
+    hash = hashlib.sha256()
+    scan_output = []
     for line in data.stdout:
-        scan_line(cursor, share_id, line.strip('\n'))
+        scan_output.append(line.strip('\n'))
+        hash.update(line)
     if data.wait() != 0:
-        db.rollback()
         # assume next_scan is far away from now and we do not have to
         # acquire lock on the shares table again
         shares.execute("""
@@ -120,13 +121,31 @@ def scan_share(db, share_id, proto, host, port, command):
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         db.commit()
         print "[%s] Scanning %s failed." % (time.ctime(), hoststr)
-    else:
+    elif hash.hexdigest() == oldhash:
         cursor.execute("""
-            UPDATE shares SET last_scan = now() + %(w)s
+            UPDATE shares SET last_scan = now()
             WHERE share_id = %(s)s
-            """, {'s':share_id, 'w': wait_until_next_scan})
+            """, {'s':share_id})
         db.commit()
-        print "[%s] Scanning %s succeded." % (time.ctime(), hoststr)
+        print "[%s] Scanning %s succeded. No changes found." \
+              % (time.ctime(), hoststr)
+    else:
+        cursor.execute("DELETE FROM files WHERE share_id = %(id)s",
+            {'id':share_id})
+        cursor.execute("DELETE FROM paths WHERE share_id = %(id)s",
+            {'id':share_id})
+        for line in scan_output:
+            scan_line(cursor, share_id, line)
+        cursor.execute("""
+            UPDATE shares
+            SET last_scan = now(), hash = %(h)s
+            WHERE share_id = %(s)s
+            """, {'s':share_id,
+                  'h': hash.hexdigest()
+                  })
+        db.commit()
+        print "[%s] Scanning %s succeded. Database updated." \
+              % (time.ctime(), hoststr)
 
 
 if __name__ == "__main__":
@@ -141,7 +160,7 @@ if __name__ == "__main__":
         shares.execute("""
             LOCK TABLE shares IN SHARE ROW EXCLUSIVE MODE;
             
-            SELECT share_id, shares.protocol, hostname, port, scan_command
+            SELECT share_id, shares.protocol, hostname, port, hash, scan_command
             FROM shares
             LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
             WHERE state = 'online' AND (next_scan IS NULL OR next_scan < now())
@@ -151,12 +170,12 @@ if __name__ == "__main__":
             proceed = False
             db.rollback()
             break
-        id, proto, host, port, command = shares.fetchone()
+        id, proto, host, port, hash, command = shares.fetchone()
         shares.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
             WHERE share_id = %(s)s;
             """, {'s':id, 'w': wait_until_next_scan})
         # release lock on commit
         db.commit()
-        scan_share(db, id, proto, host, port, command)
+        scan_share(db, id, proto, host, port, hash, command)
 
