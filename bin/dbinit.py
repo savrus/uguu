@@ -113,6 +113,21 @@ def ddl_prog(db):
         CREATE TRIGGER share_stage_change_trigger
             BEFORE UPDATE ON shares FOR EACH ROW
             EXECUTE PROCEDURE share_state_change();
+        
+        CREATE OR REPLACE FUNCTION get_and_save_filename(
+                IN text, IN filetype, IN text)
+            RETURNS integer AS $$
+            DECLARE id INTEGER;
+            BEGIN
+                SELECT INTO id filename_id FROM filenames WHERE name = $1;
+                IF NOT FOUND THEN
+                    INSERT INTO filenames (name, type, tsname)
+                    VALUES ($1, $2, to_tsvector($3));
+                    id := lastval();
+                END IF;
+                RETURN id;
+            END;
+            $$ LANGUAGE 'plpgsql' VOLATILE;
 	""")
 
 

@@ -7,6 +7,7 @@
 #
 
 import psycopg2
+from psycopg2.extensions import adapt
 import sys
 import string
 import re
@@ -29,8 +30,35 @@ def tsprepare(string):
                    '\\1\\2\\3\\4 \\2 \\4', relax, re.UNICODE)
     return relax
 
+fquery_select = "INSERT INTO files (share_id, sharepath_id, pathfile_id, sharedir_id, size, filename_id) VALUES "
+fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, get_and_save_filename(%(n)s, %(t)s, %(r)s))"
 
-def scan_line(cursor, share, line):
+class PsycoCache:
+    def __init__(self, db, cursor):
+        self.query = []
+        self.fquery = []
+        self.conn = db
+        self.cursor = cursor
+    def append(self, q, vars):
+        self.query.append(self.cursor.mogrify(q, vars))
+        if len(self.query) > 1024:
+            self.commit()
+    def commit(self):
+        if len(self.query) > 0:
+            self.cursor.execute(string.join(self.query,";"))
+            self.query = []
+    def fappend(self, vars):
+        self.fquery.append(self.cursor.mogrify(fquery_values, vars))
+        if len(self.fquery) > 1024:
+            self.fcommit()
+    def fcommit(self):
+        self.commit()
+        self.cursor.execute(fquery_select + string.join(self.fquery, ","))
+        self.fquery = []
+    def allcommit(self):
+        self.fcommit()
+
+def scan_line(cursor, share, line, qcache):
     line = unicode(line, scanners_locale)
     if line[0] == "0":
         # 'path' type of line 
@@ -40,10 +68,8 @@ def scan_line(cursor, share, line):
             l, id = string.split(s=line, maxsplit=2)
             path = ""
         id = int(id)
-        cursor.execute("""
-            INSERT INTO paths (share_id, sharepath_id, path, tspath)
-            VALUES (%(s)s, %(id)s, %(p)s, to_tsvector(%(t)s))
-            """, {'s':share, 'id':id, 'p':path, 't':tsprepare(path)})
+        qcache.append("INSERT INTO paths (share_id, sharepath_id, path, tspath) VALUES (%(s)s, %(id)s, %(p)s, to_tsvector(%(t)s))",
+            {'s':share, 'id':id, 'p':path, 't':tsprepare(path)})
     else:
         # 'file' type of line
         try:
@@ -58,47 +84,18 @@ def scan_line(cursor, share, line):
         items = int(items)
         if dirid > 0:
             # if directory then update paths table
-            cursor.execute("""
-                UPDATE paths SET parent_id = %(p)s,
-                                 parentfile_id = %(f)s,
-                                 items = %(i)s,
-                                 size = %(sz)s
-                WHERE share_id = %(s)s AND sharepath_id = %(d)s
-                """, {'p':path, 'f':file, 'i':items,
-                      'sz':size, 's':share, 'd':dirid})
+            qcache.append("UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s WHERE share_id = %(s)s AND sharepath_id = %(d)s;",
+                {'p':path, 'f':file, 'i':items, 'sz':size, 's':share, 'd':dirid})
         if path == 0:
             # if share root then it's size is the share size
-            cursor.execute("""
-                UPDATE shares SET size = %(sz)s
-                WHERE share_id = %(s)s
-                """, {'sz':size, 's':share})
+            qcache.append("UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s;", {'sz':size, 's':share})
         else:
             # not share root
             # save all info into the files table
-            cursor.execute("""
-                SELECT filename_id FROM filenames WHERE name = %(n)s
-                """, {'n':name})
-            if cursor.rowcount > 0:
-                filename, = cursor.fetchone()
-            else:
-                suf = suffix(name)
-                type = filetypes.get(suf)
-                cursor.execute("""
-                    INSERT INTO filenames (name, type, tsname)
-                    VALUES (%(n)s, %(t)s, to_tsvector('uguu', %(r)s))
-                    """, {'n':name, 't':type, 'r':tsprepare(name)})
-                cursor.execute("SELECT * FROM lastval()")
-                filename, = cursor.fetchone()
-            cursor.execute("""
-                INSERT INTO files (share_id,
-                                   sharepath_id,
-                                   pathfile_id,
-                                   sharedir_id,
-                                   size,
-                                   filename_id)
-                VALUES (%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(fn)s)
-                """, {'s':share, 'p':path, 'f':file, 'did':dirid, 'sz':size,
-                      'fn':filename })
+            suf = suffix(name)
+            type = filetypes.get(suf)
+            qcache.fappend({'s':share, 'p':path, 'f':file, 'did':dirid,
+                'sz':size, 'n':name, 't':type, 'r':tsprepare(name)})
 
 
 def scan_share(db, share_id, proto, host, port, oldhash, command):
@@ -134,8 +131,10 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             {'id':share_id})
         cursor.execute("DELETE FROM paths WHERE share_id = %(id)s",
             {'id':share_id})
+        qcache = PsycoCache(db, cursor)
         for line in scan_output:
-            scan_line(cursor, share_id, line)
+            scan_line(cursor, share_id, line, qcache)
+        qcache.allcommit()
         cursor.execute("""
             UPDATE shares
             SET last_scan = now(), hash = %(h)s
