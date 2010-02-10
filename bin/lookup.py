@@ -76,8 +76,10 @@ known_hosts is dictionary of "host" : "lookup engine name"
     def __len__(self):
         return len(self.__params)
     def __getitem__(self, key):
-        try: return self.__params[key]
-        except KeyError: return self.default
+        if key in self.__params:
+            return self.__params[key]
+        else:
+            return self.default
     def __del__(self):
         def ListProto(_dict):
             for proto in default_ports.iterkeys():
@@ -292,11 +294,19 @@ def get_scantypes(db):
                 res[proto].discovery.append(scantype[0])
     return res
 
-def get_networks(db):
+def get_networks(db, network = None):
     cursor = db.cursor()
     cursor.execute("SELECT network, lookup_config FROM networks")
-    for net in cursor.fetchall():
-        yield (net[0], net[1])
+    if network is None:
+        for net in cursor.fetchall():
+            yield (net[0], net[1])
+    else:
+        for net in cursor.fetchall():
+            if net == network:
+                yield (net[0], net[1])
+                return
+        print "Unknown network \"%s\"" % network
+        sys.exit(1)
 
 #####################################
 ### Here are comes Lookup engines
@@ -316,8 +326,8 @@ class SkipHosts(Lookup):
 #####################################
         
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or 'help' in sys.argv or '-h' in sys.argv:
-        print 'Usage %s [help|confighelp|showengines|showscantypes|shownetworks|showconfig [networkname]|run]' % sys.argv[0]
+    if len(sys.argv) < 2 or len(sys.argv) > 3 or 'help' in sys.argv or '-h' in sys.argv:
+        print 'Usage %s [help|confighelp|showengines|showscantypes|shownetworks|showconfig [networkname]|runall|runnet networkname]' % sys.argv[0]
         sys.exit()
     if 'confighelp' in sys.argv:
         print ParseConfig.__doc__
@@ -357,11 +367,15 @@ if __name__ == "__main__":
             print 'Lookup config for network "%s":\n%s\n' % (net, config)
         sys.exit()
 
-    if len(sys.argv) != 2 or sys.argv[1] != 'run':
-        print 'Unknown parameter, try %s help' % sys.argv[0]
+    if len(sys.argv) == 2 and sys.argv[1] == 'runall':
+        netw = None
+    elif len(sys.argv) == 3 and sys.argv[1] == 'runnet':
+        netw = sys.argv[3]
+    else
+        print 'Invalid command-line, try %s help' % sys.argv[0]
         sys.exit(1)
 
-    for (net, config) in get_networks(db):
+    for (net, config) in get_networks(db, netw):
         try:
             netconfig = ParseConfig(net, config)
             for lookuper in netconfig(db):
