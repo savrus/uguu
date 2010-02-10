@@ -312,7 +312,7 @@ def get_networks(db, network = None):
 ### Here are comes Lookup engines
 
 class SkipHosts(Lookup):
-    """ preserves hosts in 'list' parameter from adding into database """
+    """ preserves hosts in 'list' list from adding into database """
     def __call__(self):
         self.default = tuple()
         hostlist = self['list']
@@ -321,7 +321,112 @@ class SkipHosts(Lookup):
         for host in hostlist:
             self.AddServer(host, False)
 
-#TODO: more engines            
+class ListStdHosts(Lookup):
+    """ add standart shares for hosts in 'list' list """
+    def __call__(self):
+        self.default = tuple()
+        hostlist = self['list']
+        if type(hostlist) is str:
+            hostlist = (hostlist,)
+        for host in hostlist:
+            self.AddServer(host)
+
+class KeepDBShares(Lookup):
+    """ keep scantype from database, 'Count' is share number,
+    '0'..'Count-1' are ("host", "proto"[, port(=0)]) """
+    def __call__(self):
+        self.default = 0
+        for i in range(self['Count']):
+            item = self[str(i)]
+            if type(item) is not tuple or len(item) < 2 or len(item) > 4 or \
+               type(item[0]) is not str or type(item[1]) is not str or \
+               (len(item) == 3 and type(item[2]) is not int):
+                continue
+            if not self.AddServer(item[0], False):
+                continue
+            port = 0
+            if len(item) == 3:
+                port = item[2]
+            self.AddShare(Share(item[0], item[1], port, Ellipsis))
+
+class ManualShares(Lookup):
+    """ implicitly add shares, 'Count' is share number,
+    '0'..'Count-1' are ("host", "proto"[, port(=0)[, scantype(=auto)]]) """
+    def __call__(self):
+        self.default = 0
+        for i in range(self['Count']):
+            item = self[str(i)]
+            if type(item) is not tuple or len(item) < 2 or len(item) > 4 or \
+               type(item[0]) is not str or type(item[1]) is not str or \
+               (len(item) > 2 and type(item[2]) is not int) or \
+               (len(item) == 4 and type(item[3]) is not int):
+                continue
+            if len(item) == 2:
+                share = Share(item[0], item[1])
+            elif len(item) == 3:
+                share = Share(item[0], item[1], item[2])
+            else:
+                share = Share(item[0], item[1], item[2], item[3])
+            self.AddShare(share)
+
+class DNSZoneListing(object):
+    """ required by DNSZoneKeys, DNSZoneValues """
+    def Listing(self, nscache = None):
+        """ base listing generator """
+        nstype = self['Type']
+        valid = ('A', 'AAAA', 'ANY', 'CNAME', 'PTR')
+        if nstype not in valid:
+            print 'Invalid or missing option Type (valid are %s)' % (valid, )
+            raise UserWarning
+        self.default = None
+        nszone = self['Zone']
+        if type(nszone) is not str or \
+           nszone[0] == '.' or nszone[-1] == '.':
+            print 'Invalid or mission option Zone'
+            raise UserWarning
+        self.default = ""
+        dns = self['DNSAddr']
+        self.default = '^.*$'
+        keyinclude = re.compile(self['KeyInclude'])
+        valinclude = re.compile(self['ValInclude'])
+        self.default = '^$'
+        keyexclude = re.compile(self['KeyExclude'])
+        valexclude = re.compile(self['ValExclude'])
+        for (key, val) in ns_domain(nszone, nstype, dns, nscache):
+            if keyinclude.match(key) is None or \
+               valinclude.match(val) is None or \
+               keyexclude.match(key) is not None or \
+               valexclude.match(val) is not None:
+                continue
+            yield (key, val)
+
+class DNSZoneKeys(Lookup, DNSZoneListing):
+    """ add all 'Type' keys from 'Zone' zone listing, optionals:
+    'DNSAddr', regexps '{Key|Val}{Include|Exclude}', 'Suffix'(="." Zone) """
+    def __call__(self):
+        self.default = '.' + self['Zone']
+        suffix = self['Suffix']
+        cache = None
+        if suffix == self.default:
+            cache = self.nscache
+        for (key, val) in self.Listing(cache):
+            self.AddServer(key + suffix)
+
+class DNSZoneValues(Lookup, DNSZoneListing):
+    """ add all 'Type' values from 'Zone' zone listing, optionals:
+    'DNSAddr', regexps '{Key|Val}{Include|Exclude}', changing tuple 'Replace' """
+    def __call__(self):
+        self.default = ("", "")
+        repl = self['Replace']
+        if type(repl) is not tuple or len(repl) != 2:
+            print 'Invalid Replace option (should be tuple)'
+            raise UserWarning
+        r = re.compile(repl[0])
+        repl = repl[1]
+        for (key, val) in self.Listing():
+            self.AddServer(r.sub(repl, val))
+
+#TODO: more engines
 
 #####################################
         
