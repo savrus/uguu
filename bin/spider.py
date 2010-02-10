@@ -83,11 +83,11 @@ def scan_line(cursor, share, line, qcache):
         items = int(items)
         if dirid > 0:
             # if directory then update paths table
-            qcache.append("UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s WHERE share_id = %(s)s AND sharepath_id = %(d)s;",
+            qcache.append("UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s WHERE share_id = %(s)s AND sharepath_id = %(d)s",
                 {'p':path, 'f':file, 'i':items, 'sz':size, 's':share, 'd':dirid})
         if path == 0:
             # if share root then it's size is the share size
-            qcache.append("UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s;", {'sz':size, 's':share})
+            qcache.append("UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s", {'sz':size, 's':share})
         else:
             # not share root
             # save all info into the files table
