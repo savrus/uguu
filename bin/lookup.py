@@ -107,7 +107,7 @@ scantype == Ellipsis means "read it from database if possible"
             if dbshare[0].proto != share.proto:
                 dbshare = None
         if dbshare is not None:
-            share[0].id = dbshare[0].id
+            share.id = dbshare[0].id
             if share.scantype is Ellipsis:
                 share.scantype = dbshare[0].scantype
             if dbshare[1] or share.scantype != dbshare[0].scantype:
