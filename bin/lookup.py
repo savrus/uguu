@@ -9,6 +9,7 @@
 import psycopg2
 import sys
 import socket
+import string
 import re
 import collections
 from common import connectdb, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
@@ -130,10 +131,10 @@ scantype == Ellipsis means "read it from database if possible"
 """
         share.nscache = self.nscache
         self.__cursor.execute("""
-            SELECT share_id, scantype_id, last_lookup + interval '%(interval)s' > now()
+            SELECT share_id, scantype_id, last_lookup + interval %(interval)s > now()
             FROM shares
-            WHERE hostname = '%(host)s' AND
-                protocol = '%(proto)s' AND port = '%(port)s'
+            WHERE hostname = %(host)s AND
+                protocol = %(proto)s AND port = %(port)s
             """, {'interval': wait_until_next_lookup, 'host': share.host,
                   'proto': share.proto, 'port': share.port})
         data = self.__cursor.fetchone()
@@ -384,7 +385,7 @@ class DNSZoneListing(object):
         self.default = '^$'
         keyexclude = re.compile(self['KeyExclude'])
         valexclude = re.compile(self['ValExclude'])
-        for (key, val) in ns_domain(nszone, nstype, dns, nscache):
+        for (key, val) in ns_domain(nszone, nstype, dns, nscache).iteritems():
             if keyinclude.match(key) is None or \
                valinclude.match(val) is None or \
                keyexclude.match(key) is not None or \
