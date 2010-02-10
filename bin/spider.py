@@ -31,12 +31,19 @@ def tsprepare(string):
 
 fquery_select = "INSERT INTO files (share_id, sharepath_id, pathfile_id, sharedir_id, size, filename_id) VALUES "
 fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, gfid(%(n)s, %(t)s, %(r)s))"
+fquery_execute = "EXECUTE ifile (%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(n)s, %(t)s, %(r)s)"
 
 class PsycoCache:
     def __init__(self, cursor):
         self.query = []
         self.fquery = []
         self.cursor = cursor
+        self.cursor.execute("""
+            PREPARE ifile(int, int, int, int, bigint, text, filetype, text) AS
+            INSERT INTO files (share_id, sharepath_id, pathfile_id,
+                sharedir_id, size, filename_id)
+            VALUES ($1, $2, $3, $4, $5, gfid($6, $7, $8))
+            """)
     def append(self, q, vars):
         self.query.append(self.cursor.mogrify(q, vars))
         if len(self.query) > 1024:
@@ -45,15 +52,17 @@ class PsycoCache:
         self.cursor.execute(string.join(self.query,";"))
         self.query = []
     def fappend(self, vars):
-        self.fquery.append(self.cursor.mogrify(fquery_values, vars))
-        if len(self.fquery) > 1024:
-            self.fcommit()
+        #self.fquery.append(self.cursor.mogrify(fquery_values, vars))
+        self.append(fquery_execute, vars)
+        #if len(self.fquery) > 1024:
+        #    self.fcommit()
     def fcommit(self):
-        self.query.append(fquery_select + string.join(self.fquery, ","))
-        self.fquery = []
-        self.commit()
+        pass
+        #self.query.append(fquery_select + string.join(self.fquery, ","))
+        #self.fquery = []
+        #self.commit()
     def allcommit(self):
-        self.fcommit()
+        self.commit()
 
 def scan_line(cursor, share, line, qcache):
     line = unicode(line, scanners_locale)
