@@ -161,7 +161,7 @@ static void usage(char *binname, int err)
     fprintf(stderr, "\t-c cp\tset codepage for non-utf8 servers (default is " DEFAULT_ANSI_CODEPAGE ")\n");
     fprintf(stderr, "\t-C cp\tforce server codepage (without detecting utf8)\n");
     fprintf(stderr, "\t-P##\tuse non-default port ## for ftp control connection\n");
-    fprintf(stderr, "\t-t###\tconnection timeout ### in miliseconds (default is " _TOSTRING(DEF_TIMEOUTS) ")\n");
+    fprintf(stderr, "\t-t###\tconnection timeout ### in seconds (default is " _TOSTRING(DEF_TIMEOUT) ")\n");
 	fprintf(stderr, "\t-h\tprint this help\n");
     exit(err);
 }
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 				curdir.ServerPORT = atoi(argv[i]+2);
 				break;
 			case 't':
-				curdir.timeouts = atoi(argv[i]+2);
+				curdir.timeout_sec = atoi(argv[i]+2);
 				break;
 			case 'u':
 				curdir.login = argv[++i];
