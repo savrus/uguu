@@ -70,6 +70,22 @@ known_hosts is dictionary of "host" : "lookup engine name"
         self.__newshares = collections.defaultdict(dict)
         self.nscache = dns_cache()
         self.default = None
+        self.__cursor.execute("""
+            SELECT
+                share_id,
+                scantype_id,
+                protocol,
+                hostname,
+                port,
+                last_lookup + interval %(interval)s < now()
+            FROM shares
+            WHERE network = %(net)s
+            """, {'interval': wait_until_next_lookup, 'net': self.__network})
+        self.__dbhosts = collections.defaultdict(dict)
+        for row in self.__cursor.fetchall():
+            share = Share(row[3], row[2], row[4], row[1])
+            share.id = row[0]
+            self.__dbhosts[share.ProtoOrPort()][share.host] = (share, row[5])
     def __len__(self):
         return len(self.__params)
     def __getitem__(self, key):
@@ -130,25 +146,23 @@ add share with optional scantype detection,
 scantype == Ellipsis means "read it from database if possible"
 """
         share.nscache = self.nscache
-        self.__cursor.execute("""
-            SELECT share_id, scantype_id, last_lookup + interval %(interval)s > now()
-            FROM shares
-            WHERE hostname = %(host)s AND
-                protocol = %(proto)s AND port = %(port)s
-            """, {'interval': wait_until_next_lookup, 'host': share.host,
-                  'proto': share.proto, 'port': share.port})
-        data = self.__cursor.fetchone()
-        if data is not None:
-            share.id = data[0]
+        dbshare = None
+        PoP = share.ProtoOrPort()
+        if PoP in self.__dbhosts and \
+           share.host in self.__dbhosts[PoP]:
+            dbshare = self.__dbhosts[PoP][share.host]
+            if dbshare[0].proto != share.proto:
+                dbshare = None
+        if dbshare is not None:
+            share[0].id = dbshare.id
             if share.scantype is Ellipsis:
-                share.scantype = data[1]
-            if data[2] and share.scantype == data[1]:
-                return
-            self.__checkshares[share.ProtoOrPort()][share.host] = share
+                share.scantype = dbshare[0].scantype
+            if dbshare[1] or share.scantype != dbshare[0].scantype:
+                self.__checkshares[PoP][share.host] = share
         else:
             if share.scantype is Ellipsis:
                 share.scantype = None
-            self.__newshares[share.ProtoOrPort()][share.host] = share
+            self.__newshares[PoP][share.host] = share
     def AddServer(self, host, default_shares = True):
         """
 add/check server to checklist, try to add default shares if default_shares,
