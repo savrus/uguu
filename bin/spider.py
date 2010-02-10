@@ -33,28 +33,51 @@ fquery_select = "INSERT INTO files (share_id, sharepath_id, pathfile_id, sharedi
 fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, gfid(%(n)s, %(t)s, %(r)s))"
 fquery_execute = "EXECUTE ifile (%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(n)s, %(t)s, %(r)s)"
 
+def sql_prepare(cursor):
+    str = """
+        PREPARE ifile(int, int, int, int, bigint, text, filetype, text) AS
+        INSERT INTO files (share_id, sharepath_id, pathfile_id,
+            sharedir_id, size, filename_id)
+        VALUES ($1, $2, $3, $4, $5, gfid($6, $7, $8));
+        
+        PREPARE ipath(int, int, text, text) AS
+        INSERT INTO paths (share_id, sharepath_id, path, tspath)
+        VALUES ($1, $2, $3, to_tsvector($4));
+        
+        PREPARE upath(int, int, int, bigint, int, int) AS
+        UPDATE paths
+        SET parent_id = $1, parentfile_id = $2, items = $3,
+            size = $4 WHERE share_id = $5 AND sharepath_id = $6;
+            
+        PREPARE ushare(bigint, int) AS
+        UPDATE shares SET size = $1 WHERE share_id = $2;
+        """
+    cursor.execute(str)
+
+
 class PsycoCache:
     def __init__(self, cursor):
         self.query = []
         self.fquery = []
         self.cursor = cursor
-        self.cursor.execute("""
-            PREPARE ifile(int, int, int, int, bigint, text, filetype, text) AS
-            INSERT INTO files (share_id, sharepath_id, pathfile_id,
-                sharedir_id, size, filename_id)
-            VALUES ($1, $2, $3, $4, $5, gfid($6, $7, $8))
-            """)
     def append(self, q, vars):
         self.query.append(self.cursor.mogrify(q, vars))
         if len(self.query) > 1024:
             self.commit()
     def commit(self):
-        self.cursor.execute(string.join(self.query,";"))
+        str = string.join(self.query,";")
+        self.cursor.execute(str)
         self.query = []
     def ifile(self, vars):
-        self.append(fquery_execute, vars)
-    def allcommit(self):
+        self.fquery.append(self.cursor.mogrify(fquery_values, vars))
+        if len(self.fquery) > 1024:
+            self.fcommit()
+    def fcommit(self):
+        self.query.append(fquery_select + string.join(self.fquery, ","))
+        self.fquery = []
         self.commit()
+    def allcommit(self):
+        self.fcommit()
 
 def scan_line(cursor, share, line, qcache):
     line = unicode(line, scanners_locale)
@@ -66,7 +89,7 @@ def scan_line(cursor, share, line, qcache):
             l, id = string.split(s=line, maxsplit=2)
             path = ""
         id = int(id)
-        qcache.append("INSERT INTO paths (share_id, sharepath_id, path, tspath) VALUES (%(s)s, %(id)s, %(p)s, to_tsvector(%(t)s))",
+        qcache.append("EXECUTE ipath (%(s)s, %(id)s, %(p)s, %(t)s)",
             {'s':share, 'id':id, 'p':path, 't':tsprepare(path)})
     else:
         # 'file' type of line
@@ -82,11 +105,11 @@ def scan_line(cursor, share, line, qcache):
         items = int(items)
         if dirid > 0:
             # if directory then update paths table
-            qcache.append("UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s WHERE share_id = %(s)s AND sharepath_id = %(d)s",
+            qcache.append("EXECUTE upath(%(p)s, %(f)s, %(i)s, %(sz)s, %(s)s, %(d)s)",
                 {'p':path, 'f':file, 'i':items, 'sz':size, 's':share, 'd':dirid})
         if path == 0:
             # if share root then it's size is the share size
-            qcache.append("UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s", {'sz':size, 's':share})
+            qcache.append("EXECUTE ushare(%(sz)s, %(s)s)", {'sz':size, 's':share})
         else:
             # not share root
             # save all info into the files table
@@ -152,6 +175,7 @@ if __name__ == "__main__":
         print "Unable to connect to the database, exiting."
         sys.exit()
     shares = db.cursor()
+    sql_prepare(shares)
     proceed = True
     while proceed:
         shares.execute("""
