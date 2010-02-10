@@ -31,7 +31,7 @@ def tsprepare(string):
     return relax
 
 fquery_select = "INSERT INTO files (share_id, sharepath_id, pathfile_id, sharedir_id, size, filename_id) VALUES "
-fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, get_and_save_filename(%(n)s, %(t)s, %(r)s))"
+fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, gfid(%(n)s, %(t)s, %(r)s))"
 
 class PsycoCache:
     def __init__(self, db, cursor):

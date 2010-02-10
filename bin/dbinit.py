@@ -114,7 +114,7 @@ def ddl_prog(db):
             BEFORE UPDATE ON shares FOR EACH ROW
             EXECUTE PROCEDURE share_state_change();
         
-        CREATE OR REPLACE FUNCTION get_and_save_filename(
+        CREATE OR REPLACE FUNCTION gfid(
                 IN text, IN filetype, IN text)
             RETURNS integer AS $$
             DECLARE id INTEGER;
