@@ -74,7 +74,7 @@ class dns_cache(object):
     def __init__(self):
         self.name2ip = dict()
         self.ip2name = collections.defaultdict(set)
-    def __call__(host, ip = None):
+    def __call__(self, host, ip = None):
         """usually returns ip (and caches it),
 but if host is None, returns set of hostnames"""
         if ip is None:
