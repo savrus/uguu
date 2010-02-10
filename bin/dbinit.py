@@ -151,11 +151,20 @@ def fill(db):
     cursor = db.cursor()
     cursor.execute("""
         INSERT INTO networks (network, lookup_config)
-        VALUES ('official', '#todo');
+        VALUES ('official', '%s');
 
         INSERT INTO scantypes (protocol, scan_command, priority)
         VALUES ('smb', 'smbscan', 1),
                ('ftp', 'ftpscan', 1);
+        """ % """
+; retrieving computer\\'s DNS records in official MSU network
+[DNSZoneKeys]
+Zone = "msu"
+Type = "CNAME"
+DNSAddr = "ns.msu"
+ValInclude = "^.?+\\\\.a\\\\.msu$"
+[StandardHosts]
+list = ("green.msu")
         """)
 
 def fillshares_melchior(db):
