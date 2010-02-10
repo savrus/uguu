@@ -13,7 +13,7 @@ from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_item
 
 # for types other than recognizable by scanner
 qopt_type = {
-    'dir':      "files.sharedir_id > 0"
+    'dir':      "(files.sharedir_id != 0)"
 }
 
 # for ordering query option 
