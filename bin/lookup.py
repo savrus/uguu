@@ -66,9 +66,9 @@ known_hosts is dictionary of "host" : "lookup engine name"
         self.__params = params
         self.__hosts = known_hosts
         self.default = '^.*$'
-        self.__include = self['Include']
+        self.__include = re.compile(self['Include'])
         self.default = '^$'
-        self.__exclude = self['Exclude']
+        self.__exclude = re.compile(self['Exclude'])
         self.default = None
         self.__checkshares = collections.defaultdict(dict)
         self.__newshares = collections.defaultdict(dict)
