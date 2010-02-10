@@ -371,7 +371,7 @@ if __name__ == "__main__":
         netw = None
     elif len(sys.argv) == 3 and sys.argv[1] == 'runnet':
         netw = sys.argv[3]
-    else
+    else:
         print 'Invalid command-line, try %s help' % sys.argv[0]
         sys.exit(1)
 
