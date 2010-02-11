@@ -12,6 +12,7 @@ import socket
 import string
 import re
 import collections
+import traceback
 from common import connectdb, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
 from network import dns_cache, ns_domain, scan_all_hosts
 
@@ -489,13 +490,14 @@ if __name__ == "__main__":
                 except UserWarning:
                     pass
                 except:
-                    #todo: traceback
-                    sys.stderr.write("Exception in lookup engine '%s' for network \"%s\"\n" % \
+                    sys.stderr.write("Exception in engine '%s' (network \"%s\")" % \
                                      (engine_name, net))
+                    traceback.print_exc()
         except UserWarning:
             pass
         except:
-            sys.stderr.write("Exception during lookup network \"%s\"\n" % net)
+            sys.stderr.write("Exception at network \"%s\" lookup\n" % net)
+            traceback.print_exc()
 
     db.cursor().execute("DELETE FROM shares WHERE last_lookup + interval %s < now()",
                         (wait_until_delete_share,))
