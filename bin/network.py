@@ -98,6 +98,11 @@ returns dict with hostnames as keys"""
         entry = re_host.search(nsentry)
         if entry is not None:
             res[entry.group(1)] = entry.group(2)
+    hosts.stdout.close()
+    if hosts.wait() != 0:
+        sys.stderr.write("DNS zone %s listing completed with error\n" % domain)
+    elif len(res) == 0:
+        sys.stderr.write("DNS zone %s listing returned no records\n" % domain)
     return res
 
 def ipv4_to_int(ip):
