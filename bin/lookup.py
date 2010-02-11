@@ -55,7 +55,7 @@ Basic class for lookup engines.
 Descedants should not overlap __init__, __del__ methods and
 must define __call__ method with self argument only.
 """
-    def __init__(self, db, network, params, known_hosts):
+    def __init__(self, db, network, params, known_hosts, nscache):
         """
 db is database connection
 network is network name
@@ -69,7 +69,7 @@ known_hosts is dictionary of "host" : "lookup engine name"
         self.__hosts = known_hosts
         self.__checkshares = collections.defaultdict(dict)
         self.__newshares = collections.defaultdict(dict)
-        self.nscache = dns_cache()
+        self.nscache = nscache
         self.default = None
         self.__cursor.execute("""
             SELECT
@@ -268,8 +268,9 @@ Exclude = "if present, exclude hosts matching with this regexp"
             pass
         return False
     def __call__(self, db, known_hosts = dict()):
+        nscache = dns_cache()
         for (section, params) in self.__sections:
-            yield lookup_engines[section](db, self.__network, params, known_hosts)
+            yield lookup_engines[section](db, self.__network, params, known_hosts, nscache)
 
 
 def get_scantypes(db):
@@ -370,9 +371,10 @@ class ManualShares(Lookup):
 
 class DNSZoneListing(object):
     """ required by DNSZoneKeys, DNSZoneValues """
-    def Listing(self):
+    def Listing(self, nstype = None):
         """ base listing generator """
-        nstype = self['Type']
+        if nstype is None:
+            nstype = self['Type']
         valid = ('A', 'AAAA', 'ANY', 'CNAME', 'PTR')
         if nstype not in valid:
             print 'Invalid or missing option Type (valid are %s)' % (valid, )
@@ -421,6 +423,20 @@ class DNSZoneValues(Lookup, DNSZoneListing):
         repl = repl[1]
         for (key, val) in self.Listing():
             self.AddServer(r.sub(repl, val))
+
+class FlushDNSCache(Lookup):
+    """ just flush DNS-cache (one per network), no parameters """
+    def __call__(self):
+        self.nscache.__init__()
+
+class DNSZoneToCache(Lookup, DNSZoneListing):
+    """ just cache "A" records to prevent single host lookups, params
+    are the same as DNSZoneKeys engine's, except 'Type' (not used) """
+    def __call__(self):
+        self.default = '.' + self['Zone']
+        suffix = self['Suffix']
+        for (key, val) in self.Listing(nstype = 'A'):
+            self.nscache(key + suffix, val)
 
 #TODO: more engines
 
