@@ -87,9 +87,9 @@ but if host is None, returns set of hostnames"""
         self.ip2name[ip].add(host)
         return ip
 
-def ns_domain(domain, rtype = "A", dns = "", cache = None):
+def ns_domain(domain, rtype = "A", dns = ""):
     """list rtype NS records from domain using provided or default dns,
-optionally adding records to dns_cache, returns dict with hostnames as keys"""
+returns dict with hostnames as keys"""
     hosts = subprocess.Popen(nsls_cmd % {'d': domain, 't': rtype, 's': dns},
                              stdout=PIPE, shell=True)
     re_host = re.compile(nsls_entry % rtype)
@@ -98,9 +98,6 @@ optionally adding records to dns_cache, returns dict with hostnames as keys"""
         entry = re_host.search(nsentry)
         if entry is not None:
             res[entry.group(1)] = entry.group(2)
-    if type(cache) is dns_cache and rtype == "A":
-        for (host, ip) in res.iteritems():
-            cache(host + '.' + domain, ip)
     return res
 
 def ipv4_to_int(ip):

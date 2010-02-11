@@ -370,7 +370,7 @@ class ManualShares(Lookup):
 
 class DNSZoneListing(object):
     """ required by DNSZoneKeys, DNSZoneValues """
-    def Listing(self, nscache = None):
+    def Listing(self):
         """ base listing generator """
         nstype = self['Type']
         valid = ('A', 'AAAA', 'ANY', 'CNAME', 'PTR')
@@ -391,7 +391,7 @@ class DNSZoneListing(object):
         self.default = '^$'
         keyexclude = re.compile(self['KeyExclude'])
         valexclude = re.compile(self['ValExclude'])
-        for (key, val) in ns_domain(nszone, nstype, dns, nscache).iteritems():
+        for (key, val) in ns_domain(nszone, nstype, dns).iteritems():
             if keyinclude.match(key) is None or \
                valinclude.match(val) is None or \
                keyexclude.match(key) is not None or \
@@ -405,10 +405,7 @@ class DNSZoneKeys(Lookup, DNSZoneListing):
     def __call__(self):
         self.default = '.' + self['Zone']
         suffix = self['Suffix']
-        cache = None
-        if suffix == self.default:
-            cache = self.nscache
-        for (key, val) in self.Listing(cache):
+        for (key, val) in self.Listing():
             self.AddServer(key + suffix)
 
 class DNSZoneValues(Lookup, DNSZoneListing):
