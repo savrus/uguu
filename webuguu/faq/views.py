@@ -15,7 +15,7 @@ def bold(x):
 def strargs(args):
     return string.join([bold(x) for x in args], ", ")
 
-sizedesc = u" Размером является десятичное число с последующим спецификатором. Спецификатором может быть одно из: tb, gb, mb, kb, byte."
+ru_sizedesc = u" Размером является десятичное число с последующим спецификатором. Спецификатором может быть одно из: tb, gb, mb, kb, byte."
 
 ru_multiarg = u" Moжно задать несколько аргументов через запятую, но не разделяя пробелом."
 
@@ -49,11 +49,11 @@ ru_qoptions = (
     },
     {'option': "max",
      'args': strargs(["100gb", "256.8mb"]),
-     'desc': u"Максимальный размер файла." + sizedesc,
+     'desc': u"Максимальный размер файла." + ru_sizedesc,
     },
     {'option': "min",
      'args': strargs(["100gb", "256.8mb"]),
-     'desc': u"Минимальный размер файла." + sizedesc
+     'desc': u"Минимальный размер файла." + ru_sizedesc
     },
     {'option': "type",
      'args': strargs(tuple(known_filetypes) + ("dir",)),
