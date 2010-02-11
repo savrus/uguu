@@ -143,14 +143,35 @@ static struct dt_dentry * dt_linkchild(struct dt_dentry **c, struct dt_dentry *d
     return dn;
 }
 
+static int dt_exceed_limit(unsigned int value, unsigned int limit, char *str, struct dt_dentry *d)
+{
+    if (value > limit) {
+        LOG_ERR("%s limit exceeded for directory '%s' (id %u). "
+                "Increase %s and recompile if you want to scan everything.",
+                str, d->name, d->id, str);
+        return 1;
+    }           
+    return 0;
+}
+
+#define dt_exceed_macro(value, limit, d) \
+    dt_exceed_limit(value, limit, #limit, d)
+
 static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, unsigned int *id)
 {
     struct dt_dentry *ddc = NULL, *dfc = NULL, *dn;
     unsigned int dirs = 0;
     unsigned int files = 0;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
-    
+
+    if (dt_exceed_macro(d->id, MAX_DIRS, d))
+        return;
+
     while ((dn = wk->readdir(curdir)) != NULL) {
+        if (dt_exceed_macro(files + dirs + 1, MAX_ITEMS_IN_DIR, d)) {
+            dt_free(dn);
+            break;
+        }
         dn->stamp = 0;
         dn->parent = d;
         if (dn->type == DT_DIR) {
