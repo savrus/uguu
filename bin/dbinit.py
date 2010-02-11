@@ -151,25 +151,37 @@ def fill(db):
     cursor = db.cursor()
     cursor.execute("""
         INSERT INTO networks (network, lookup_config)
-        VALUES ('official', '%s');
+        VALUES ('official', %(msu)s);
 
         INSERT INTO scantypes (protocol, scan_command, priority)
         VALUES ('smb', 'smbscan -d', 2),
                ('smb', 'smbscan -a', 1),
                ('ftp', 'ftpscan -c cp1251', 1);
-        """ % """
-; retrieving computer\\'s DNS records in official MSU network
+        """, {'msu': """
+# retrieving computer's DNS records in official MSU network
 [StandardHosts]
-list = ("melchior.msu", "green.msu")
+;melchior.msu will be the first host
+list = ("melchior.msu")
+[StandardHosts]
+;green.msu don't have record in a.msu
+list = ("green.msu")
+.COMMENT
 [SkipHosts]
 list=("melchior.a.msu")
+.END
+[FlushDNSCache]
+[DNSZoneToCache]
+Zone = "a.msu"
+DNSAddr = "ns.msu"
+ValExclude="^auto-\w{10}\.a\.msu$"
+Suffix = ".msu"
 [DNSZoneKeys]
 Zone = "a.msu"
 Type = "A"
 DNSAddr = "ns.msu"
-#ValInclude = "^.+?\\\\.a\\\\.msu$"
-ValExclude="^auto-\\\\w{10}\\\\.a\\\\.msu$"
-        """)
+ValExclude="^auto-\w{10}\.a\.msu$"
+Suffix = ".msu"
+        """})
 
 def fillshares_melchior(db):
     cursor = db.cursor()
