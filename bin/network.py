@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # network.py - python portable port scanner and nameserver-related routines
 #
