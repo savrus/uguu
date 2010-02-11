@@ -503,7 +503,7 @@ if __name__ == "__main__":
                 except UserWarning:
                     pass
                 except:
-                    sys.stderr.write("Exception in engine '%s' (network \"%s\")" % \
+                    sys.stderr.write("Exception in engine '%s' (network \"%s\")\n" % \
                                      (engine_name, net))
                     traceback.print_exc()
         except UserWarning:
