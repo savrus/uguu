@@ -21,7 +21,7 @@ from subprocess import PIPE
 #connection timeout in seconds
 scan_timeout = 5
 #maximum simultanius connections
-max_connections = 30
+max_connections = 64
 
 # DNS listing command and parse regexp
 if os.name == 'nt':
