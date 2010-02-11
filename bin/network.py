@@ -15,7 +15,6 @@ import string
 import errno
 import sys
 import os
-from subprocess import PIPE
 
 # online checking parameters
 #connection timeout in seconds
@@ -91,9 +90,11 @@ def ns_domain(domain, rtype = "A", dns = ""):
     """list rtype NS records from domain using provided or default dns,
 returns dict with hostnames as keys"""
     hosts = subprocess.Popen(nsls_cmd % {'d': domain, 't': rtype, 's': dns},
-                             stdout=PIPE, shell=True)
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             shell=True)
     re_host = re.compile(nsls_entry % rtype)
     res = dict()
+    hosts.stdin.close()
     for nsentry in hosts.stdout:
         entry = re_host.search(nsentry)
         if entry is not None:
