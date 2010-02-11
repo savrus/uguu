@@ -39,25 +39,26 @@ else:               nbconnect_ok = errno.EINPROGRESS
 def scan_all_hosts(hosts):
     """hosts must be list of tuples (host, ip),
 returns list of tuples of up hosts"""
-    res = []
-    while hosts:
-        res.extend(scan_hosts(hosts[0:max_connections]))
-        del hosts[0:max_connections]
-    return res
+    return scan_hosts(list(hosts))
 
-def scan_hosts(hosts):
-    socks = []
-    up = []
-    for h in hosts:
+
+def fillsocks(socks, hosts):
+    while len(socks) < max_connections and len(hosts) > 0:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(0)
         try:
-            err = s.connect_ex(h)
+            err = s.connect_ex(hosts.pop())
             if err == nbconnect_ok:
                 socks.append(s)
         except:
             # catch some rare exceptions like "no such host"
             pass
+
+def scan_hosts(hosts):
+    """clears hosts list, returns list of up hosts"""
+    socks = []
+    up = []
+    fillsocks(socks, hosts)
     while socks:
         r_read, r_write, r_err = select.select([], socks, [], scan_timeout)
         if len(r_write) == 0:
@@ -67,6 +68,7 @@ def scan_hosts(hosts):
                 host = s.getpeername()
                 up.append(host)
         socks = list(set(socks) - set(r_write))
+        fillsocks(socks, hosts)
     return up
 
 class dns_cache(object):
