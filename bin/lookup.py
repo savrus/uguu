@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # lookup.py - network shares lookup (discovery)
 #

@@ -1,4 +1,3 @@
-#!/usr/bin/python
 #
 # dbinit.py - initialise uguu database
 #
