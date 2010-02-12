@@ -13,6 +13,8 @@ syntax: glob
 *.vcproj.*.user
 ./scanners/*/Debug
 ./scanners/*/Release
+./scanners/ftpscan/ftpscan
+./scanners/smbscan/smbscan
 *.exe
 ./bin/smbscan
 ./bin/ftpscan
