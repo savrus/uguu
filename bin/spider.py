@@ -23,7 +23,7 @@ from common import connectdb, scanners_locale, run_scanner, filetypes, wait_unti
 def kill_process(process):
     if sys.version_info[:2] < (2, 6):
         if os.name == 'nt':
-            subprocess.Popen("taskkill /F /PID %s"% process.pid, shell=True)
+            subprocess.Popen("taskkill /F /T /PID %s >nul 2>nul"% process.pid, shell=True)
         else:
             os.kill(process.pid, -9)
     else:
