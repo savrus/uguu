@@ -10,4 +10,4 @@ clean:
 	rm -f dt.o smbwk.o smbscan.o smbscan
 
 cleanall: clean
-	rm ../../bin/smbscan
+	rm -f ../../bin/smbscan
