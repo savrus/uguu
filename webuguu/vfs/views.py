@@ -136,7 +136,7 @@ def share(request, proto, hostname, port, path=""):
             """, {'s':share_id, 'p':path_id})
         try:
             dbpath, parent_id, parentfile_id, items, size = cursor.fetchone()
-            if path != dbpath:
+            if unicode(path) != unicode(dbpath, "utf-8"):
                 return HttpResponseRedirect(redirect_url)
         except: 
             return HttpResponseRedirect(redirect_url)
