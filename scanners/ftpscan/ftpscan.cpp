@@ -103,7 +103,7 @@ static bool valid_utf8(const char *str)
 			if ((0xC0 & *++str) != 0x80) return false;
 			if (!(0x10 & ch)) continue;
 			if ((0xC0 & *++str) != 0x80) return false;
-			if (0x08 & ch) return false;
+			if ((unsigned char)ch > 0xF4) return false;
 		}
 	}
 	return true;
