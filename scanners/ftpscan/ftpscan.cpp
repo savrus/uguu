@@ -92,6 +92,22 @@ static struct dt_dentry *fill_dentry(FtpFindInfo &fi)
 	return result;
 }
 
+static bool valid_utf8(const char *str)
+{
+	LOG_ASSERT(str, "Bad arguments\n");
+	for (char ch; (ch = *str); ++str) {
+		if (0x80 & ch) {
+			if (!(0x40 & ch)) return false;
+			if ((0xC0 & *++str) != 0x80) return false;
+			if (!(0x20 & ch)) continue;
+			if ((0xC0 & *++str) != 0x80) return false;
+			if (!(0x10 & ch)) continue;
+			if ((0xC0 & *++str) != 0x80) return false;
+			if (0x08 & ch) return false;
+		}
+	}
+	return true;
+}
 
 static struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 {
@@ -110,7 +126,9 @@ static struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 				return NULL;
 			}
 		}
-	} while( !strcmp(".", ftp->findinfo.Data.name) || !strcmp("..", ftp->findinfo.Data.name) );
+	} while( !strcmp(".", ftp->findinfo.Data.name) || 
+			!strcmp("..", ftp->findinfo.Data.name) || 
+			!valid_utf8(ftp->findinfo.Data.name));
 	return fill_dentry(ftp->findinfo);
 }
 
