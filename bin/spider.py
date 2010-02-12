@@ -113,7 +113,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
     cursor = db.cursor()
     hoststr = "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
     address = socket.gethostbyname(host)
-    print "[%s] Scanning %s (%s) ..." % (time.ctime(), hoststr, address)
+    sys.stderr.write("[%s] Scanning %s (%s) ...\n" % (time.ctime(), hoststr, address))
     data = run_scanner(command, address, proto, port)
     save = tempfile.TemporaryFile(bufsize=-1)
     hash = hashlib.sha256()
@@ -124,7 +124,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             kill_process(data)
             data.stdout.close()
             data.wait()
-            print "[%s] Scanning %s failed. Too many lines from scanner." % (time.ctime(), hoststr)
+            sys.stderr.write("[%s] Scanning %s failed. Too many lines from scanner.\n" % (time.ctime(), hoststr))
             return
         hash.update(line)
         save.write(line)
@@ -136,15 +136,15 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             WHERE share_id = %(s)s;
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         db.commit()
-        print "[%s] Scanning %s failed." % (time.ctime(), hoststr)
+        sys.stderrr.write("[%s] Scanning %s failed.\n" % (time.ctime(), hoststr))
     elif hash.hexdigest() == oldhash:
         cursor.execute("""
             UPDATE shares SET last_scan = now()
             WHERE share_id = %(s)s
             """, {'s':share_id})
         db.commit()
-        print "[%s] Scanning %s succeded. No changes found." \
-              % (time.ctime(), hoststr)
+        sys.stderr.write("[%s] Scanning %s succeded. No changes found.\n" \
+              % (time.ctime(), hoststr))
     else:
         cursor.execute("DELETE FROM files WHERE share_id = %(id)s",
             {'id':share_id})
@@ -164,8 +164,8 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
                   'h': hash.hexdigest()
                   })
         db.commit()
-        print "[%s] Scanning %s succeded. Database updated." \
-              % (time.ctime(), hoststr)
+        sys.stderr.write("[%s] Scanning %s succeded. Database updated.\n" \
+              % (time.ctime(), hoststr))
 
 
 if __name__ == "__main__":
