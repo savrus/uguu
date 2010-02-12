@@ -1,6 +1,6 @@
 CC = gcc
 CXX = g++
-CALLFLAGS = -Wall -g
+CALLFLAGS = -Wall -O3
 CFLAGS += $(CALLFLAGS)
 CXXFLAGS += $(CALLFLAGS)
 LDFLAGS += 
