@@ -13,7 +13,21 @@ import re
 import socket
 import hashlib
 import time
-from common import connectdb, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed
+import tempfile
+import os
+import sys
+from common import connectdb, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner
+
+
+# python 2.5 compitible shitcode
+def kill_process(process):
+    if sys.version_info[:2] < (2, 6):
+        if os.name == 'nt':
+            subprocess.Popen("taskkill /F /PID %s"% process.pid, shell=True)
+        else:
+            os.kill(process.pid, -9)
+    else:
+        process.kill()
 
 def suffix(filename):
     dot = filename.rfind(".")
@@ -101,11 +115,19 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
     address = socket.gethostbyname(host)
     print "[%s] Scanning %s (%s) ..." % (time.ctime(), hoststr, address)
     data = run_scanner(command, address, proto, port)
+    save = tempfile.TemporaryFile(bufsize=-1)
     hash = hashlib.sha256()
-    scan_output = []
+    line_count = 0
     for line in data.stdout:
-        scan_output.append(line.strip('\n'))
+        line_count += 1
+        if line_count > max_lines_from_scanner:
+            kill_process(data)
+            data.stdout.close()
+            data.wait()
+            print "[%s] Scanning %s failed. Too many lines from scanner." % (time.ctime(), hoststr)
+            return
         hash.update(line)
+        save.write(line)
     if data.wait() != 0:
         # assume next_scan is far away from now and we do not have to
         # acquire lock on the shares table again
@@ -129,9 +151,11 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
         cursor.execute("DELETE FROM paths WHERE share_id = %(id)s",
             {'id':share_id})
         qcache = PsycoCache(cursor)
-        for line in scan_output:
-            scan_line(cursor, share_id, line, qcache)
+        save.seek(0)
+        for line in save:
+            scan_line(cursor, share_id, line.strip('\n'), qcache)
         qcache.allcommit()
+        save.close()
         cursor.execute("""
             UPDATE shares
             SET last_scan = now(), hash = %(h)s

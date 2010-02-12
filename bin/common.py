@@ -92,3 +92,9 @@ wait_until_next_scan_failed = "2 hour"
 wait_until_next_lookup = "1 week"
 #time period to wait until delete old share
 wait_until_delete_share = "4 month"
+
+
+# maximum number of lines to get from scanner
+# required by spider.py
+max_lines_from_scanner = 1000000
+
