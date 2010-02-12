@@ -1,0 +1,18 @@
+syntax: glob
+*.pyc
+*.pyo
+*~
+*.orig
+*.o
+*.obj
+*.pdb
+*.ncb
+*.sln
+*.sln.cache
+*.suo
+*.vcproj.*.user
+./scanners/*/Debug
+./scanners/*/Release
+*.exe
+./bin/smbscan
+./bin/ftpscan
