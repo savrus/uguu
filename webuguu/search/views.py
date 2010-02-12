@@ -76,12 +76,6 @@ class QueryParser:
             matches[arg]()
         else:
             self.error += "Unsupported match argument: '%s'.\n" % arg
-    def parse_option_full(self, option, arg):
-        if arg.lower() in ["yes", "true", "y", "t", "1"]:
-            self.sqltsquery = " paths.tspath ||" + self.sqltsquery
-            self.sqlcount_joinpath = True
-        elif arg.lower() not in ["no", "false", "n", "f", "0"]:
-            self.error += "Unsupported full option argument: '%s'.\n" % arg
     def parse_option_type(self, option, arg):
         conds = []
         common = []
@@ -165,9 +159,9 @@ class QueryParser:
         words = []
         for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,)*)?', query, re.UNICODE):
             if w[1] == "":
-                ## prefix search (available in postgres 8.4)
-                # words.append(w[0] + ":*")
-                words.append(w[0])
+                ## prefix search in postgres 8.4, for postgres 8.3 use
+                #words.append(w[0])
+                words.append(w[0] + ":*")
             elif qext.get(w[0]):
                 arg = w[1][1:]
                 if arg != "":
@@ -241,6 +235,10 @@ def do_search(request, index, searchform):
         JOIN files on (filenames.filename_id = files.filename_id)
         """ + parsedq.sqlcount(), parsedq.getoptions())
     items = int(cursor.fetchone()['count'])
+    if items == 0:
+        return render_to_response('search/error.html',
+            {'form': searchform, 'types': types, 'query': query,
+             'error':"Sorry, nothing found."})
     offset, gobar = offset_prepare(request, items, search_items_per_page)
     parsedq.setoption("offset", offset)
     parsedq.setoption("limit", search_items_per_page)
@@ -260,52 +258,47 @@ def do_search(request, index, searchform):
             """, files.share_id, files.sharepath_id, files.pathfile_id
         OFFSET %(offset)s LIMIT %(limit)s
         """, parsedq.getoptions())
-    if cursor.rowcount == 0:
-        return render_to_response('search/error.html',
-            {'form': searchform, 'types': types, 'query': query,
-             'error':"Sorry, nothing found."})
-    else:
-        res = cursor.fetchall()
-        result = []
-        for row in res:
-            newrow = dict()
-            urlpath = "/" + row['path'] if row['path'] != "" else ""
-            urlhost = row['hostname']
-            urlhost += ":" + str(row['port']) if row['port'] != 0 else ""
-            urlproto = protocol_prepare(request, row['protocol'])
-            viewargs = [row['protocol'], row['hostname'], row['port']]
-            if row['path'] != "":
-                viewargs.append(row['path'])
-            vfs = reverse('webuguu.vfs.views.share', args=viewargs)
-            vfs_offset = int(row['fileid']) / vfs_items_per_page
-            newrow['pathlink'] = vfs + "?" + urlencode(dict(
-                [('s', row['share_id']), ('p', row['path_id'])] +
-                ([('o', vfs_offset)] if vfs_offset > 0 else []) ))
-            newrow['filename'] = row['filename']
-            if row['dirid'] > 0:
-                newrow['type'] = "<dir>"
-                newrow['filelink'] = vfs + newrow['filename'] + "/?" + \
-                    urlencode({'s': row['share_id'], 'p': row['dirid']})
-            else:
-                newrow['type'] = ""
-                newrow['filelink'] = urlproto + "://" +\
-                    urlhost + urlpath + "/" + newrow['filename']
-            newrow['path'] = row['protocol'] + "://" + urlhost + urlpath
-            newrow['size'] = row['size']
-            newrow['state'] = row['state']
-            result.append(newrow)
-            del row
-        del res
-        fastselflink = "./?" + urlencode(dict([('q', query), ('t', type)]))
-        return render_to_response('search/results.html',
-            {'form': searchform,
-             'query': query,
-             'types': types,
-             'results': result,
-             'offset': offset,
-             'fastself': fastselflink,
-             'gobar': gobar
-             })
+    res = cursor.fetchall()
+    result = []
+    for row in res:
+        newrow = dict()
+        urlpath = "/" + row['path'] if row['path'] != "" else ""
+        urlhost = row['hostname']
+        urlhost += ":" + str(row['port']) if row['port'] != 0 else ""
+        urlproto = protocol_prepare(request, row['protocol'])
+        viewargs = [row['protocol'], row['hostname'], row['port']]
+        if row['path'] != "":
+            viewargs.append(row['path'])
+        vfs = reverse('webuguu.vfs.views.share', args=viewargs)
+        vfs_offset = int(row['fileid']) / vfs_items_per_page
+        newrow['pathlink'] = vfs + "?" + urlencode(dict(
+            [('s', row['share_id']), ('p', row['path_id'])] +
+            ([('o', vfs_offset)] if vfs_offset > 0 else []) ))
+        newrow['filename'] = row['filename']
+        if row['dirid'] > 0:
+            newrow['type'] = "<dir>"
+            newrow['filelink'] = vfs + newrow['filename'] + "/?" + \
+                urlencode({'s': row['share_id'], 'p': row['dirid']})
+        else:
+            newrow['type'] = ""
+            newrow['filelink'] = urlproto + "://" +\
+                urlhost + urlpath + "/" + newrow['filename']
+        newrow['path'] = row['protocol'] + "://" + urlhost + urlpath
+        newrow['size'] = row['size']
+        newrow['state'] = row['state']
+        result.append(newrow)
+        del row
+    del res
+    fastselflink = "./?" + urlencode(dict([('q', query), ('t', type)]))
+    return render_to_response('search/results.html',
+        {'form': searchform,
+         'query': query,
+         'types': types,
+         'results': result,
+         'offset': offset,
+         'fastself': fastselflink,
+         'gobar': gobar
+         })
 
 def search(request):
     return do_search(request, "search/index.html", "search/searchform.html")
