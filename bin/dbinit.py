@@ -88,6 +88,7 @@ def ddl(db):
             sharedir_id integer DEFAULT 0,
             size bigint DEFAULT 0,
             filename_id bigint REFERENCES filenames ON DELETE RESTRICT,
+            tsfullpath tsvector,
             FOREIGN KEY (share_id, sharepath_id) REFERENCES paths
                 ON DELETE CASCADE,
             PRIMARY KEY (share_id, sharepath_id, pathfile_id)
