@@ -30,6 +30,10 @@ def kill_process(process):
     else:
         process.kill()
 
+
+filetypes_reverse = dict([(x,y) for y in filetypes.keys()
+                                for x in filetypes[y]])
+
 def suffix(filename):
     dot = filename.rfind(".")
     if dot == -1:
@@ -109,7 +113,7 @@ def scan_line(cursor, share, line, qcache):
             # not share root
             # save all info into the files table
             suf = suffix(name)
-            type = filetypes.get(suf)
+            type = filetypes_reverse.get(suf)
             qcache.fappend({'s':share, 'p':path, 'f':file, 'did':dirid,
                 'sz':size, 'n':name, 't':type, 'r':tsprepare(name)})
 
