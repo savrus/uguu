@@ -136,7 +136,7 @@ def share(request, proto, hostname, port, path=""):
             """, {'s':share_id, 'p':path_id})
         try:
             dbpath, parent_id, parentfile_id, items, size = cursor.fetchone()
-            if unicode(path) != unicode(dbpath, "utf-8"):
+            if path != unicode(dbpath, "utf-8"):
                 return HttpResponseRedirect(redirect_url)
         except: 
             return HttpResponseRedirect(redirect_url)
@@ -156,7 +156,7 @@ def share(request, proto, hostname, port, path=""):
         path_id = int(path_id)
         parent_id = int(parent_id)
         parentfile_id = int(parentfile_id)
-        items = int(item)
+        items = int(items)
         size = int(size)
     except:
         return render_to_response('vfs/error.html',
