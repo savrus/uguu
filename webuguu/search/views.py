@@ -70,7 +70,7 @@ class QueryParser:
         pass
     def parse_option_match(self, option, arg):
         matches = {
-            'name': self.parse_option_match_norm,
+            'name': self.parse_option_match_name,
             'full': self.parse_option_match_full,
             'path': self.parse_option_match_full,
             'exact': self.parse_option_match_exact,
