@@ -54,7 +54,7 @@ def sharelist(request, column, name, is_this_host):
         SELECT share_id, state, size, network, protocol, hostname, port
         FROM shares
         WHERE %s = %%(n)s
-        ORDER BY hostname
+        ORDER BY state, hostname
         OFFSET %%(o)s LIMIT %%(l)s
         """ % column, {'n':name, 'o':offset, 'l':vfs_items_per_page})
     fastselflink = "./?"
