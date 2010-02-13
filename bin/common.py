@@ -51,31 +51,30 @@ known_protocols = ('smb', 'ftp')
 known_filetypes = ('audio', 'video',  'archive', 'cdimage', 'exe', 'lib',
                    'script', 'image', 'document')
 #types of files recognizable by the spider
-filetypes = dict(
-    [(x,'audio') for x in ('mp3', 'ogg', 'vaw', 'flac', 'ape', 'au', 'aiff',
-                           'ra', 'wma', 'mid', 'midi', 'mpc')] +
-    [(x,'video') for x in ('mkv', 'avi', 'mp4', 'mov', 'mpeg', 'mpg', 'asf',
-                           'ogm', 'vob', 'm2v', 'ts', 'wmv', 'rm', 'mov',
-                           'qt', 'mpe', 'divx', 'flv', 'm2ts')] +
-    [(x,'archive') for x in ('bz', 'gz', 'bz2', 'tar', 'tbz', 'tgz', 'zip',
-                             'rar', 'arj', 'zip', 'rar', 'ace', 'cab', 'z',
-                             'tbz2', '7z', 'ha', 'jar', 'lzh', 'lzma', 'j')] +
-    [(x,'cdimage') for x in ('bin', 'iso', 'cue', 'bwt', 'ccd', 'cdi', 'mds',
-                             'nrg', 'vcd', 'vc4', 'mdf', 'gho', 'ghs')] +
-    [(x,'exe') for x in ('exe', 'com', 'msi', 'scf', 'swf')] +
-    [(x,'lib') for x in ('dll', 'sys', 'vxd', 'bpl', 'cpl', 'ime', 'drv',
-                         'mui', 'so', 'lib')] +
-    [(x,'script') for x in ('bat', 'cmd', 'vbs', 'vbe', 'js', 'jse', 'wsf',
-                            'wsh', 'pl', 'py', 'php', 'sh')] +
-
-    [(x,'image') for x in ('jpg', 'jpeg', 'gif', 'png', 'bmp', 'tiff', 'pbm',
-                           'pcx', 'pnm', 'ico', 'ppm', 'psd', 'tif', 'tga',
-                           'xbm', 'xpm')] +
-    [(x,'document') for x in ('txt', 'doc', 'xls', 'rtf', 'docx', 'xlsx',
-                              'pdf', 'ps', 'eps', 'hlp', 'djvu', 'djv', 'htm',
-                              'html', 'chm', 'mht', 'shtml', 'log', 'xml',
-                              'csv', 'ini', 'cfg', 'conf', 'tex', 'dvi')]
-)
+filetypes = {
+    'audio':        ('mp3', 'ogg', 'vaw', 'flac', 'ape', 'au', 'aiff',
+                     'ra', 'wma', 'mid', 'midi', 'mpc'),
+    'video':        ('mkv', 'avi', 'mp4', 'mov', 'mpeg', 'mpg', 'asf',
+                     'ogm', 'vob', 'm2v', 'ts', 'wmv', 'rm', 'mov',
+                     'qt', 'mpe', 'divx', 'flv', 'm2ts'),
+    'archive':      ('bz', 'gz', 'bz2', 'tar', 'tbz', 'tgz', 'zip',
+                     'rar', 'arj', 'zip', 'rar', 'ace', 'cab', 'z',
+                     'tbz2', '7z', 'ha', 'jar', 'lzh', 'lzma', 'j'),
+    'cdimage':      ('bin', 'iso', 'cue', 'bwt', 'ccd', 'cdi', 'mds',
+                     'nrg', 'vcd', 'vc4', 'mdf', 'gho', 'ghs'),
+    'exe':          ('exe', 'com', 'msi', 'scf', 'swf'),
+    'lib':          ('dll', 'sys', 'vxd', 'bpl', 'cpl', 'ime', 'drv',
+                     'mui', 'so', 'lib'),
+    'script':       ('bat', 'cmd', 'vbs', 'vbe', 'js', 'jse', 'wsf',
+                     'wsh', 'pl', 'py', 'php', 'sh'),
+    'image':        ('jpg', 'jpeg', 'gif', 'png', 'bmp', 'tiff', 'pbm',
+                     'pcx', 'pnm', 'ico', 'ppm', 'psd', 'tif', 'tga',
+                     'xbm', 'xpm'),
+    'document':     ('txt', 'doc', 'xls', 'rtf', 'docx', 'xlsx',
+                     'pdf', 'ps', 'eps', 'hlp', 'djvu', 'djv', 'htm',
+                     'html', 'chm', 'mht', 'shtml', 'log', 'xml',
+                     'csv', 'ini', 'cfg', 'conf', 'tex', 'dvi'),
+}
 
 
 #default protocols' ports, keep in conformance with known_protocols
