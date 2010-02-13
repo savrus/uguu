@@ -9,7 +9,9 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
-from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols
+from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host
+
+default_match_limit = search_items_per_page * 20
 
 # for types other than recognizable by scanner
 qopt_type = {
@@ -41,9 +43,28 @@ qopt_order = {
 }
 
 qopt_match = {
-    'name': "filenames.tsname @@ to_tsquery('uguu',%(query)s)",
-    'full': "paths.tspath || filenames.tsname @@ to_tsquery('uguu',%(query)s)",
-    'path': "paths.tspath  @@ to_tsquery('uguu',%(query)s)",
+# Query optimization: get only limited number of strin values. 
+    'name': """filename_id IN
+               (SELECT filename_id
+                FROM filenames 
+                WHERE tsname @@ to_tsquery('uguu', %(query)s)
+                ORDER BY filename_id
+                LIMIT %(matchlimit)s)""",
+    'full': """(files.share_id, files.sharepath_id, files.pathfile_id) IN
+               (SELECT share_id, sharepath_id, pathfile_id
+                FROM files
+                WHERE files.tsfullpath @@ to_tsquery('uguu',%(query)s)
+                ORDER BY share_id, sharepath_id, pathfile_id
+                LIMIT %(matchlimit)s)""",
+    'path': """(paths.share_id, paths.sharepath_id) IN
+               (SELECT share_id, sharepath_id
+                FROM paths
+                WHERE paths.tspath @@ to_tsquery('uguu',%(query)s)
+                ORDER BY share_id, sharepath_id
+                LIMIT %(matchlimit)s)""",
+#    'name': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
+#    'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
+#    'path': "paths.tspath @@ to_tsquery('uguu',%(query)s)",
     'exact': "filenames.name = %(equery)s",
 }
 
@@ -61,7 +82,7 @@ class QueryParser:
             s *= sizenotatios.get(string.lower(m[1]), 1)
         return int(s)
     def parse_option_match_full(self):
-        self.sqlcount_joinpath = True
+        pass
     def parse_option_match_path(self):
         self.sqlcount_joinpath = True
     def parse_option_match_name(self):
@@ -72,7 +93,7 @@ class QueryParser:
         matches = {
             'name': self.parse_option_match_name,
             'full': self.parse_option_match_full,
-            'path': self.parse_option_match_full,
+            'path': self.parse_option_match_path,
             'exact': self.parse_option_match_exact,
         }
         if arg in matches.keys():
@@ -136,13 +157,25 @@ class QueryParser:
                 self.error += "Unknown sorting parameter: '%s'.\n" % x
         orders = string.join(orders, ",")
         self.order = orders
+    def parse_option_scale(self, option, arg):
+        m =  re.match(r'(?u)(\d+)', arg, re.UNICODE)
+        if m == None:
+            self.error += "Bad %s argument: '%s'.\n" % (option, arg)
+            return
+        m = m.groups()
+        m = int(m[0])
+        if m <= 1000:
+            self.options['matchlimit'] *= m
+        else:
+            self.error += "Limit %s is too big.\n" % str(m)
     def parse_option_onlyonce_plug(self, option, arg):
         self.error += "Query option '%s' appears more than once.\n" % option
     def __init__(self, query):
         self.options = dict()
+        self.options['matchlimit'] = default_match_limit
         self.order = "shares.state"
         self.error = ""
-        self.sqltsquery = "filenames.tsname @@ to_tsquery('uguu',%(query)s)"
+        self.sqltsquery = qopt_match['name']
         self.userquery = query
         self.sqlcond = []
         self.sqlcount_joinpath = False;
@@ -158,6 +191,7 @@ class QueryParser:
             'net':   self.parse_option_net,
             'avl':   self.parse_option_avl,
             'order': self.parse_option_order,
+            'scale': self.parse_option_scale,
         }
         qext_executed = dict()
         words = []
@@ -176,7 +210,7 @@ class QueryParser:
             else:
                 self.error += "Unknown query option: '%s'.\n" % w[0]
         self.options['query'] = string.join(words, " & ")
-        equery = re.search(r'(?u)(?P<equery>.*) \w+:', query, re.UNICODE)
+        equery = re.search(r'(?u)(?P<equery>[^:]*) \w+:', query, re.UNICODE)
         self.options['equery'] = equery.group('equery') if equery else "NULL"
         ## if you want to allow empty queries...
         #if len(words) > 0:
@@ -196,12 +230,11 @@ class QueryParser:
         str = ""
         if self.sqlcount_joinpath:
             str += """
-                JOIN paths ON (files.share_id = paths.share_id
-                    AND files.sharepath_id = paths.sharepath_id)
+                JOIN paths USING (share_id, sharepath_id)
                 """
         if self.sqlcount_joinshares:
             str += """
-                JOIN shares ON (files.share_id = shares.share_id)
+                JOIN shares USING (share_id)
                 """
         return str + self.sqlquery
     def getoptions(self):
@@ -210,6 +243,7 @@ class QueryParser:
         return self.error
 
 def do_search(request, index, searchform):
+    sqlecho = debug_virtual_host(request)
     try:
         query = request.GET['q']
     except:
@@ -233,35 +267,36 @@ def do_search(request, index, searchform):
         return render_to_response('search/error.html',
             {'form': searchform, 'types': types, 'query': query,
              'error': parsedq.geterror()})
-    cursor.execute("""
+    sqlcount = cursor.mogrify("""
         SELECT count(*) as count
         FROM filenames
-        JOIN files on (filenames.filename_id = files.filename_id)
+        JOIN files USING (filename_id)
         """ + parsedq.sqlcount(), parsedq.getoptions())
+    cursor.execute(sqlcount)
     items = int(cursor.fetchone()['count'])
-    if items == 0:
+    if items == 0 and sqlecho == 0:
         return render_to_response('search/error.html',
             {'form': searchform, 'types': types, 'query': query,
              'error':"Sorry, nothing found."})
     offset, gobar = offset_prepare(request, items, search_items_per_page)
     parsedq.setoption("offset", offset)
     parsedq.setoption("limit", search_items_per_page)
-    cursor.execute("""
+    sqlquery = cursor.mogrify("""
         SELECT protocol, hostname,
             paths.path AS path, files.sharedir_id AS dirid,
             filenames.name AS filename, files.size AS size, port,
             shares.share_id, paths.sharepath_id as path_id,
             files.pathfile_id as fileid, shares.state
         FROM filenames
-        JOIN files ON (filenames.filename_id = files.filename_id)
-        JOIN paths ON (files.share_id = paths.share_id
-            AND files.sharepath_id = paths.sharepath_id)
-        JOIN shares ON (files.share_id = shares.share_id)
+        JOIN files USING (filename_id)
+        JOIN paths USING (share_id, sharepath_id)
+        JOIN shares USING (share_id)
         """ + parsedq.sqlwhere() + """
         ORDER BY """ + parsedq.sqlorder() +
             """, files.share_id, files.sharepath_id, files.pathfile_id
         OFFSET %(offset)s LIMIT %(limit)s
         """, parsedq.getoptions())
+    cursor.execute(sqlquery)
     res = cursor.fetchall()
     result = []
     for row in res:
@@ -303,7 +338,10 @@ def do_search(request, index, searchform):
          'results': result,
          'offset': offset,
          'fastself': fastselflink,
-         'gobar': gobar
+         'gobar': gobar,
+         'sqlecho': sqlecho,
+         'sqlcount': sqlcount,
+         'sqlquery': sqlquery,
          })
 
 def search(request):
