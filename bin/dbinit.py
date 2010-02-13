@@ -88,6 +88,7 @@ def ddl(db):
             sharedir_id integer DEFAULT 0,
             size bigint DEFAULT 0,
             filename_id bigint REFERENCES filenames ON DELETE RESTRICT,
+            tsfullpath tsvector,
             FOREIGN KEY (share_id, sharepath_id) REFERENCES paths
                 ON DELETE CASCADE,
             PRIMARY KEY (share_id, sharepath_id, pathfile_id)
@@ -143,6 +144,7 @@ def ddl_index(db):
         CREATE INDEX files_filename ON files (filename_id);
         CREATE INDEX files_sharedir ON files ((sharedir_id != 0));
         CREATE INDEX files_size ON files (size);
+        CREATE INDEX files_tsfullpath ON files USING gin(tsfullpath);
         CREATE INDEX shares_hostname ON shares USING hash(hostname);
         CREATE INDEX shares_network ON shares USING hash(network);
         CREATE INDEX shares_state ON shares USING hash(state);

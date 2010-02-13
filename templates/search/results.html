@@ -4,6 +4,10 @@
 <div class="margintop" id="searchform">
     {% include form %}
 </div>
+{% spaceless %}{% if sqlecho %}
+<div style="font-family: monospace; margin-top: 1em;">{{sqlcount}}</div>
+<div style="font-family: monospace; margin-top: 1em;">{{sqlquery}}</div>
+{% endif %}{% endspaceless %}
 <div class="margintop" id="searchresults">
     <table>
         {% for r in results %}

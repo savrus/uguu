@@ -153,10 +153,10 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
         db.commit()
         log("Scanning %s succeded. No changes found.", hoststr)
     else:
-        cursor.execute("DELETE FROM files WHERE share_id = %(id)s",
-            {'id':share_id})
-        cursor.execute("DELETE FROM paths WHERE share_id = %(id)s",
-            {'id':share_id})
+        cursor.execute("""
+            DELETE FROM files WHERE share_id = %(s)s;
+            DELETE FROM paths WHERE share_id = %(s)s;
+            """, {'s':share_id})
         qcache = PsycoCache(cursor)
         save.seek(0)
         for line in save:
@@ -164,12 +164,20 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
         qcache.allcommit()
         save.close()
         cursor.execute("""
+            UPDATE ONLY files SET tsfullpath = paths.tspath || filenames.tsname
+            FROM files AS f
+            JOIN filenames USING (filename_id)
+            JOIN paths  USING (share_id, sharepath_id)
+            WHERE files.share_id = f.share_id
+                AND files.sharepath_id = f.sharepath_id
+                AND files.pathfile_id = f.pathfile_id
+                AND files.share_id = %(s)
+            """, {'s': share_id})
+        cursor.execute("""
             UPDATE shares
             SET last_scan = now(), hash = %(h)s
             WHERE share_id = %(s)s
-            """, {'s':share_id,
-                  'h': hash.hexdigest()
-                  })
+            """, {'s':share_id, 'h': hash.hexdigest()})
         db.commit()
         log("Scanning %s succeded. Database updated.", hoststr)
 
