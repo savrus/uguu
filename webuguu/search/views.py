@@ -11,6 +11,8 @@ import string
 import re
 from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols
 
+default_match_limit = search_items_per_page * 20
+
 # for types other than recognizable by scanner
 qopt_type = {
     'dir':      "(files.sharedir_id != 0)"
@@ -41,9 +43,28 @@ qopt_order = {
 }
 
 qopt_match = {
-    'name': "filenames.tsname @@ to_tsquery('uguu',%(query)s)",
-    'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
-    'path': "paths.tspath @@ to_tsquery('uguu',%(query)s)",
+# Query optimization: get only limited number of strin values. 
+    'name': """filename_id IN
+               (SELECT filename_id
+                FROM filenames 
+                WHERE tsname @@  to_tsquery('uguu', %(query)s)
+                ORDER BY filename_id
+                LIMIT %(matchlimit)s)""",
+    'full': """(files.share_id, files.sharepath_id, files.pathfile_id) IN
+               (SELECT share_id, sharepath_id, pathfile_id
+                FROM files
+                WHERE files.tsfullpath @@ to_tsquery('uguu',%(query)s)
+                ORDER BY share_id, sharepath_id, pathfile_id
+                LIMIT %(matchlimit)s)""",
+    'path': """(paths.share_id, paths.sharepath_id) IN
+               (SELECT share_id, sharepath_id
+                FROM paths
+                WHERE paths.tspath @@ to_tsquery('uguu',%(query)s)
+                ORDER BY share_id, sharepath_id
+                LIMIT %(matchlimit)s)""",
+#    'name': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
+#    'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
+#    'path': "paths.tspath @@ to_tsquery('uguu',%(query)s)",
     'exact': "filenames.name = %(equery)s",
 }
 
@@ -136,13 +157,25 @@ class QueryParser:
                 self.error += "Unknown sorting parameter: '%s'.\n" % x
         orders = string.join(orders, ",")
         self.order = orders
+    def parse_option_scale(self, option, arg):
+        m =  re.match(r'(?u)(\d+)', arg, re.UNICODE)
+        if m == None:
+            self.error += "Bad %s argument: '%s'.\n" % (option, arg)
+            return
+        m = m.groups()
+        m = int(m[0])
+        if m <= 1000:
+            self.options['matchlimit'] *= m
+        else:
+            self.error += "Limit %s is too big.\n" % str(m)
     def parse_option_onlyonce_plug(self, option, arg):
         self.error += "Query option '%s' appears more than once.\n" % option
     def __init__(self, query):
         self.options = dict()
+        self.options['matchlimit'] = default_match_limit
         self.order = "shares.state"
         self.error = ""
-        self.sqltsquery = "filenames.tsname @@ to_tsquery('uguu',%(query)s)"
+        self.sqltsquery = qopt_match['name']
         self.userquery = query
         self.sqlcond = []
         self.sqlcount_joinpath = False;
@@ -158,6 +191,7 @@ class QueryParser:
             'net':   self.parse_option_net,
             'avl':   self.parse_option_avl,
             'order': self.parse_option_order,
+            'scale': self.parse_option_scale,
         }
         qext_executed = dict()
         words = []
@@ -176,7 +210,7 @@ class QueryParser:
             else:
                 self.error += "Unknown query option: '%s'.\n" % w[0]
         self.options['query'] = string.join(words, " & ")
-        equery = re.search(r'(?u)(?P<equery>.*) \w+:', query, re.UNICODE)
+        equery = re.search(r'(?u)(?P<equery>[^:]*) \w+:', query, re.UNICODE)
         self.options['equery'] = equery.group('equery') if equery else "NULL"
         ## if you want to allow empty queries...
         #if len(words) > 0:
@@ -209,6 +243,7 @@ class QueryParser:
         return self.error
 
 def do_search(request, index, searchform):
+    sqlecho = 1
     try:
         query = request.GET['q']
     except:
@@ -239,6 +274,10 @@ def do_search(request, index, searchform):
         """ + parsedq.sqlcount(), parsedq.getoptions())
     cursor.execute(sqlcount)
     items = int(cursor.fetchone()['count'])
+    if items == 0 and sqlecho == 0:
+        return render_to_response('search/error.html',
+            {'form': searchform, 'types': types, 'query': query,
+             'error':"Sorry, nothing found."})
     offset, gobar = offset_prepare(request, items, search_items_per_page)
     parsedq.setoption("offset", offset)
     parsedq.setoption("limit", search_items_per_page)
@@ -300,7 +339,7 @@ def do_search(request, index, searchform):
          'offset': offset,
          'fastself': fastselflink,
          'gobar': gobar,
-         'sqlecho': 1,
+         'sqlecho': sqlecho,
          'sqlcount': sqlcount,
          'sqlquery': sqlquery,
          })
