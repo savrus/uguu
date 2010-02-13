@@ -72,11 +72,12 @@ def ddl(db):
             items integer DEFAULT 0,
             size bigint DEFAULT 0,
             tspath tsvector,
+            UNIQUE (share_id, path),
             PRIMARY KEY (share_id, sharepath_id)
         );
         CREATE TABLE filenames (
             filename_id BIGSERIAL PRIMARY KEY,
-            name text NOT NULL,
+            name text UNIQUE NOT NULL,
             type filetype,
             tsname tsvector
         );
@@ -118,6 +119,7 @@ def ddl_prog(db):
             RETURNS integer AS $$
             DECLARE id INTEGER;
             BEGIN
+                LOCK TABLE filenames IN ROW EXCLUSIVE MODE;
                 SELECT INTO id filename_id FROM filenames WHERE name = $1;
                 IF NOT FOUND THEN
                     INSERT INTO filenames (name, type, tsname)
@@ -137,6 +139,7 @@ def ddl_index(db):
         CREATE INDEX filenames_tsname ON filenames USING gin(tsname);
         CREATE INDEX filenames_type ON filenames (type);
         CREATE INDEX paths_path ON paths USING hash(path);
+        CREATE INDEX paths_tspath ON paths USING gin(tspath);
         CREATE INDEX files_filename ON files (filename_id);
         CREATE INDEX files_sharedir ON files ((sharedir_id != 0));
         CREATE INDEX files_size ON files (size);
