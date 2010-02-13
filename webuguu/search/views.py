@@ -47,7 +47,7 @@ qopt_match = {
     'name': """filename_id IN
                (SELECT filename_id
                 FROM filenames 
-                WHERE tsname @@  to_tsquery('uguu', %(query)s)
+                WHERE tsname @@ to_tsquery('uguu', %(query)s)
                 ORDER BY filename_id
                 LIMIT %(matchlimit)s)""",
     'full': """(files.share_id, files.sharepath_id, files.pathfile_id) IN
