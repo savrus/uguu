@@ -41,7 +41,7 @@ qopt_order = {
 }
 
 qopt_match = {
-    'norm': "filenames.tsname @@ to_tsquery('uguu',%(query)s)",
+    'name': "filenames.tsname @@ to_tsquery('uguu',%(query)s)",
     'full': "paths.tspath || filenames.tsname @@ to_tsquery('uguu',%(query)s)",
     'path': "paths.tspath  @@ to_tsquery('uguu',%(query)s)",
     'exact': "filenames.name = %(equery)s",
@@ -64,13 +64,13 @@ class QueryParser:
         self.sqlcount_joinpath = True
     def parse_option_match_path(self):
         self.sqlcount_joinpath = True
-    def parse_option_match_norm(self):
+    def parse_option_match_name(self):
         pass
     def parse_option_match_exact(self):
         pass
     def parse_option_match(self, option, arg):
         matches = {
-            'norm': self.parse_option_match_norm,
+            'name': self.parse_option_match_norm,
             'full': self.parse_option_match_full,
             'path': self.parse_option_match_full,
             'exact': self.parse_option_match_exact,
