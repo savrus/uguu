@@ -4,6 +4,8 @@
 <div class="margintop" id="searchform">
     {% include form %}
 </div>
+<div style="font-family: monospace; margin-top: 1em;">{{sqlcount}}</div>
+<div style="font-family: monospace; margin-top: 1em;">{{sqlquery}}</div>
 <div class="margintop" id="searchresults">
     <table>
         {% for r in results %}

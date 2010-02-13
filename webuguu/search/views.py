@@ -233,11 +233,12 @@ def do_search(request, index, searchform):
         return render_to_response('search/error.html',
             {'form': searchform, 'types': types, 'query': query,
              'error': parsedq.geterror()})
-    cursor.execute("""
+    sqlcount = cursor.mogrify("""
         SELECT count(*) as count
         FROM filenames
         JOIN files on (filenames.filename_id = files.filename_id)
         """ + parsedq.sqlcount(), parsedq.getoptions())
+    cursor.execute(sqlcount)
     items = int(cursor.fetchone()['count'])
     if items == 0:
         return render_to_response('search/error.html',
@@ -246,7 +247,7 @@ def do_search(request, index, searchform):
     offset, gobar = offset_prepare(request, items, search_items_per_page)
     parsedq.setoption("offset", offset)
     parsedq.setoption("limit", search_items_per_page)
-    cursor.execute("""
+    sqlquery = cursor.mogrify("""
         SELECT protocol, hostname,
             paths.path AS path, files.sharedir_id AS dirid,
             filenames.name AS filename, files.size AS size, port,
@@ -262,6 +263,7 @@ def do_search(request, index, searchform):
             """, files.share_id, files.sharepath_id, files.pathfile_id
         OFFSET %(offset)s LIMIT %(limit)s
         """, parsedq.getoptions())
+    cursor.execute(sqlquery)
     res = cursor.fetchall()
     result = []
     for row in res:
@@ -303,7 +305,9 @@ def do_search(request, index, searchform):
          'results': result,
          'offset': offset,
          'fastself': fastselflink,
-         'gobar': gobar
+         'gobar': gobar,
+         'sqlcount': sqlcount,
+         'sqlquery': sqlquery,
          })
 
 def search(request):
