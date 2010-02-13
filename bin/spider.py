@@ -75,7 +75,7 @@ def scan_line(cursor, share, line, qcache):
         line = unicode(line, scanners_locale)
     except:
         sys.stderr.write("[%s] Non utf-8 line occured: '%s'.\n" % (time.ctime(), line))
-        line = string.join([(lambda x: x if x in string.printable else "?")(c) for c in line], "")        
+        line = string.join([(lambda x: x if x in string.printable else "\\%#x" % ord(c))(c) for c in line], "")        
     if line[0] == "0":
         # 'path' type of line 
         try:
