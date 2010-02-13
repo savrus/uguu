@@ -152,6 +152,15 @@ def share(request, proto, hostname, port, path=""):
         except:
             return render_to_response('vfs/error.html',
                 {'error':"No such file or directory: '" + path + "'"})
+    try:
+        path_id = int(path_id)
+        parent_id = int(parent_id)
+        parentfile_id = int(parentfile_id)
+        items = int(item)
+        size = int(size)
+    except:
+        return render_to_response('vfs/error.html',
+            {'error':"Seems like directory '%s' has not been scanned properly." % path})
     # detect offset in file list and fill offset bar
     offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     # get file list
