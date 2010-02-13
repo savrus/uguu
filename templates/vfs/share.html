@@ -1,7 +1,7 @@
 {% extends "general.html" %}
 {% block htmltitle %}{{protocol}}://{{urlhost}}{{urlpath}}{% endblock %}
 {% block htmlbody %}
-<div class="margintop" id="title">Contents of <a class="share" href="{{urlproto}}{{urlhost|iriencode}}{{urlpath|iriencode}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
+<div class="margintop" id="title">Contents of <a class="share" href="{{urlproto}}{{urlhost|iriencode}}{{urlpath|urlencode}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
 total items: {{ items }}, total size: <span class="filesize">{{ size|filesizeformat }}</span></div>
 <div class="margintop">
     <a class="share" href="../{{fastup|iriencode}}">go up</a>
@@ -12,8 +12,8 @@ total items: {{ items }}, total size: <span class="filesize">{{ size|filesizefor
             <td><span class="filetype">{% if f.dirid %} &lt;dir&gt; {% endif %}</span></td>
             <td align="right"><span class="filesize">{{ f.size|filesizeformat }}</span></td> 
             <td class="file">{% spaceless %}{% if f.dirid %}
-            <a class="share" href="{{f.name|iriencode}}/?p={{f.dirid}}&amp;s={{share_id}}"> {{f.name}} </a>{% else %}
-            <a class="share" href="{{urlproto}}{{urlhost|iriencode}}{{urlpath|iriencode}}/{{f.name|iriencode}}">{{f.name}}</a>{% endif %}</td>{% endspaceless %}
+            <a class="share" href="{{f.name|urlencode}}/?p={{f.dirid}}&amp;s={{share_id}}"> {{f.name}} </a>{% else %}
+            <a class="share" href="{{urlproto}}{{urlhost|iriencode}}{{urlpath|urlencode}}/{{f.name|urlencode}}">{{f.name}}</a>{% endif %}</td>{% endspaceless %}
         </tr>
         {% endfor %}
     </table>

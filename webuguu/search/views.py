@@ -4,7 +4,7 @@
 # Read the COPYING file in the root of the source tree.
 #
 
-from django.utils.http import urlencode
+from django.utils.http import urlencode, urlquote
 from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
@@ -266,27 +266,29 @@ def do_search(request, index, searchform):
     result = []
     for row in res:
         newrow = dict()
-        urlpath = "/" + row['path'] if row['path'] != "" else ""
+        utfpath = unicode(row['path'], "utf-8")
+        utffile = unicode(row['filename'], "utf-8")
+        urlpath = "/" + utfpath if utfpath != "" else ""
         urlhost = row['hostname']
         urlhost += ":" + str(row['port']) if row['port'] != 0 else ""
         urlproto = protocol_prepare(request, row['protocol'])
         viewargs = [row['protocol'], row['hostname'], row['port']]
-        if row['path'] != "":
-            viewargs.append(row['path'])
-        vfs = reverse('webuguu.vfs.views.share', args=viewargs)
+        if utfpath != u"":
+            viewargs.append(utfpath)
+        vfs = urlquote(reverse('webuguu.vfs.views.share', args=viewargs))
         vfs_offset = int(row['fileid']) / vfs_items_per_page
         newrow['pathlink'] = vfs + "?" + urlencode(dict(
             [('s', row['share_id']), ('p', row['path_id'])] +
             ([('o', vfs_offset)] if vfs_offset > 0 else []) ))
-        newrow['filename'] = row['filename']
+        newrow['filename'] = utffile
         if row['dirid'] > 0:
             newrow['type'] = "<dir>"
-            newrow['filelink'] = vfs + newrow['filename'] + "/?" + \
+            newrow['filelink'] = vfs + utffile + "/?" + \
                 urlencode({'s': row['share_id'], 'p': row['dirid']})
         else:
             newrow['type'] = ""
-            newrow['filelink'] = urlproto + \
-                urlhost + urlpath + "/" + newrow['filename']
+            newrow['filelink'] = urlproto + urlhost \
+                + urlquote(urlpath + "/" + utffile)
         newrow['path'] = row['protocol'] + "://" + urlhost + urlpath
         newrow['size'] = row['size']
         newrow['state'] = row['state']
