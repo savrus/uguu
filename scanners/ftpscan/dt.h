@@ -16,7 +16,7 @@ extern "C" {
 /* maximum number of directories that would be scanned */
 #define MAX_DIRS (1 << 16)
 /* maximum number of items in a directory that would be scanned */
-#define MAX_ITEMS_IN_DIR (1 << 16)
+#define MAX_ITEMS_IN_DIR (1 << 18)
 
 typedef enum {
     DT_DIR = 1,
