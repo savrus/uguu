@@ -42,8 +42,8 @@ qopt_order = {
 
 qopt_match = {
     'name': "filenames.tsname @@ to_tsquery('uguu',%(query)s)",
-    'full': "paths.tspath || filenames.tsname @@ to_tsquery('uguu',%(query)s)",
-    'path': "paths.tspath  @@ to_tsquery('uguu',%(query)s)",
+    'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
+    'path': "paths.tspath @@ to_tsquery('uguu',%(query)s)",
     'exact': "filenames.name = %(equery)s",
 }
 
@@ -61,7 +61,7 @@ class QueryParser:
             s *= sizenotatios.get(string.lower(m[1]), 1)
         return int(s)
     def parse_option_match_full(self):
-        self.sqlcount_joinpath = True
+        pass
     def parse_option_match_path(self):
         self.sqlcount_joinpath = True
     def parse_option_match_name(self):
@@ -72,7 +72,7 @@ class QueryParser:
         matches = {
             'name': self.parse_option_match_name,
             'full': self.parse_option_match_full,
-            'path': self.parse_option_match_full,
+            'path': self.parse_option_match_path,
             'exact': self.parse_option_match_exact,
         }
         if arg in matches.keys():
@@ -196,12 +196,11 @@ class QueryParser:
         str = ""
         if self.sqlcount_joinpath:
             str += """
-                JOIN paths ON (files.share_id = paths.share_id
-                    AND files.sharepath_id = paths.sharepath_id)
+                JOIN paths USING (share_id, sharepath_id)
                 """
         if self.sqlcount_joinshares:
             str += """
-                JOIN shares ON (files.share_id = shares.share_id)
+                JOIN shares USING (share_id)
                 """
         return str + self.sqlquery
     def getoptions(self):
@@ -236,7 +235,7 @@ def do_search(request, index, searchform):
     sqlcount = cursor.mogrify("""
         SELECT count(*) as count
         FROM filenames
-        JOIN files on (filenames.filename_id = files.filename_id)
+        JOIN files USING (filename_id)
         """ + parsedq.sqlcount(), parsedq.getoptions())
     cursor.execute(sqlcount)
     items = int(cursor.fetchone()['count'])
@@ -250,10 +249,9 @@ def do_search(request, index, searchform):
             shares.share_id, paths.sharepath_id as path_id,
             files.pathfile_id as fileid, shares.state
         FROM filenames
-        JOIN files ON (filenames.filename_id = files.filename_id)
-        JOIN paths ON (files.share_id = paths.share_id
-            AND files.sharepath_id = paths.sharepath_id)
-        JOIN shares ON (files.share_id = shares.share_id)
+        JOIN files USING (filename_id)
+        JOIN paths USING (share_id, sharepath_id)
+        JOIN shares USING (share_id)
         """ + parsedq.sqlwhere() + """
         ORDER BY """ + parsedq.sqlorder() +
             """, files.share_id, files.sharepath_id, files.pathfile_id
