@@ -9,7 +9,7 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
-from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols
+from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host
 
 default_match_limit = search_items_per_page * 20
 
@@ -243,7 +243,7 @@ class QueryParser:
         return self.error
 
 def do_search(request, index, searchform):
-    sqlecho = 0
+    sqlecho = debug_virtual_host(request)
     try:
         query = request.GET['q']
     except:

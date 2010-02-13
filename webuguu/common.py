@@ -93,3 +93,9 @@ def protocol_prepare(request, protocol):
     return protocol + "://"
              
 
+# Some additional debug info
+def debug_virtual_host(request):
+    if request.get_host() in ["127.0.0.1:8000"]:
+        return True
+    return False
+
