@@ -281,7 +281,7 @@ def do_search(request, index, searchform):
                 urlencode({'s': row['share_id'], 'p': row['dirid']})
         else:
             newrow['type'] = ""
-            newrow['filelink'] = urlproto + "://" +\
+            newrow['filelink'] = urlproto + \
                 urlhost + urlpath + "/" + newrow['filename']
         newrow['path'] = row['protocol'] + "://" + urlhost + urlpath
         newrow['size'] = row['size']
