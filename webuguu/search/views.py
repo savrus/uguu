@@ -240,10 +240,6 @@ def do_search(request, index, searchform):
         """ + parsedq.sqlcount(), parsedq.getoptions())
     cursor.execute(sqlcount)
     items = int(cursor.fetchone()['count'])
-    if items == 0:
-        return render_to_response('search/error.html',
-            {'form': searchform, 'types': types, 'query': query,
-             'error':"Sorry, nothing found."})
     offset, gobar = offset_prepare(request, items, search_items_per_page)
     parsedq.setoption("offset", offset)
     parsedq.setoption("limit", search_items_per_page)
