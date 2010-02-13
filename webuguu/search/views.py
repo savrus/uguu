@@ -243,7 +243,7 @@ class QueryParser:
         return self.error
 
 def do_search(request, index, searchform):
-    sqlecho = 1
+    sqlecho = 0
     try:
         query = request.GET['q']
     except:
