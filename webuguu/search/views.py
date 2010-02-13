@@ -300,6 +300,7 @@ def do_search(request, index, searchform):
          'offset': offset,
          'fastself': fastselflink,
          'gobar': gobar,
+         'sqlecho': 1,
          'sqlcount': sqlcount,
          'sqlquery': sqlquery,
          })
