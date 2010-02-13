@@ -13,7 +13,7 @@ import string
 import re
 import collections
 import traceback
-from common import connectdb, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
+from common import connectdb, log, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
 from network import dns_cache, ns_domain, scan_all_hosts
 
 class Share(object):
@@ -41,7 +41,7 @@ class Share(object):
             for scantype in scantypes[self.proto].discovery:
                 if self.CheckScantype(scantype) is not None:
                     return self.scantype
-            sys.stderr.write("Cann't discover scantype for %s:%s\n" % (self.host, self.ProtoOrPort()))
+            log("Cann't discover scantype for %s:%s", (self.host, self.ProtoOrPort()))
         else:
             if run_scanner(scantypes[self.proto][self.scantype], self.nscache(self.host),
                            self.proto, self.port, "-l").wait() == 0:
@@ -240,7 +240,7 @@ Exclude = "if present, exclude hosts matching with this regexp"
                 self.__sections.append((section, secdata))
         if len(errors) > 0:
             del self.__sections
-            sys.stderr.write("Errors in network %s configuration\nat lines: %s\n" %
+            log("Errors in network \"%s\" configuration at lines: %s",
                              (self.__network, tuple(errors)))
             raise UserWarning()
     def __addparam(self, data, match):
@@ -383,7 +383,7 @@ class DNSZoneListing(object):
         nszone = self['Zone']
         if type(nszone) is not str or \
            nszone[0] == '.' or nszone[-1] == '.':
-            print 'Invalid or mission option Zone'
+            print 'Invalid or missing option Zone'
             raise UserWarning
         self.default = ""
         dns = self['DNSAddr']
@@ -494,6 +494,7 @@ if __name__ == "__main__":
 
     for (net, config) in get_networks(db, netw):
         try:
+            log("Looking up for network \"%s\"...", net)
             netconfig = ParseConfig(net, config)
             for lookuper in netconfig(db):
                 engine_name = type(lookuper).__name__;
@@ -503,16 +504,17 @@ if __name__ == "__main__":
                 except UserWarning:
                     pass
                 except:
-                    sys.stderr.write("Exception in engine '%s' (network \"%s\")\n" % \
+                    log("Exception in engine '%s' (network \"%s\")",
                                      (engine_name, net))
                     traceback.print_exc()
         except UserWarning:
             pass
         except:
-            sys.stderr.write("Exception at network \"%s\" lookup\n" % net)
+            log("Exception at network \"%s\" lookup", net)
             traceback.print_exc()
 
     db.cursor().execute("DELETE FROM shares WHERE last_lookup + interval %s < now()",
                         (wait_until_delete_share,))
     db.commit()
+    log("All network lookups finished")
 

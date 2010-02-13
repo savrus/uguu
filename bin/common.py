@@ -23,11 +23,21 @@ def connectdb():
     	database = db_database,
     	connection_factory = DictConnection)
 
+# Logging options
+# required by all scripts
+#where to send logs from low-level scanners to stderr
+#valid values are "filename", True (pass to stderr) and False (no logs)
+#file name should be shell-escapead (TODO: test for concurensy) 
+scanners_logging = True
+#scripts logging routine
+import time
+import sys
+def log(logstr, logparams = ()):
+   sys.stderr.write("[" + time.ctime() + "] " + (logstr % logparams) + "\n") 
 
 #locale for scanners output
 scanners_locale = "utf-8"
 #path where scanners are, with trailing slash
-import sys
 import subprocess
 import os.path
 scanners_path = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -38,8 +48,13 @@ def run_scanner(cmd, ip, proto, port, ext = ""):
         cmdline = "%s %s %s" % (cmd, ext, ip)
     else:
         cmdline = "%s -P%s %s %s" % (cmd, str(port), ext, ip)
+    _stderr = None
+    if type(scanners_logging) is str:
+        cmdline = cmdline + " 2>>" + scanners_logging
+    elif not scanners_logging:
+        _stderr = subprocess.PIPE
     process = subprocess.Popen(cmdline, shell=True, stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE, stderr=None)
+                               stdout=subprocess.PIPE, stderr=_stderr)
     process.stdin.close()
     return process
 
@@ -96,4 +111,5 @@ wait_until_delete_share = "4 month"
 # maximum number of lines to get from scanner
 # required by spider.py
 max_lines_from_scanner = 1000000
+
 

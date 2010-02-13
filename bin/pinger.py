@@ -13,7 +13,7 @@ import subprocess
 import string
 import re
 from network import dns_cache, scan_all_hosts
-from common import connectdb, default_ports
+from common import connectdb, log, default_ports
 
 def get_names_list(ips, nscache):
     res = set()
@@ -42,6 +42,7 @@ def update_shares_state(db, selwhere, port):
     if len(offline):
         cursor.execute("UPDATE shares SET state='offline' WHERE share_id IN %s", \
         	(tuple(itemdict[host] for host in offline),))
+    return len(online), len(offline)
 
 def get_shares_ports(db):
     cursor = db.cursor()
@@ -55,10 +56,20 @@ if __name__ == "__main__":
         print "I am unable to connect to the database, exiting."
         sys.exit()
 
+    log("Starting pinger...")
+    shares = 0
+    online = 0
+
     for proto in default_ports.iteritems():
-        update_shares_state(db, "protocol='%s' AND port=0" % proto[0], proto[1])
+        on, off = update_shares_state(db, "protocol='%s' AND port=0" % proto[0], proto[1])
+        shares += on + off
+        online += on
 
     for port in get_shares_ports(db):
-        update_shares_state(db, "port=%d" % port, port)
+        on, off = update_shares_state(db, "port=%d" % port, port)
+        shares += on + off
+        online += on
 
     db.commit()
+    log("Updated state for %4d shares, %4d are online.", (shares, online))
+

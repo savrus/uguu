@@ -12,12 +12,11 @@ import string
 import re
 import socket
 import hashlib
-import time
 import tempfile
 import os
 import sys
 import traceback
-from common import connectdb, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner
+from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner
 
 
 # python 2.5 compitible shitcode
@@ -78,7 +77,7 @@ def scan_line(cursor, share, line, qcache):
     try:
         line = unicode(line, scanners_locale)
     except:
-        sys.stderr.write("[%s] Non utf-8 line occured: '%s'.\n" % (time.ctime(), line))
+        log("Non utf-8 line occured: '%s'.", line)
         line = string.join([(lambda x: x if x in string.printable else "\\%#x" % ord(c))(c) for c in line], "")        
     if line[0] == "0":
         # 'path' type of line 
@@ -122,7 +121,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
     cursor = db.cursor()
     hoststr = "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
     address = socket.gethostbyname(host)
-    sys.stderr.write("[%s] Scanning %s (%s) ...\n" % (time.ctime(), hoststr, address))
+    log("Scanning %s (%s) ...", (hoststr, address))
     data = run_scanner(command, address, proto, port)
     save = tempfile.TemporaryFile(bufsize=-1)
     hash = hashlib.sha256()
@@ -133,7 +132,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             kill_process(data)
             data.stdout.close()
             data.wait()
-            sys.stderr.write("[%s] Scanning %s failed. Too many lines from scanner.\n" % (time.ctime(), hoststr))
+            log("Scanning %s failed. Too many lines from scanner.", hoststr)
             return
         hash.update(line)
         save.write(line)
@@ -145,15 +144,14 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             WHERE share_id = %(s)s;
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         db.commit()
-        sys.stderr.write("[%s] Scanning %s failed.\n" % (time.ctime(), hoststr))
+        log("Scanning %s failed.", hoststr)
     elif hash.hexdigest() == oldhash:
         cursor.execute("""
             UPDATE shares SET last_scan = now()
             WHERE share_id = %(s)s
             """, {'s':share_id})
         db.commit()
-        sys.stderr.write("[%s] Scanning %s succeded. No changes found.\n" \
-              % (time.ctime(), hoststr))
+        log("Scanning %s succeded. No changes found.", hoststr)
     else:
         cursor.execute("DELETE FROM files WHERE share_id = %(id)s",
             {'id':share_id})
@@ -173,8 +171,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
                   'h': hash.hexdigest()
                   })
         db.commit()
-        sys.stderr.write("[%s] Scanning %s succeded. Database updated.\n" \
-              % (time.ctime(), hoststr))
+        log("Scanning %s succeded. Database updated.", hoststr)
 
 
 if __name__ == "__main__":
@@ -209,6 +206,6 @@ if __name__ == "__main__":
         try:
             scan_share(db, id, proto, host, port, hash, command)
         except:
-            sys.stderr.write("[%s] Scanning %s://%s%s failed with a crash. Something unexpected happened. Exception trace:\n" % (time.ctime(), proto, host, ":" + str(port) if port != 0 else "", ))
+            log("Scanning %s://%s%s failed with a crash. Something unexpected happened. Exception trace:", (proto, host, ":" + str(port) if port != 0 else "", ))
             traceback.print_exc()
 
