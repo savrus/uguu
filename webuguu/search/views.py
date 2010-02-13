@@ -43,6 +43,7 @@ qopt_order = {
 qopt_match = {
     'norm': "filenames.tsname @@ to_tsquery('uguu',%(query)s)",
     'full': "paths.tspath || filenames.tsname @@ to_tsquery('uguu',%(query)s)",
+    'path': "paths.tspath  @@ to_tsquery('uguu',%(query)s)",
     'exact': "filenames.name = %(equery)s",
 }
 
@@ -59,16 +60,19 @@ class QueryParser:
         if m[1]:
             s *= sizenotatios.get(string.lower(m[1]), 1)
         return int(s)
-    def parse_option_match_norm(self):
-        pass
     def parse_option_match_full(self):
         self.sqlcount_joinpath = True
+    def parse_option_match_path(self):
+        self.sqlcount_joinpath = True
+    def parse_option_match_norm(self):
+        pass
     def parse_option_match_exact(self):
         pass
     def parse_option_match(self, option, arg):
         matches = {
             'norm': self.parse_option_match_norm,
             'full': self.parse_option_match_full,
+            'path': self.parse_option_match_full,
             'exact': self.parse_option_match_exact,
         }
         if arg in matches.keys():
@@ -281,7 +285,7 @@ def do_search(request, index, searchform):
                 urlencode({'s': row['share_id'], 'p': row['dirid']})
         else:
             newrow['type'] = ""
-            newrow['filelink'] = urlproto + "://" +\
+            newrow['filelink'] = urlproto + \
                 urlhost + urlpath + "/" + newrow['filename']
         newrow['path'] = row['protocol'] + "://" + urlhost + urlpath
         newrow['size'] = row['size']

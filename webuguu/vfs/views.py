@@ -54,7 +54,7 @@ def sharelist(request, column, name, is_this_host):
         SELECT share_id, state, size, network, protocol, hostname, port
         FROM shares
         WHERE %s = %%(n)s
-        ORDER BY hostname
+        ORDER BY state, hostname
         OFFSET %%(o)s LIMIT %%(l)s
         """ % column, {'n':name, 'o':offset, 'l':vfs_items_per_page})
     fastselflink = "./?"
@@ -136,7 +136,7 @@ def share(request, proto, hostname, port, path=""):
             """, {'s':share_id, 'p':path_id})
         try:
             dbpath, parent_id, parentfile_id, items, size = cursor.fetchone()
-            if path != dbpath:
+            if unicode(path) != unicode(dbpath, "utf-8"):
                 return HttpResponseRedirect(redirect_url)
         except: 
             return HttpResponseRedirect(redirect_url)
@@ -152,6 +152,15 @@ def share(request, proto, hostname, port, path=""):
         except:
             return render_to_response('vfs/error.html',
                 {'error':"No such file or directory: '" + path + "'"})
+    try:
+        path_id = int(path_id)
+        parent_id = int(parent_id)
+        parentfile_id = int(parentfile_id)
+        items = int(item)
+        size = int(size)
+    except:
+        return render_to_response('vfs/error.html',
+            {'error':"Seems like directory '%s' has not been scanned properly." % path})
     # detect offset in file list and fill offset bar
     offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     # get file list

@@ -16,6 +16,7 @@ import time
 import tempfile
 import os
 import sys
+import traceback
 from common import connectdb, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner
 
 
@@ -70,7 +71,11 @@ class PsycoCache:
         self.fcommit()
 
 def scan_line(cursor, share, line, qcache):
-    line = unicode(line, scanners_locale)
+    try:
+        line = unicode(line, scanners_locale)
+    except:
+        sys.stderr.write("[%s] Non utf-8 line occured: '%s'.\n" % (time.ctime(), line))
+        line = string.join([(lambda x: x if x in string.printable else "?")(c) for c in line], "")        
     if line[0] == "0":
         # 'path' type of line 
         try:
@@ -197,5 +202,9 @@ if __name__ == "__main__":
             """, {'s':id, 'w': wait_until_next_scan})
         # release lock on commit
         db.commit()
-        scan_share(db, id, proto, host, port, hash, command)
+        try:
+            scan_share(db, id, proto, host, port, hash, command)
+        except:
+            sys.stderr.write("[%s] Scanning %s://%s%s failed with a crash. Something unexpected happened. Exception trace:\n" % (time.ctime(), proto, host, ":" + str(port) if port != 0 else "", ))
+            traceback.print_exc()
 
