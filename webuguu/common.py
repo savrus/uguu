@@ -89,7 +89,7 @@ def protocol_prepare(request, protocol):
     if protocol == "smb":
         if re.search(r'(?u)win(dows|nt|32)',
                 string.lower(request.META['HTTP_USER_AGENT']), re.UNICODE):
-            return "file"
-    return protocol
+            return "file://///"
+    return protocol + "://"
              
 
