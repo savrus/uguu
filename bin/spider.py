@@ -136,7 +136,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             WHERE share_id = %(s)s;
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         db.commit()
-        sys.stderrr.write("[%s] Scanning %s failed.\n" % (time.ctime(), hoststr))
+        sys.stderr.write("[%s] Scanning %s failed.\n" % (time.ctime(), hoststr))
     elif hash.hexdigest() == oldhash:
         cursor.execute("""
             UPDATE shares SET last_scan = now()
