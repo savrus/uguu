@@ -39,13 +39,19 @@ class Share(object):
             self.scantype = scantype
         if self.scantype is None:
             for scantype in scantypes[self.proto].discovery:
-                if self.CheckScantype(scantype) is not None:
-                    return self.scantype
+                try:
+                    if self.CheckScantype(scantype) is not None:
+                        return self.scantype
+                except StopIteration:
+                    break
             log("Cann't discover scantype for %s:%s", (self.host, self.ProtoOrPort()))
         else:
-            if run_scanner(scantypes[self.proto][self.scantype], self.nscache(self.host),
-                           self.proto, self.port, "-l").wait() == 0:
+            result = run_scanner(scantypes[self.proto][self.scantype],
+                                 self.nscache(self.host), self.proto, self.port, "-l").wait()
+            if result == 0:
                 return self.scantype
+            elif result == 2:
+                raise StopIteration
         self.scantype = None
         return None
 
