@@ -9,7 +9,7 @@
 <div style="font-family: monospace; margin-top: 1em;">{{sqlquery}}</div>
 {% endif %}{% endspaceless %}
 <div class="margintop" id="searchresults">
-    <table>
+    <table class="files">
         {% for r in results %}
         <tr>
             <td><span class="rownum">{{forloop.counter|add:offset}}.</span></td>
