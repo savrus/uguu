@@ -26,8 +26,8 @@ def check_online_shares(hostlist, port):
     iplist = frozenset([nscache(host) for host in hostlist])
     hostlist = frozenset(hostlist)
     online = set(ip for (ip, port) in scan_all_hosts([(ip, port) for ip in iplist]))
-    return get_names_list(online) & hostlist, \
-           get_names_list(iplist - online) & hostlist
+    online = get_names_list(online) & hostlist
+    return online, hostlist - online
 
 def update_shares_state(db, selwhere, port):
     cursor = db.cursor()
