@@ -99,26 +99,26 @@ def share(request, proto, hostname, port, path=""):
     if share_id != 0:
         cursor.execute("""
             SELECT protocol, hostname, port,
-                   state, last_scan, last_state_change
+                   state, last_scan, next_scan, last_state_change
             FROM shares
             WHERE share_id = %(s)s
             """, {'s':share_id})
         try:
-            d_proto, d_hostname, d_port, state, scantime, changetime = cursor.fetchone()
+            d_proto, d_hostname, d_port, state, scantime, nexttime, changetime = cursor.fetchone()
             if [proto, hostname, int(port)] != [d_proto, d_hostname, d_port]:
                 return HttpResponseRedirect(".")
         except: 
             return HttpResponseRedirect(".")
     else:
         cursor.execute("""
-            SELECT share_id, state, last_scan, last_state_change
+            SELECT share_id, state, last_scan, next_scan, last_state_change
             FROM shares
             WHERE protocol = %(p)s
                 AND hostname = %(h)s
                 AND port = %(port)s
             """, {'p': proto, 'h': hostname, 'port': port})
         try:
-            share_id, state, scantime, changetime = cursor.fetchone()
+            share_id, state, scantime, nexttime, changetime = cursor.fetchone()
             url['share'] = [('s', share_id)] 
         except:
             return render_to_response('vfs/error.html',
@@ -203,6 +203,7 @@ def share(request, proto, hostname, port, path=""):
          'gobar': gobar,
          'state': state,
          'changetime': changetime,
-         'scantime': scantime
+         'scantime': scantime,
+         'nextscantime': nexttime,
          })
 
