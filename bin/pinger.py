@@ -18,7 +18,8 @@ from common import connectdb, log, default_ports
 def get_names_list(ips):
     res = set()
     for ip in ips:
-        res|=nscache(None, ip)
+        if ip is not None:
+            res|=nscache(None, ip)
     return res
 
 def check_online_shares(hostlist, port):
