@@ -17,6 +17,7 @@
 #include "dt.h"
 #include "smbwk.h"
 #include "log.h"
+#include "estat.h"
 
 #define SHARELIST_TMP_DECLARE size_t listlen = 0, listsize = 0, itemlen
 #define SHARELIST_APPEND_WSTR(slist, wstr) \
@@ -31,6 +32,9 @@
 		listlen[slist] = 0; \
 	} while (0)
 #define SHARELIST_START_ENUM(wkdir) (wkdir).next_share = (wkdir).share_list
+
+#define NETWORK_LASTERROR(err) \
+	((ERROR_BAD_NETPATH == (err))||(ERROR_NETWORK_UNREACHABLE == (res)))
 
 static char *smbwk_getshare(struct smbwk_dir *c)
 {
@@ -59,7 +63,7 @@ static int smbwk_fillshares(struct smbwk_dir *c)
 	netenum.lpRemoteName = c->url;
 	if ((res = WNetOpenEnum(RESOURCE_GLOBALNET, RESOURCETYPE_DISK, 0, &netenum, &hEnum)) != NO_ERROR) {
 		LOG_ERR("WNetOpenEnum failed (%d)\n", res);
-		return 0;
+		return (ERROR_NO_NET_OR_BAD_PATH == res || ERROR_NO_NETWORK == res) ? ESTAT_NOCONNECT : ESTAT_FAILURE;
 	}
 
 	buffer = malloc(BUF_SIZE);
@@ -76,7 +80,7 @@ static int smbwk_fillshares(struct smbwk_dir *c)
 			LOG_ERR("WNetEnumResource failed (%d)\n", res);
 			free(buffer);
 			WNetCloseEnum(hEnum);
-			return 0;
+			return (ERROR_NO_NET_OR_BAD_PATH == res || ERROR_NO_NETWORK == res) ? ESTAT_NOCONNECT : ESTAT_FAILURE;
 		}
 		for (i = 0, item = (LPNETRESOURCE)buffer; i < rescount; i++, item++) {
 			name = wcschr(item->lpRemoteName + 2, L'\\');
@@ -91,7 +95,7 @@ static int smbwk_fillshares(struct smbwk_dir *c)
 	free(buffer);
 
 	WNetCloseEnum(hEnum);
-	return 1;
+	return ESTAT_SUCCESS;
 }
 
 static int smbwk_fillallshares(struct smbwk_dir *c, int adm) 
@@ -106,7 +110,7 @@ static int smbwk_fillallshares(struct smbwk_dir *c, int adm)
 		res = NetShareEnum(c->url + 2, 1, &buffer, BUF_SIZE, &resread, &rescount, &resh);
 		if (NERR_Success != res && ERROR_MORE_DATA != res) {
 			LOG_ERR("NetShareEnum failed (%d)\n", res);
-			return 0;
+			return NETWORK_LASTERROR(res) ? ESTAT_NOCONNECT : ESTAT_FAILURE;
 		}
 		for (i = 0, item = (PSHARE_INFO_1)buffer; i < resread; i++, item++) {
 			switch (item->shi1_type)
@@ -124,7 +128,7 @@ static int smbwk_fillallshares(struct smbwk_dir *c, int adm)
 		}
 		NetApiBufferFree((void *)buffer);
 	} while (ERROR_MORE_DATA == res);
-	return 1;
+	return ESTAT_SUCCESS;
 }
 
 /* appends to null-terminated url string new file/dir
@@ -222,6 +226,7 @@ struct dt_dentry * smbwk_readdir(void *curdir)
 static int smbwk_go(dt_go type, char *name, void *curdir)
 {
     struct smbwk_dir *c = (struct smbwk_dir*) curdir;
+    int res;
 
     switch (type) {
         case DT_GO_PARENT:
@@ -258,9 +263,9 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
 		wcscat_s(c->url, c->url_len, L"\\*");//no need another checks or convertation from utf8
 		c->find = FindFirstFile(c->url, &c->data);
 		smbwk_url_suspend(c->url);
-		if (INVALID_HANDLE_VALUE == c->find)
-		{
-			LOG_ERR("Enumeration failed for %S (%d)\n", c->url, GetLastError());
+		if (INVALID_HANDLE_VALUE == c->find) {
+			LOG_ERR("Enumeration failed for %S (%d)\n", c->url, res = GetLastError());
+			if (NETWORK_LASTERROR(res)) exit(ESTAT_NOCONNECT);
 			if (type == DT_GO_CHILD) {
 				smbwk_url_suspend(c->url);
 				c->subdir--;
@@ -280,16 +285,17 @@ struct dt_walker smbwk_walker = {
 int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *password, enum_type enum_hidden_shares)
 {
 	NETRESOURCE conn;
+	int res;
 	c->url = (wchar_t *)malloc((SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN) * sizeof(wchar_t));
 	if(c->url == NULL) {
 		LOG_ERR("malloc() returned NULL\n");
-		return -1;
+		return ESTAT_FAILURE;
 	}
 	c->url_len = SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN;
 	if (wcsnlen(host, SMBWK_PATH_MAX_LEN) > SMBWK_PATH_MAX_LEN - 10) {
 		LOG_ERR("bad argument. host is too long\n");
 		free(c->url);
-		return -1;
+		return ESTAT_FAILURE;
 	}
 	wcscpy_s(c->url, SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN, L"\\\\");
 	wcscat_s(c->url, SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN, host);
@@ -297,27 +303,33 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
 	conn.dwDisplayType = RESOURCETYPE_DISK;
 	conn.lpRemoteName = c->url;
 	c->share_list = NULL;
-	switch (WNetAddConnection2(&conn, password, username, 0)) {
+	switch (res = WNetAddConnection2(&conn, password, username, 0)) {
 	case NO_ERROR:
 	case ERROR_SESSION_CREDENTIAL_CONFLICT://already connected under other username, let's scan using it
 		break;
-	default:
-		LOG_ERR("Cann\'t establish connection to %S as %S (%d)\n", c->url, username, GetLastError());
+	case ERROR_BAD_NET_NAME:
+	case ERROR_NO_NET_OR_BAD_PATH:
+	case ERROR_NO_NETWORK:
+		LOG_ERR("Network error or %S is down (%d)\n", c->url, res);
 		smbwk_close(c);
-		return -1;
+		return ESTAT_NOCONNECT;
+	default:
+		LOG_ERR("Cann\'t establish connection to %S as %S (%d)\n", c->url, username, res);
+		smbwk_close(c);
+		return ESTAT_FAILURE;
 	}
-	if (!(
+	if ((res = (
 		ENUM_SKIP_DOLLAR == enum_hidden_shares ?
 			(int(*)(struct smbwk_dir *, int))smbwk_fillshares :
 			smbwk_fillallshares
-		)(c, !(int)enum_hidden_shares)) {
+		)(c, !(int)enum_hidden_shares)) != ESTAT_SUCCESS) {
 			smbwk_close(c);
-			return -1;
+			return res;
 	}
 	SHARELIST_START_ENUM(*c);
 	c->subdir = 0;
 	c->find = INVALID_HANDLE_VALUE;
-    return 1;
+    return ESTAT_SUCCESS;
 }
 
 int smbwk_close(struct smbwk_dir *c)

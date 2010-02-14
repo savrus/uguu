@@ -10,10 +10,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "estat.h"
+
 #define LOG_ERR(...) \
 do { \
     fprintf(stderr, "%s: ", __FUNCTION__); \
     fprintf(stderr, __VA_ARGS__); \
+    /*perror(" errorno");*/ \
 } while (0)
 
 #define LOG_ASSERT(expr, ...) \
@@ -22,7 +25,7 @@ do { \
         fprintf(stderr, "Assertion failed in file %s, func %s, line %d: ", \
                 __FILE__, __FUNCTION__, __LINE__); \
         fprintf(stderr, __VA_ARGS__); \
-        abort(); \
+        exit(ESTAT_FAILURE); \
     } \
 } while(0)
 

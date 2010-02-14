@@ -282,6 +282,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\estat.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ftpparse.h"
 				>
 			</File>
