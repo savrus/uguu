@@ -20,8 +20,8 @@
             <td class="netinfo">{{n.items}}</td>
             <td class="netinfo">{{n.online}}</td>
             <td class="netinfo">{{n.offline}}</td>
-            <td class="netinfo">{{n.size|filesizeformat}}</td>
-            <td class="netinfo">{{n.avg|filesizeformat}}</td>
+            <td class="netinfo"><span class="filesize">{{n.size|filesizeformat}}</span></td>
+            <td class="netinfo"><span class="filesize">{{n.avg|filesizeformat}}</span></td>
         </tr>
         {% endfor %}
     </table>

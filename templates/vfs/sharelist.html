@@ -10,8 +10,8 @@
 total shares: {{info.items}},
 <span class="state" id="online">online:</span> {{info.online}},
 <span class="state" id="offline">offline:</span> {{info.offline}},
-total size: {{info.size|filesizeformat}},
-average size: {{info.avg|filesizeformat}}
+total size: <span class="filesize">{{info.size|filesizeformat}}</span>,
+average size: <span class="filesize">{{info.avg|filesizeformat}}</span>
 </div>
 {% if ishost %}
     <div class="margintop"><a class="share" href="{%url webuguu.vfs.views.network shares.0.network %}">go up</a></div>
