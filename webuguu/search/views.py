@@ -9,6 +9,7 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import re
+import time
 from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host
 
 default_match_limit = search_items_per_page * 20
@@ -255,6 +256,7 @@ class QueryParser:
         return self.error
 
 def do_search(request, index, searchform):
+    generation_started = time.time()
     sqlecho = debug_virtual_host(request)
     try:
         query = request.GET['q']
@@ -354,6 +356,7 @@ def do_search(request, index, searchform):
          'sqlecho': sqlecho,
          'sqlcount': sqlcount,
          'sqlquery': sqlquery,
+         'gentime': time.time() - generation_started,
          })
 
 def search(request):

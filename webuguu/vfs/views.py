@@ -9,10 +9,12 @@ from django.utils.http import urlencode
 from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
+import time
 from webuguu.common import connectdb, vfs_items_per_page, offset_prepare, protocol_prepare, known_protocols
 
 
 def index(request):
+    generation_started = time.time()
     try:
         db = connectdb()
     except:
@@ -22,6 +24,7 @@ def index(request):
 
 
 def net(request):
+    generation_started = time.time()
     try:
         db = connectdb()
     except:
@@ -42,9 +45,12 @@ def net(request):
             ) AS nstat USING(network)
         """)
     return render_to_response('vfs/net.html', \
-        {'networks': cursor.fetchall()})
+        {'networks': cursor.fetchall(),
+         'gentime': time.time() - generation_started,
+        })
 
 def sharelist(request, column, name, is_this_host):
+    generation_started = time.time()
     try:
         db = connectdb()
     except:
@@ -84,6 +90,7 @@ def sharelist(request, column, name, is_this_host):
          'fastself': fastselflink,
          'gobar': gobar,
          'info': listinfo,
+         'gentime': time.time() - generation_started,
          })
 
 
@@ -96,6 +103,7 @@ def host(request, proto, hostname):
 
 
 def share(request, proto, hostname, port, path=""):
+    generation_started = time.time()
     try:
         db = connectdb()
     except:
@@ -226,5 +234,6 @@ def share(request, proto, hostname, port, path=""):
          'changetime': changetime,
          'scantime': scantime,
          'nextscantime': nexttime,
+         'gentime': time.time() - generation_started,
          })
 
