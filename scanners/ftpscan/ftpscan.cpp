@@ -174,13 +174,13 @@ static void usage(char *binname, int err)
     char *bin = strrchr(binname, _DIR_SLASH);
     if (bin) binname = bin + 1;
     fprintf(stderr, "Usage: %s [-l] [-f] [(-c|-C) cp] [-P##] [-t###] [-u username] [-p password] [-h] host_ip\n", binname);
-    fprintf(stderr, "\t-l\tlookup mode (detect if there is anything available)\n");
-    fprintf(stderr, "\t-f\tprint full paths (debug output)\n");
-    fprintf(stderr, "\t-c cp\tset codepage for non-utf8 servers (default is " DEFAULT_ANSI_CODEPAGE ")\n");
-    fprintf(stderr, "\t-C cp\tforce server codepage (without detecting utf8)\n");
-    fprintf(stderr, "\t-P##\tuse non-default port ## for ftp control connection\n");
-    fprintf(stderr, "\t-t###\tconnection timeout ### in seconds (default is " _TOSTRING(DEF_TIMEOUT) ")\n");
-	fprintf(stderr, "\t-h\tprint this help\n");
+    fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
+    fprintf(stderr, "  -f\tprint full paths (debug output)\n");
+    fprintf(stderr, "  -c cp\tset codepage for non-utf8 servers (default is " DEFAULT_ANSI_CODEPAGE ")\n");
+    fprintf(stderr, "  -C cp\tforce server codepage (without detecting utf8)\n");
+    fprintf(stderr, "  -P##\tuse non-default port ## for ftp control connection\n");
+    fprintf(stderr, "  -t###\tconnection timeout ### in seconds (default is " _TOSTRING(DEF_TIMEOUT) ")\n");
+	fprintf(stderr, "  -h\tprint this help\n");
     exit(err);
 }
 
