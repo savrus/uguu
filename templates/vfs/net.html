@@ -4,10 +4,24 @@
 <div class="margintop" id="title">List of networks</div>
 <div class="margintop">
     <table>
+        <tr>
+            <td></td>
+            <td></td>
+            <td class="netinfo">shares</td>
+            <td class="netinfo"><span class="state" id="online">online:</span></td>
+            <td class="netinfo"><span class="state" id="offline">offline:</span></td>
+            <td class="netinfo">size</td>
+            <td class="netinfo">average</td>
+        </tr>
         {% for n in networks %}
         <tr>
             <td>{{forloop.counter}}.</td>
             <td><a class="share" href = "{%url webuguu.vfs.views.network n.network %}">{{ n.network }}</a></td>
+            <td class="netinfo">{{n.items}}</td>
+            <td class="netinfo">{{n.online}}</td>
+            <td class="netinfo">{{n.offline}}</td>
+            <td class="netinfo">{{n.size|filesizeformat}}</td>
+            <td class="netinfo">{{n.avg|filesizeformat}}</td>
         </tr>
         {% endfor %}
     </table>
