@@ -28,7 +28,19 @@ def net(request):
         return render_to_response('vfs/error.html',
             {'error':"Unable to connect to the database."})
     cursor = db.cursor()
-    cursor.execute("SELECT network FROM networks")
+    cursor.execute("""
+            SELECT network, items, online, offline, size, avg
+            FROM networks
+            LEFT JOIN (
+                SELECT network, 
+                count(*) AS items,
+                sum(case when state = 'online' then 1 else 0 end) AS online,
+                sum(case when state = 'offline' then 1 else 0 end) AS offline,
+                sum(size) AS size,
+                avg(size) AS avg
+                FROM shares GROUP BY network
+            ) AS nstat USING(network)
+        """)
     return render_to_response('vfs/net.html', \
         {'networks': cursor.fetchall()})
 
@@ -55,7 +67,7 @@ def sharelist(request, column, name, is_this_host):
             raise
     except:
         return render_to_response('vfs/error.html',
-            {'error':"Unknown %s '%s'" % (column, name)})
+            {'error':"No shares within %s '%s'" % (column, name)})
     offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     cursor.execute("""
         SELECT share_id, state, size, network, protocol, hostname, port
