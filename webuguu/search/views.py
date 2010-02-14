@@ -209,10 +209,11 @@ class QueryParser:
                 #words.append(w[0])
                 words.append(w[0] + ":*")
             elif qext.get(w[0]):
+                option = w[0].encode("ascii")
                 arg = w[1][1:]
                 if arg != "":
-                    qext[w[0]](w[0],arg)
-                    qext[w[0]] = self.parse_option_onlyonce_plug
+                    qext[option](option,arg)
+                    qext[option] = self.parse_option_onlyonce_plug
                 else:
                     self.error += "No arguments for query option '%s'.\n" % w[0]
             else:
