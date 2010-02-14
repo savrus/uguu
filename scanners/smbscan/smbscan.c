@@ -10,6 +10,7 @@
 
 #include "dt.h"
 #include "smbwk.h"
+#include "estat.h"
 
 static void usage(char *binname, int err)
 {
@@ -54,29 +55,29 @@ int main(int argc, char **argv)
                                                  : SKIP_BUCKS_ALL;
                 break;
             case 'h':
-                usage(argv[0], EXIT_SUCCESS);
+                usage(argv[0], ESTAT_SUCCESS);
             default:
-                usage(argv[0], EXIT_FAILURE);
+                usage(argv[0], ESTAT_FAILURE);
         }
     }
     
     if (i + 1 != argc)
-        usage(argv[0], EXIT_FAILURE);
+        usage(argv[0], ESTAT_FAILURE);
 
     host = argv[i];
 
     if (smbwk_open(&curdir, host, skip_bucks) < 0)
-        exit(EXIT_FAILURE);
+        exit(ESTAT_FAILURE);
 
     if (lookup) {
         probe = smbwk_walker.readdir(&curdir);
         smbwk_close(&curdir);
         if (probe != NULL) {
             dt_free(probe);
-            exit(EXIT_SUCCESS);
+            exit(ESTAT_SUCCESS);
         }
         else
-            exit(EXIT_FAILURE);
+            exit(ESTAT_FAILURE);
     }
 
     if (full)
@@ -86,6 +87,6 @@ int main(int argc, char **argv)
 
     smbwk_close(&curdir);
 
-    return EXIT_SUCCESS;
+    return ESTAT_SUCCESS;
 }
 

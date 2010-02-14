@@ -14,6 +14,7 @@
 #include <errno.h>
 
 #include "dt.h"
+#include "estat.h"
 #include "smbwk.h"
 #include "log.h"
 
@@ -243,7 +244,7 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
         if ((fd = smbc_opendir(c->url)) < 0) {
             LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n", c->url, type);
             if (errno == ETIMEDOUT)
-                exit(EXIT_FAILURE);
+                exit(ESTAT_FAILURE);
             if (type == DT_GO_CHILD)
                 smbwk_url_suspend(c->url);
             return -1;
