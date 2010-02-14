@@ -44,6 +44,7 @@ qopt_order = {
 
 qopt_match = {
 # Query optimization: get only limited number of strin values. 
+  'scaled': {
     'name': """filename_id IN
                (SELECT filename_id
                 FROM filenames 
@@ -62,10 +63,14 @@ qopt_match = {
                 WHERE paths.tspath @@ to_tsquery('uguu',%(query)s)
                 ORDER BY share_id, sharepath_id
                 LIMIT %(matchlimit)s)""",
-#    'name': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
-#    'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
-#    'path': "paths.tspath @@ to_tsquery('uguu',%(query)s)",
     'exact': "filenames.name = %(equery)s",
+    },
+  'unlimited': {
+    'name': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
+    'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
+    'path': "paths.tspath @@ to_tsquery('uguu',%(query)s)",
+    'exact': "filenames.name = %(equery)s",
+    },
 }
 
 class QueryParser:
@@ -97,7 +102,8 @@ class QueryParser:
             'exact': self.parse_option_match_exact,
         }
         if arg in matches.keys():
-            self.sqltsquery = qopt_match[arg]
+            #self.sqltsquery = qopt_match[arg]
+            self.options['tsquery'] = arg
             matches[arg]()
         else:
             self.error += "Unsupported match argument: '%s'.\n" % arg
@@ -165,17 +171,18 @@ class QueryParser:
         m = m.groups()
         m = int(m[0])
         if m <= 1000:
-            self.options['matchlimit'] *= m
+            self.options['scale'] = m
         else:
-            self.error += "Limit %s is too big.\n" % str(m)
+            self.error += "Scale %s is too big.\n" % str(m)
     def parse_option_onlyonce_plug(self, option, arg):
         self.error += "Query option '%s' appears more than once.\n" % option
     def __init__(self, query):
         self.options = dict()
         self.options['matchlimit'] = default_match_limit
+        self.options['scale'] = 1
+        self.options['tsquery'] = 'name'
         self.order = "shares.state"
         self.error = ""
-        self.sqltsquery = qopt_match['name']
         self.userquery = query
         self.sqlcond = []
         self.sqlcount_joinpath = False;
@@ -209,6 +216,11 @@ class QueryParser:
                     self.error += "No arguments for query option '%s'.\n" % w[0]
             else:
                 self.error += "Unknown query option: '%s'.\n" % w[0]
+        if self.options['scale'] == 0:
+            self.sqltsquery = qopt_match['unlimited'][self.options['tsquery']]
+        else:
+            self.sqltsquery = qopt_match['scaled'][self.options['tsquery']]
+            self.options['matchlimit'] *= self.options['scale']
         self.options['query'] = string.join(words, " & ")
         equery = re.search(r'(?u)(?P<equery>[^:]*) \w+:', query, re.UNICODE)
         self.options['equery'] = equery.group('equery') if equery else "NULL"

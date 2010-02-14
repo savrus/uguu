@@ -171,7 +171,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             WHERE files.share_id = f.share_id
                 AND files.sharepath_id = f.sharepath_id
                 AND files.pathfile_id = f.pathfile_id
-                AND files.share_id = %(s)
+                AND files.share_id = %(s)s
             """, {'s': share_id})
         cursor.execute("""
             UPDATE shares
