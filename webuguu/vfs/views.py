@@ -40,10 +40,17 @@ def sharelist(request, column, name, is_this_host):
             {'error':"Unable to connect to the database."})
     cursor = db.cursor()
     cursor.execute("""
-        SELECT count(*) FROM shares WHERE %s = %%(n)s
+        SELECT 
+            count(*) AS items,
+            sum(case when state = 'online' then 1 else 0 end) AS online,
+            sum(case when state = 'offline' then 1 else 0 end) AS offline,
+            sum(size) AS size,
+            avg(size) AS avg
+        FROM shares WHERE %s = %%(n)s
         """ % column, {'n': name})
     try:
-        items, = cursor.fetchone()
+        listinfo  = cursor.fetchone()
+        items = listinfo['items']
         if items == 0:
             raise
     except:
@@ -63,7 +70,9 @@ def sharelist(request, column, name, is_this_host):
          'ishost': is_this_host,
          'shares': cursor.fetchall(),
          'fastself': fastselflink,
-         'gobar': gobar})
+         'gobar': gobar,
+         'info': listinfo,
+         })
 
 
 def network(request, network):

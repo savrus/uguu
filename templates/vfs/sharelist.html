@@ -1,11 +1,21 @@
 {% extends "general.html" %}
 {% block htmltitle %}List of shares{% endblock %}
 {% block htmlbody %}
+<div class="margintop" id="title">
+    {% if ishost %}
+        List of shares at host <span class="shareholder">{{name}}</span><br>
+    {% else %}
+        List of shares in network <span class="shareholder">{{name}}</span><br>
+    {% endif %}
+total shares: {{info.items}},
+<span class="state" id="online">online:</span> {{info.online}},
+<span class="state" id="offline">offline:</span> {{info.offline}},
+total size: {{info.size|filesizeformat}},
+average size: {{info.avg|filesizeformat}}
+</div>
 {% if ishost %}
-    <div class="margintop" id="title">List of shares at host <span class="shareholder">{{name}}</span></div>
     <div class="margintop"><a class="share" href="{%url webuguu.vfs.views.network shares.0.network %}">go up</a></div>
 {% else %}
-    <div class="margintop" id="title">List of shares in network <span class="shareholder">{{name}}</span></div>
     <div class="margintop"><a class="share" href="{%url webuguu.vfs.views.net %}">go up</a></div>
 {% endif %}
 <table>
