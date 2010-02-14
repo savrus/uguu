@@ -18,13 +18,12 @@ static void usage(wchar_t *binname, int err)
 {
     wchar_t *bin = wcsrchr(binname, L'\\');
     if (bin) binname = bin + 1;
-	setlocale(LC_ALL, ".OCP");
 	fprintf(stderr, "Usage: %S [-l] [-f] [-u username] [-p password] [-a|-d] [-h] host_ip\n", binname);
-	fprintf(stderr, "\t-l\tlookup mode (detect if there is anything available)\n");
-	fprintf(stderr, "\t-f\tprint full paths (debug output)\n");
-	fprintf(stderr, "\t-a\tskip admin shares\n");
-	fprintf(stderr, "\t-d\tskip shares with trailing dollar (hidden)\n");
-	fprintf(stderr, "\t-h\tprint this help\n");
+	fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
+	fprintf(stderr, "  -f\tprint full paths (debug output)\n");
+	fprintf(stderr, "  -a\tskip admin shares\n");
+	fprintf(stderr, "  -d\tskip shares with trailing dollar (hidden)\n");
+	fprintf(stderr, "  -h\tprint this help\n");
 	exit(err);
 }
 
@@ -37,6 +36,7 @@ int wmain(int argc, wchar_t **argv)
     enum_type etype = ENUM_ALL;
     int i;
 
+	setlocale(LC_ALL, ".OCP");
 #if defined(_DEBUG)
 	_CrtSetReportMode( _CRT_WARN, _CRTDBG_MODE_DEBUG );
 	_CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );
