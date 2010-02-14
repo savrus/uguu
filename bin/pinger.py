@@ -15,19 +15,18 @@ import re
 from network import dns_cache, scan_all_hosts
 from common import connectdb, log, default_ports
 
-def get_names_list(ips, nscache):
+def get_names_list(ips):
     res = set()
     for ip in ips:
         res|=nscache(None, ip)
     return res
 
 def check_online_shares(hostlist, port):
-    nscache = dns_cache()
     iplist = frozenset([nscache(host) for host in hostlist])
     hostlist = frozenset(hostlist)
     online = set(ip for (ip, port) in scan_all_hosts([(ip, port) for ip in iplist]))
-    return get_names_list(online, nscache) & hostlist, \
-           get_names_list(iplist - online, nscache) & hostlist
+    return get_names_list(online) & hostlist, \
+           get_names_list(iplist - online) & hostlist
 
 def update_shares_state(db, selwhere, port):
     cursor = db.cursor()
@@ -55,6 +54,8 @@ if __name__ == "__main__":
     except:
         print "I am unable to connect to the database, exiting."
         sys.exit()
+
+    nscache = dns_cache()
 
     log("Starting pinger...")
     shares = 0
