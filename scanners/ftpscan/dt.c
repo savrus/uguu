@@ -13,6 +13,7 @@
 
 #include "dt.h"
 #include "logpp.h"
+#include "estat.h"
 
 struct dt_dentry * dt_alloc()
 {
@@ -204,8 +205,10 @@ static struct dt_dentry * dt_go_sibling_or_parent(struct dt_walker *wk, struct d
         ;
     if (dn == NULL) {
         dn = d->parent;
-        if ((dn != NULL) && (wk->go(DT_GO_PARENT, NULL, curdir) < 0))
-            exit(EXIT_FAILURE);
+        if ((dn != NULL) && (wk->go(DT_GO_PARENT, NULL, curdir) < 0)) {
+            LOG_ERR("Unable to return to parent directory.\n"); 
+            exit(ESTAT_FAILURE);
+        }
     }
     return dn;
 }

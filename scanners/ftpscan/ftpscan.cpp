@@ -31,6 +31,7 @@
 #include "dt.h"
 #include "logpp.h"
 #include "FtpSockLib.h"
+#include "estat.h"
 
 #define DEFAULT_ANSI_CODEPAGE "latin1"
 
@@ -45,6 +46,7 @@ public:
 	~CFtpControlEx() {
 		if (!do_list) FindClose(findinfo);
 	}
+	class LogonError {};
 	std::string curpath;
 	bool do_list;
 	FtpFindInfo findinfo;
@@ -180,7 +182,7 @@ static void usage(char *binname, int err)
     fprintf(stderr, "  -C cp\tforce server codepage (without detecting utf8)\n");
     fprintf(stderr, "  -P##\tuse non-default port ## for ftp control connection\n");
     fprintf(stderr, "  -t###\tconnection timeout ### in seconds (default is " _TOSTRING(DEF_TIMEOUT) ")\n");
-	fprintf(stderr, "  -h\tprint this help\n");
+    fprintf(stderr, "  -h\tprint this help\n");
     exit(err);
 }
 
@@ -232,13 +234,13 @@ int main(int argc, char *argv[])
 				curdir.pass = argv[++i];//TODO: read from stdin
 				break;
 			case 'h':
-				usage(argv[0], EXIT_SUCCESS);
+				usage(argv[0], ESTAT_SUCCESS);
 			default:
-				usage(argv[0], EXIT_FAILURE);
+				usage(argv[0], ESTAT_FAILURE);
 		}
 	}
 	if (i+1 != argc)
-		usage(argv[0], EXIT_FAILURE);
+		usage(argv[0], ESTAT_FAILURE);
 	host = argv[i];
 
 	curdir.ServerIP = inet_addr(host);
@@ -247,18 +249,20 @@ int main(int argc, char *argv[])
 		TryReconnect(&curdir);
 		if (lookup) {
 			if (struct dt_dentry *probe = walker.readdir(&curdir))
-				return dt_free(probe), EXIT_SUCCESS;
+				return dt_free(probe), ESTAT_SUCCESS;
 			else
-				return EXIT_FAILURE;
+				return ESTAT_FAILURE;
 		}
 		if (full)
 			dt_full(&walker, &d, &curdir);
 		else
 			dt_reverse(&walker, &d, &curdir);
 	} catch(const CFtpControl::NetworkError&) {
-		return EXIT_FAILURE;
+		return ESTAT_NOCONNECT;
+	} catch(const CFtpControlEx::LogonError&) {
+		return ESTAT_FAILURE;
 	}
 
-    return EXIT_SUCCESS;
+    return ESTAT_SUCCESS;
 }
 

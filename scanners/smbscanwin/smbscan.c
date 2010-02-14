@@ -13,6 +13,7 @@
 
 #include "dt.h"
 #include "smbwk.h"
+#include "estat.h"
 
 static void usage(wchar_t *binname, int err)
 {
@@ -67,29 +68,29 @@ int wmain(int argc, wchar_t **argv)
             case L'a':
             case L'd':
                 if (ENUM_ALL != etype)
-                    usage(argv[0], EXIT_FAILURE);
+                    usage(argv[0], ESTAT_FAILURE);
                 etype = (L'a'==argv[i][1]) ? ENUM_SKIP_ADMIN : ENUM_SKIP_DOLLAR;
                 break;
             case L'h':
-                usage(argv[0], EXIT_SUCCESS);
+                usage(argv[0], ESTAT_SUCCESS);
             default:
-                usage(argv[0], EXIT_FAILURE);
+                usage(argv[0], ESTAT_FAILURE);
         }
     }
 
     if (i+1 != argc)
-        usage(argv[0], EXIT_FAILURE);
+        usage(argv[0], ESTAT_FAILURE);
     
     host = argv[i];
 
-    if (smbwk_open(&curdir, host, user, pass, etype) < 0)
-        return EXIT_FAILURE;
+    if ((i = smbwk_open(&curdir, host, user, pass, etype)) != ESTAT_SUCCESS)
+        return i;
 
     if (lookup) {
         if ((probe = smbwk_walker.readdir(&curdir)) != NULL)
             dt_free(probe);
         smbwk_close(&curdir);
-        return probe ? EXIT_SUCCESS : EXIT_FAILURE;
+        return probe ? ESTAT_SUCCESS : ESTAT_FAILURE;
     }
     
     if (full)
@@ -99,6 +100,6 @@ int wmain(int argc, wchar_t **argv)
 
     smbwk_close(&curdir);
 
-    return EXIT_SUCCESS;
+    return ESTAT_SUCCESS;
 }
 
