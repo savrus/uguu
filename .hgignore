@@ -7,12 +7,14 @@ syntax: glob
 *.obj
 *.pdb
 *.ncb
+*.ilk
 *.sln
 *.sln.cache
 *.suo
 *.vcproj.*.user
 ./scanners/*/Debug
 ./scanners/*/Release
+./scanners/*/Install
 ./scanners/ftpscan/ftpscan
 ./scanners/smbscan/smbscan
 *.exe
