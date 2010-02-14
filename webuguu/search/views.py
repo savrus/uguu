@@ -58,6 +58,18 @@ qopt_match = {
                 WHERE files.tsfullpath @@ to_tsquery('uguu',%(query)s)
                 ORDER BY share_id, sharepath_id, pathfile_id
                 LIMIT %(matchlimit)s)""",
+    'name.p': """filename_id IN
+               (SELECT filename_id
+                FROM filenames 
+                WHERE tsname @@ to_tsquery('uguu', %(query)s)
+                ORDER BY filename_id
+                LIMIT %(matchlimit)s)""",
+    'full.p': """(files.share_id, files.sharepath_id, files.pathfile_id) IN
+               (SELECT share_id, sharepath_id, pathfile_id
+                FROM files
+                WHERE files.tsfullpath @@ to_tsquery('uguu',%(query)s)
+                ORDER BY share_id, sharepath_id, pathfile_id
+                LIMIT %(matchlimit)s)""",
     'path': """(paths.share_id, paths.sharepath_id) IN
                (SELECT share_id, sharepath_id
                 FROM paths
@@ -69,6 +81,8 @@ qopt_match = {
   'unlimited': {
     'name': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
     'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
+    'name.p': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
+    'full.p': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
     'path': "paths.tspath @@ to_tsquery('uguu',%(query)s)",
     'exact': "filenames.name = %(equery)s",
     },
@@ -93,12 +107,18 @@ class QueryParser:
         self.sqlcount_joinpath = True
     def parse_option_match_name(self):
         pass
+    def parse_option_match_full_prefix(self):
+        self.sql_full_search_prefix = True
+    def parse_option_match_name_prefix(self):
+        self.sql_full_search_prefix = True
     def parse_option_match_exact(self):
         pass
     def parse_option_match(self, option, arg):
         matches = {
             'name': self.parse_option_match_name,
             'full': self.parse_option_match_full,
+            'name.p': self.parse_option_match_name_prefix,
+            'full.p': self.parse_option_match_full_prefix,
             'path': self.parse_option_match_path,
             'exact': self.parse_option_match_exact,
         }
@@ -186,8 +206,9 @@ class QueryParser:
         self.error = ""
         self.userquery = query
         self.sqlcond = []
-        self.sqlcount_joinpath = False;
-        self.sqlcount_joinshares = False;
+        self.sqlcount_joinpath = False
+        self.sqlcount_joinshares = False
+        self.sql_full_search_prefix = False
         qext = {
             'type':  self.parse_option_type,
             'max':   self.parse_option_max,
@@ -205,9 +226,7 @@ class QueryParser:
         words = []
         for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,)*)?', query, re.UNICODE):
             if w[1] == "":
-                ## prefix search in postgres 8.4, for postgres 8.3 use
-                #words.append(w[0])
-                words.append(w[0] + ":*")
+                words.append(w[0])
             elif qext.get(w[0]):
                 option = w[0].encode("ascii")
                 arg = w[1][1:]
@@ -223,6 +242,9 @@ class QueryParser:
         else:
             self.sqltsquery = qopt_match['scaled'][self.options['tsquery']]
             self.options['matchlimit'] *= self.options['scale']
+        if self.sql_full_search_prefix:
+            ## prefix search in postgres 8.4, for postgres 8.3 just remove
+            words = [x + ":*" for x in words]
         self.options['query'] = string.join(words, " & ")
         equery = re.search(r'(?u)(?P<equery>[^:]*) \w+:', query, re.UNICODE)
         self.options['equery'] = equery.group('equery') if equery else "NULL"
