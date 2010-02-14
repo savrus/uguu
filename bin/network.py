@@ -74,13 +74,21 @@ class dns_cache(object):
     def __init__(self):
         self.name2ip = dict()
         self.ip2name = collections.defaultdict(set)
+        self.error = list()
     def __call__(self, host, ip = None):
         """usually returns ip (and caches it),
 but if host is None, returns set of hostnames"""
         if ip is None:
             if host in self.name2ip:
                 return self.name2ip[host]
-            ip = socket.gethostbyname(host)
+            if host in self.error:
+                return None
+            try:
+                ip = socket.gethostbyname(host)
+            except:
+                self.error.append(host)
+                sys.stderr.write("Cann't resolve host name '%s'.\n" % host)
+                return None
         elif host is None:
             return self.ip2name[ip]
         self.name2ip[host] = ip
