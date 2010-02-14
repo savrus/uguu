@@ -50,7 +50,7 @@ int main(int argc, char **argv)
             case 'a':
             case 'd':
                 if (skip_bucks != SKIP_BUCKS_NONE)
-                    usage(argv[0], EXIT_FAILURE);
+                    usage(argv[0], ESTAT_FAILURE);
                 skip_bucks = (argv[i][1] == 'a') ? SKIP_BUCKS_ADMIN
                                                  : SKIP_BUCKS_ALL;
                 break;
