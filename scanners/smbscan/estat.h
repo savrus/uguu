@@ -17,7 +17,7 @@ extern "C" {
  * Each exit status corresponds to specific kind of situation:
  * success, failure or no connection (optional)
  * Lookup process can build chains of scanners and to simplify it's
- * job scanners can exit with RSTAT_NOCONNECT status if further
+ * job scanners can exit with ESTAT_NOCONNECT status if further
  * investigation is meaningless (for example, the scanned share
  * has just went offline)
  */
