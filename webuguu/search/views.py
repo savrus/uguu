@@ -12,7 +12,7 @@ import re
 import time
 from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host
 
-default_match_limit = search_items_per_page * 20
+default_match_limit = search_items_per_page * 8
 
 # for types other than recognizable by scanner
 qopt_type = {
