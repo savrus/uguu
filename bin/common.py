@@ -25,9 +25,7 @@ def connectdb():
 
 # Logging options
 # required by all scripts
-#where to send logs from low-level scanners to stderr
-#valid values are "filename", True (pass to stderr) and False (no logs)
-#file name should be shell-escapead (TODO: test for concurensy) 
+#whether to send logs from low-level scanners to stderr
 scanners_logging = True
 #scripts logging routine
 import time
@@ -49,9 +47,7 @@ def run_scanner(cmd, ip, proto, port, ext = ""):
     else:
         cmdline = "%s -P%s %s %s" % (cmd, str(port), ext, ip)
     _stderr = None
-    if type(scanners_logging) is str:
-        cmdline = cmdline + " 2>>" + scanners_logging
-    elif not scanners_logging:
+    if not scanners_logging:
         _stderr = subprocess.PIPE
     process = subprocess.Popen(cmdline, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=_stderr)
