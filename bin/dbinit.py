@@ -255,6 +255,31 @@ def textsearch(db):
         ALTER MAPPING for word WITH russian_stem;
         """)
 
+def grant_access(db, db_user, ReadOnly):
+    cursor = db.cursor()
+    cursor.execute("GRANT CONNECT, TEMP ON DATABASE %(d)s TO %(u)s" %
+                   {'d': common.db_database, 'u': db_user})
+    cursor.execute("GRANT SELECT ON TABLE networks, scantypes TO %(u)s" %
+                   {'u': db_user})
+    if ReadOnly:
+        cursor.execute("""
+            GRANT SELECT
+            ON TABLE shares, paths, filenames, files
+            TO %(u)s
+            """ % {'u': db_user})
+    else:
+        cursor.execute("""
+            GRANT SELECT, INSERT, UPDATE, DELETE
+            ON TABLE shares, paths, filenames, files
+            TO %(u)s;
+            GRANT USAGE
+            ON SEQUENCE shares_share_id_seq, filenames_filename_id_seq
+            TO %(u)s;
+            GRANT EXECUTE
+            ON FUNCTION share_state_change(), gfid(IN text, IN filetype, IN text)
+            TO %(u)s;
+            """ % {'u': db_user})
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -262,9 +287,11 @@ if __name__ == "__main__":
         print "Parameters are (at least one should be specified):"
         print "  --dropdb\tdrop all uguu-related stuff from database"
         print "  --makedb\tinit uguu database"
+        print "  --grant\tgrant access for R/O and R/W roles, use only with --makedb"
         print "  --\tmust be specified before dbusername starting with hyphen"
         sys.exit()
 
+    rw_user = common.db_user
     common.db_user = sys.argv.pop()
     if common.db_user[0] == '-' and sys.argv.pop() != '--':
         print "Invalid parameters, run with no parameters for help."
@@ -278,12 +305,14 @@ if __name__ == "__main__":
 
     if '--dropdb' in sys.argv:
         drop(db)
+        db.commit()
     elif '--makedb' not in sys.argv:
         print "Invalid parameters, run with no parameters for help."
         sys.exit()
     elif not db_is_empty(db):
         print "Database is not empty, exiting."
         sys.exit()
+
     if '--makedb' in sys.argv:
         ddl_types(db)
         ddl(db)
@@ -293,5 +322,14 @@ if __name__ == "__main__":
         #fillshares_localhost(db)
         #fillshares_melchior(db)
         textsearch(db)
-    db.commit()
+        db.commit()
+        if '--grant' in sys.argv:
+            user = raw_input("R/W user name [%s]: " % rw_user)
+            if user != "":
+                rw_user = user
+            user = raw_input("R/O user name [%s]: " % rw_user)
+            grant_access(db, rw_user, False)
+            if user != "" and user != rw_user:
+                grant_access(db, user, True)
+            db.commit()
 
