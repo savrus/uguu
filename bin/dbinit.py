@@ -7,7 +7,36 @@
 
 import psycopg2
 import sys
+import common
+import getpass
 from common import connectdb, known_filetypes, known_protocols
+
+def db_is_empty(db):
+    cursor = db.cursor()
+    def check_q(query, required_names):
+        cursor.execute(query)
+        for line in cursor.fetchall():
+            if line[0] in required_names:
+                return False
+        return True    
+    def check(type_name, required_names):
+        return check_q("""
+            SELECT %(t)s_name
+            FROM information_schema.%(t)ss
+            WHERE %(t)s_schema='public'
+            """ % {'t': type_name}, required_names)
+    return check('table', ['networks', 'scantypes', 'shares', 'paths', \
+                           'filenames', 'files']) and \
+           check('routine', ['share_state_change','gfid']) and \
+           check('trigger', ['share_stage_change_trigger']) and \
+           check('sequence', ['scantypes_scantype_id_seq', 'shares_share_id_seq', \
+                              'filenames_filename_id_seq']) and \
+           check_q("""
+            SELECT typname FROM pg_type
+            JOIN pg_namespace ON pg_type.typnamespace=pg_namespace.oid
+            WHERE pg_namespace.nspname='public' AND
+                pg_type.oid IN (SELECT DISTINCT(enumtypid) FROM pg_enum)
+            """, ['availability', 'filetype', 'proto'])
 
 def drop(db):
     cursor = db.cursor()
@@ -18,6 +47,7 @@ def drop(db):
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
             filenames, files CASCADE;
         DROP FUNCTION IF EXISTS share_state_change() CASCADE;
+        DROP FUNCTION IF EXISTS gfid(IN text, IN filetype, IN text) CASCADE;
         DROP TYPE IF EXISTS filetype, proto, availability CASCADE;
         DROP TEXT SEARCH CONFIGURATION IF EXISTS uguu CASCADE;
         DROP LANGUAGE IF EXISTS 'plpgsql' CASCADE;
@@ -219,19 +249,41 @@ def textsearch(db):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print "Usage: python %s parameter(s) dbusername" % sys.argv[0]
+        print "Parameters are (at least one should be specified):"
+        print "  --dropdb\tdrop all uguu-related stuff from database"
+        print "  --makedb\tinit uguu database"
+        print "  --\tmust be specified before dbusername starting with hyphen"
+        sys.exit()
+
+    common.db_user = sys.argv.pop()
+    if common.db_user[0] == '-' and sys.argv.pop() != '--':
+        print "Invalid parameters, run with no parameters for help."
+        sys.exit()
+    common.db_password = getpass.getpass("%s's password: " % common.db_user)
     try:
         db = connectdb()
     except:
         print "I am unable to connect to the database, exiting."
         sys.exit()
 
-    drop(db)
-    ddl_types(db)
-    ddl(db)
-    ddl_prog(db)
-    ddl_index(db)
-    fill(db)
-    #fillshares_localhost(db)
-    textsearch(db)
+    if '--dropdb' in sys.argv:
+        drop(db)
+    elif '--makedb' not in sys.argv:
+        print "Invalid parameters, run with no parameters for help."
+        sys.exit()
+    elif not db_is_empty(db):
+        print "Database is not empty, exiting."
+        sys.exit()
+    if '--makedb' in sys.argv:
+        ddl_types(db)
+        ddl(db)
+        ddl_prog(db)
+        ddl_index(db)
+        fill(db)
+        #fillshares_localhost(db)
+        #fillshares_melchior(db)
+        textsearch(db)
     db.commit()
 
