@@ -324,12 +324,13 @@ if __name__ == "__main__":
         textsearch(db)
         db.commit()
         if '--grant' in sys.argv:
-            user = raw_input("R/W user name [%s]: " % rw_user)
+            user = raw_input("R/W user name ('--' to skip) [%s]: " % rw_user)
             if user != "":
                 rw_user = user
-            user = raw_input("R/O user name [%s]: " % rw_user)
-            grant_access(db, rw_user, False)
-            if user != "" and user != rw_user:
+            user = raw_input("R/O user name ('--' to skip) [%s]: " % rw_user)
+            if rw_user != '--':
+                grant_access(db, rw_user, False)
+            if user != "" and user != '--' and user != rw_user:
                 grant_access(db, user, True)
             db.commit()
 
