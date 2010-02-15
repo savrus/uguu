@@ -38,6 +38,13 @@ def db_is_empty(db):
                 pg_type.oid IN (SELECT DISTINCT(enumtypid) FROM pg_enum)
             """, ['availability', 'filetype', 'proto'])
 
+def safe_query(db, query):
+    db.commit()
+    try:
+        db.cursor().execute(query)
+    except:
+        db.rollback()
+
 def drop(db):
     cursor = db.cursor()
     cursor.execute("""
@@ -47,12 +54,13 @@ def drop(db):
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
             filenames, files CASCADE;
         DROP FUNCTION IF EXISTS share_state_change() CASCADE;
-        DROP FUNCTION IF EXISTS gfid(IN text, IN filetype, IN text) CASCADE;
+        """)
+    safe_query(db, "DROP FUNCTION IF EXISTS gfid(IN text, IN filetype, IN text) CASCADE")
+    cursor.execute("""
         DROP TYPE IF EXISTS filetype, proto, availability CASCADE;
         DROP TEXT SEARCH CONFIGURATION IF EXISTS uguu CASCADE;
-        DROP LANGUAGE IF EXISTS 'plpgsql' CASCADE;
         """)
-
+    safe_query(db, "DROP LANGUAGE IF EXISTS 'plpgsql' CASCADE")
 
 def ddl_types(db):
     cursor = db.cursor()
@@ -129,9 +137,9 @@ def ddl(db):
 # Warning: you may need to execute
 # "CREATE LANGUAGE 'plpgsql';" before calling this
 def ddl_prog(db):
+    safe_query(db, "CREATE LANGUAGE 'plpgsql'")
     cursor = db.cursor()
     cursor.execute("""
-        CREATE LANGUAGE 'plpgsql'; 
         CREATE OR REPLACE FUNCTION share_state_change()
             RETURNS trigger AS
             $$BEGIN
