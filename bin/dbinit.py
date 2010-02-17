@@ -158,7 +158,6 @@ def ddl_prog(db):
             RETURNS integer AS $$
             DECLARE id INTEGER;
             BEGIN
-                LOCK TABLE filenames IN ROW EXCLUSIVE MODE;
                 SELECT INTO id filename_id FROM filenames WHERE name = $1;
                 IF NOT FOUND THEN
                     INSERT INTO filenames (name, type, tsname)
