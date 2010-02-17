@@ -70,12 +70,6 @@ qopt_match = {
                 WHERE files.tsfullpath @@ to_tsquery('uguu',%(query)s)
                 ORDER BY share_id, sharepath_id, pathfile_id
                 LIMIT %(matchlimit)s)""",
-    'path': """(paths.share_id, paths.sharepath_id) IN
-               (SELECT share_id, sharepath_id
-                FROM paths
-                WHERE paths.tspath @@ to_tsquery('uguu',%(query)s)
-                ORDER BY share_id, sharepath_id
-                LIMIT %(matchlimit)s)""",
     'exact': "filenames.name = %(equery)s",
     },
   'unlimited': {
@@ -83,7 +77,6 @@ qopt_match = {
     'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
     'name.p': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
     'full.p': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
-    'path': "paths.tspath @@ to_tsquery('uguu',%(query)s)",
     'exact': "filenames.name = %(equery)s",
     },
 }
@@ -119,7 +112,6 @@ class QueryParser:
             'full': self.parse_option_match_full,
             'name.p': self.parse_option_match_name_prefix,
             'full.p': self.parse_option_match_full_prefix,
-            'path': self.parse_option_match_path,
             'exact': self.parse_option_match_exact,
         }
         if arg in matches.keys():
