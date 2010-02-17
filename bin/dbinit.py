@@ -161,7 +161,7 @@ def ddl_prog(db):
                 SELECT INTO id filename_id FROM filenames WHERE name = $1;
                 IF NOT FOUND THEN
                     INSERT INTO filenames (name, type, tsname)
-                    VALUES ($1, $2, to_tsvector($3));
+                    VALUES ($1, $2, to_tsvector('uguu', $3));
                     RETURN lastval();
                 END IF;
                 RETURN id;
