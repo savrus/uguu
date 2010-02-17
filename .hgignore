@@ -20,3 +20,4 @@ syntax: glob
 *.exe
 ./bin/smbscan
 ./bin/ftpscan
+./logs
