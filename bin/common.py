@@ -33,6 +33,9 @@ import sys
 def log(logstr, logparams = ()):
    sys.stderr.write("[" + time.ctime() + "] " + (logstr % logparams) + "\n") 
 
+def sharestr(proto, host, port=0):
+    return "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
+
 #locale for scanners output
 scanners_locale = "utf-8"
 #path where scanners are, with trailing slash
