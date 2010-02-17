@@ -173,11 +173,10 @@ def ddl_prog(db):
 def ddl_index(db):
     cursor = db.cursor()
     cursor.execute("""
-        CREATE INDEX filenames_name ON filenames USING hash(name);
+        CREATE INDEX filenames_name ON filenames USING hash(lower(name));
         CREATE INDEX filenames_tsname ON filenames USING gin(tsname);
         CREATE INDEX filenames_type ON filenames (type);
         CREATE INDEX paths_path ON paths USING hash(path);
-        CREATE INDEX paths_tspath ON paths USING gin(tspath);
         CREATE INDEX files_filename ON files (filename_id);
         CREATE INDEX files_sharedir ON files ((sharedir_id != 0));
         CREATE INDEX files_size ON files (size);
