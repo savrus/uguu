@@ -158,11 +158,10 @@ def ddl_prog(db):
             RETURNS integer AS $$
             DECLARE id INTEGER;
             BEGIN
-                LOCK TABLE filenames IN ROW EXCLUSIVE MODE;
                 SELECT INTO id filename_id FROM filenames WHERE name = $1;
                 IF NOT FOUND THEN
                     INSERT INTO filenames (name, type, tsname)
-                    VALUES ($1, $2, to_tsvector($3));
+                    VALUES ($1, $2, to_tsvector('uguu', $3));
                     RETURN lastval();
                 END IF;
                 RETURN id;
@@ -174,11 +173,10 @@ def ddl_prog(db):
 def ddl_index(db):
     cursor = db.cursor()
     cursor.execute("""
-        CREATE INDEX filenames_name ON filenames USING hash(name);
+        CREATE INDEX filenames_name ON filenames USING hash(lower(name));
         CREATE INDEX filenames_tsname ON filenames USING gin(tsname);
         CREATE INDEX filenames_type ON filenames (type);
         CREATE INDEX paths_path ON paths USING hash(path);
-        CREATE INDEX paths_tspath ON paths USING gin(tspath);
         CREATE INDEX files_filename ON files (filename_id);
         CREATE INDEX files_sharedir ON files ((sharedir_id != 0));
         CREATE INDEX files_size ON files (size);

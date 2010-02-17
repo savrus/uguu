@@ -16,7 +16,7 @@ import tempfile
 import os
 import sys
 import traceback
-from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner
+from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr
 
 
 # python 2.5 compitible shitcode
@@ -87,7 +87,7 @@ def scan_line(cursor, share, line, qcache):
             l, id = string.split(s=line, maxsplit=2)
             path = ""
         id = int(id)
-        qcache.append("INSERT INTO paths (share_id, sharepath_id, path, tspath) VALUES (%(s)s, %(id)s, %(p)s, to_tsvector(%(t)s))",
+        qcache.append("INSERT INTO paths (share_id, sharepath_id, path, tspath) VALUES (%(s)s, %(id)s, %(p)s, to_tsvector('uguu', %(t)s))",
             {'s':share, 'id':id, 'p':path, 't':tsprepare(path)})
     else:
         # 'file' type of line
@@ -119,7 +119,7 @@ def scan_line(cursor, share, line, qcache):
 
 def scan_share(db, share_id, proto, host, port, oldhash, command):
     cursor = db.cursor()
-    hoststr = "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
+    hoststr = sharestr(proto, host, port)
     address = socket.gethostbyname(host)
     log("Scanning %s (%s) ...", (hoststr, address))
     data = run_scanner(command, address, proto, port)
@@ -189,11 +189,8 @@ if __name__ == "__main__":
         print "Unable to connect to the database, exiting."
         sys.exit()
     shares = db.cursor()
-    proceed = True
-    while proceed:
+    while True:
         shares.execute("""
-            LOCK TABLE shares IN SHARE ROW EXCLUSIVE MODE;
-            
             SELECT share_id, shares.protocol, hostname, port, hash, scan_command
             FROM shares
             LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
@@ -201,7 +198,6 @@ if __name__ == "__main__":
             ORDER BY next_scan LIMIT 1
             """)
         if shares.rowcount == 0:
-            proceed = False
             db.rollback()
             break
         id, proto, host, port, hash, command = shares.fetchone()
@@ -214,6 +210,6 @@ if __name__ == "__main__":
         try:
             scan_share(db, id, proto, host, port, hash, command)
         except:
-            log("Scanning %s://%s%s failed with a crash. Something unexpected happened. Exception trace:", (proto, host, ":" + str(port) if port != 0 else "", ))
+            log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
             traceback.print_exc()
 

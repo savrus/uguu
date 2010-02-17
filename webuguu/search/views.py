@@ -119,7 +119,6 @@ class QueryParser:
             'full': self.parse_option_match_full,
             'name.p': self.parse_option_match_name_prefix,
             'full.p': self.parse_option_match_full_prefix,
-            'path': self.parse_option_match_path,
             'exact': self.parse_option_match_exact,
         }
         if arg in matches.keys():
