@@ -87,7 +87,7 @@ def scan_line(cursor, share, line, qcache):
             l, id = string.split(s=line, maxsplit=2)
             path = ""
         id = int(id)
-        qcache.append("INSERT INTO paths (share_id, sharepath_id, path, tspath) VALUES (%(s)s, %(id)s, %(p)s, to_tsvector(%(t)s))",
+        qcache.append("INSERT INTO paths (share_id, sharepath_id, path, tspath) VALUES (%(s)s, %(id)s, %(p)s, to_tsvector('uguu', %(t)s))",
             {'s':share, 'id':id, 'p':path, 't':tsprepare(path)})
     else:
         # 'file' type of line
