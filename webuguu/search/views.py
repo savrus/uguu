@@ -70,14 +70,14 @@ qopt_match = {
                 WHERE files.tsfullpath @@ to_tsquery('uguu',%(query)s)
                 ORDER BY share_id, sharepath_id, pathfile_id
                 LIMIT %(matchlimit)s)""",
-    'exact': "filenames.name = %(equery)s",
+    'exact': "lower(filenames.name) = LOWER(%(equery)s)",
     },
   'unlimited': {
     'name': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
     'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
     'name.p': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
     'full.p': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
-    'exact': "filenames.name = %(equery)s",
+    'exact': "lower(filenames.name) = LOWER(%(equery)s)",
     },
 }
 
