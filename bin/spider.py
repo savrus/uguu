@@ -67,8 +67,9 @@ class PsycoCache:
         if len(self.fquery) > 1024:
             self.fcommit()
     def fcommit(self):
-        self.query.append(fquery_select + string.join(self.fquery, ","))
-        self.fquery = []
+        if len(self.fquery) > 0:
+            self.query.append(fquery_select + string.join(self.fquery, ","))
+            self.fquery = []
         self.commit()
     def allcommit(self):
         self.fcommit()
