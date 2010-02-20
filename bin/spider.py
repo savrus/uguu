@@ -60,8 +60,9 @@ class PsycoCache:
         if len(self.query) > 1024:
             self.commit()
     def commit(self):
-        self.cursor.execute(string.join(self.query,";"))
-        self.query = []
+        if len(self.query) > 0:
+            self.cursor.execute(string.join(self.query,";"))
+            self.query = []
     def fappend(self, vars):
         self.fquery.append(self.cursor.mogrify(fquery_values, vars))
         if len(self.fquery) > 1024:
