@@ -194,7 +194,7 @@ class QueryParser:
         self.options['matchlimit'] = default_match_limit
         self.options['scale'] = 1
         self.options['tsquery'] = 'name'
-        self.order = "shares.state"
+        self.order = "shares.state, files.size DESC"
         self.error = ""
         self.userquery = query
         self.sqlcond = []
