@@ -2,6 +2,7 @@
 # dbinit.py - initialise uguu database
 #
 # Copyright 2010, savrus
+# Copyright (c) 2010, Radist <radist.nt@gmail.com>
 # Read the COPYING file in the root of the source tree.
 #
 
