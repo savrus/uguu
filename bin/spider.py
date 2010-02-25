@@ -122,7 +122,9 @@ def scan_line(cursor, share, line, qcache):
 def scan_share(db, share_id, proto, host, port, oldhash, command):
     cursor = db.cursor()
     hoststr = sharestr(proto, host, port)
-    address = socket.gethostbyname(host)
+    #WARNING: THIS SHOULD NEVER GO INTO REPOSITORY
+    #address = socket.gethostbyname(host)
+    address = host
     log("Scanning %s (%s) ...", (hoststr, address))
     data = run_scanner(command, address, proto, port)
     save = tempfile.TemporaryFile(bufsize=-1)
