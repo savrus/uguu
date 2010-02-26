@@ -93,7 +93,7 @@ filetypes = {
 
 #default protocols' ports, keep in conformance with known_protocols
 #required by pinger.py, lookup.py
-default_ports = dict(zip(known_protocols, (139, 21,)))
+default_ports = dict(zip(known_protocols, (445, 21,)))
 
 # Time period to wait until next scan
 # required by spider.py
