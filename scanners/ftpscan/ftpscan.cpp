@@ -59,7 +59,7 @@ public:
 			__VA_ARGS__ \
 		} catch(const CFtpControl::NetworkError) { \
 			if( ftp->errors--<0 ) \
-				throw CFtpControl::NetworkError(); \
+				throw; \
 			usleep(1000); \
 			TryReconnect(ftp); \
 		} \
