@@ -126,6 +126,7 @@ static bool safe_connect(SOCKET sock, struct sockaddr_in *sa, int _timeout)
     return false;
   }
 
+#if 0
   timeval timeout;
   timeout.tv_sec = _timeout;
   timeout.tv_usec = 0;
@@ -139,9 +140,10 @@ static bool safe_connect(SOCKET sock, struct sockaddr_in *sa, int _timeout)
     LOG_ERR("Connect failed or timed out\n");
     return false;
   }
+#endif
 
   socklen_t len = 4;
-  res = 0;
+  int res = 0;
   if( getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&res, &len) != SOCKET_ERROR && !res )
     return true;
   LOG_ERR("Connection is broken\n");
