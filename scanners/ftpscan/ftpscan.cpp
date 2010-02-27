@@ -10,7 +10,7 @@
 
 #include <Windows.h>
 
-#define usleep Sleep
+#define usleep(x) Sleep((x)/1000)
 
 #else
 
@@ -199,7 +199,7 @@ void CFtpControlEx::extend_cache(std::string &_dir, char *data)
 		} catch(const CFtpControl::NetworkError) { \
 			if( ftp->errors--<0 ) \
 				throw; \
-			usleep(1000); \
+			usleep(1000000); \
 			TryReconnect(ftp); \
 		} \
 	}
