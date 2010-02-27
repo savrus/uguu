@@ -12,6 +12,7 @@ import socket
 import subprocess
 import string
 import re
+import psycopg2.extensions
 from network import dns_cache, scan_all_hosts
 from common import connectdb, log, default_ports
 
@@ -55,6 +56,7 @@ if __name__ == "__main__":
     except:
         print "I am unable to connect to the database, exiting."
         sys.exit()
+    db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
 
     nscache = dns_cache()
 
@@ -72,6 +74,5 @@ if __name__ == "__main__":
         shares += on + off
         online += on
 
-    db.commit()
     log("Updated state for %4d shares, %4d are online.", (shares, online))
 
