@@ -122,7 +122,9 @@ public:
   const char *GetLastResponse(void);
 private:
   SOCKET sock, dsock;
+protected:
   iconv_t _to_utf8;
+private:
   iconv_t _from_utf8;
   char netbuff[__NB_SIZE];
   int nb_nextcmd;
