@@ -21,6 +21,8 @@
  * 11-08-2008 Fixed error in skipresponse which might cause missing recognition the end response line
  * 02-01-2010 Started cross-platform adaptation
  * 06-01-2010 Added iconv support
+ * 25-02-2010 Added DTP support
+ * 27-02-2010 Fixed skipping the second response
  *
  *  Disclaimer for thouse who wants to criticize code:
  * This library was originally created when I had nearly no experiense in C++ and networking programming areas.
@@ -35,7 +37,8 @@
 #include <Winsock2.h>
 #include <Windows.h>
 
-#define iconv_cchar const char
+#define in_addr_byte(in,N) ((in).S_un.S_un_b.s_b##N)
+typedef int socklen_t;
 
 #else // Linux etc
 
@@ -50,15 +53,19 @@
 #define SOCKET_ERROR (-1)
 #endif
 
+struct in_addr_bytes { unsigned char b1,b2,b3,b4; };
+#define in_addr_byte(in,N) (reinterpret_cast<struct in_addr_bytes*>(&(in))->b##N)
+
 static void closesocket(int sock)
 {
   shutdown(sock, SHUT_RDWR);
   close(sock);
 }
 
-#define iconv_cchar char
-
 #endif //_WIN32
+
+struct in_port_bytes { unsigned char b1,b2; };
+#define in_port_byte(p,N) (reinterpret_cast<struct in_port_bytes*>(&(p))->b##N)
 
 #include <string.h>
 #include <malloc.h>
@@ -111,6 +118,60 @@ char *CStrBuf::release(void)
 
 #undef RoundSize
 
+//network functions
+static bool safe_connect(SOCKET sock, struct sockaddr_in *sa, int _timeout)
+{
+  if( connect(sock, (struct sockaddr *)sa, sizeof(struct sockaddr_in)) == SOCKET_ERROR ) {
+    LOG_ERR("Connect error\n");
+    return false;
+  }
+
+  timeval timeout;
+  timeout.tv_sec = _timeout;
+  timeout.tv_usec = 0;
+  fd_set fdsw, fdse;
+  FD_ZERO(&fdsw);
+  FD_ZERO(&fdse);
+  FD_SET(sock, &fdsw);
+  FD_SET(sock, &fdse);
+  int res = select(sock + 1, NULL, &fdsw, &fdse, &timeout);
+  if( res<=0 || FD_ISSET(sock, &fdse) ) {
+    LOG_ERR("Connect failed or timed out\n");
+    return false;
+  }
+
+  socklen_t len = 4;
+  res = 0;
+  if( getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&res, &len) != SOCKET_ERROR && !res )
+    return true;
+  LOG_ERR("Connection is broken\n");
+  return false;
+}
+
+static bool safe_accept(SOCKET &sock, int _timeout)
+{
+  timeval timeout;
+  timeout.tv_sec = _timeout;
+  timeout.tv_usec = 0;
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(sock, &fds);
+  if( select(sock + 1, &fds, NULL, NULL, &timeout) < 1 ) {
+    LOG_ERR("Waiting for incoming connection timed out\n");
+    return false;
+ }
+
+  SOCKET s = accept(sock, NULL, NULL);
+  if( INVALID_SOCKET == s ) {
+    LOG_ERR("Cann't accept connection\n");
+    return false;
+  }
+
+  closesocket(sock);
+  sock = s;
+  return true;
+}
+
 //class CFtpControl
 
 #define _throw_NE throw(CFtpControl::NetworkError)
@@ -119,7 +180,8 @@ const char *CFtpControl::DefaultAnsiCP = NULL;
 
 CFtpControl::CFtpControl(): ServerIP(0), ServerPORT(FTP_PORT),
         login(NULL), pass(NULL), timeout_sec(DEF_TIMEOUT),
-        sock(INVALID_SOCKET), _to_utf8(ICONV_ERROR), _from_utf8(ICONV_ERROR)
+        sock(INVALID_SOCKET), dsock(INVALID_SOCKET),
+        _to_utf8(ICONV_ERROR), _from_utf8(ICONV_ERROR)
 {
 #ifdef _WIN32
   WSADATA Data;
@@ -164,36 +226,15 @@ bool CFtpControl::tryconn(void)
     sa.sin_port = htons(ServerPORT);
     sa.sin_addr.s_addr = ServerIP;
     //memset(&sa.sin_zero, 0, sizeof(sa.sin_zero));
-    if( connect(sock, (struct sockaddr *)&sa, sizeof(sa)) == SOCKET_ERROR )
+    if( !safe_connect(sock, &sa, timeout_sec) )
       break;
-    {
-      timeval timeout;
-      timeout.tv_sec = timeout_sec;
-      timeout.tv_usec = 0;
-      fd_set fdsw, fdse;
-      FD_ZERO(&fdsw);
-      FD_ZERO(&fdse);
-      FD_SET(sock, &fdsw);
-      FD_SET(sock, &fdse);
-      int res = select(sock + 1, NULL, &fdsw, &fdse, &timeout);
-      if( res<0 || !res || FD_ISSET(sock, &fdse) )
-        break;
-#ifdef _WIN32
-	  int len = 4;
-#else
-      socklen_t len = 4;
-#endif
-      res = 0;
-      if( ( getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&res, &len) == SOCKET_ERROR ) ||
-          ( res != 0 ))
-        break;
-    }
 
+    nb_nextcmd = 0;
     try {
-    	if( skipresponse() != '2' )
-      		break;
+      if( skipresponse() != '2' )
+        break;
     } catch(const NetworkError) {
-    	break;
+      break;
     }
 
     return true;
@@ -222,6 +263,7 @@ bool CFtpControl::Logon(void) _throw_NE
 void CFtpControl::Quit(void)
 {
   if( INVALID_SOCKET == sock ) return;
+  CloseData(false);
   try {
   	rawwrite("QUIT\r\n");
   } catch(const NetworkError) {};
@@ -293,12 +335,26 @@ void CFtpControl::TryUtf8() _throw_NE
   LOG_ASSERT(SetConnCP(DefaultAnsiCP), "CFtpControl::DefaultAnsiCP (%s) should be valid iconv codepage name (see iconv -l)\n", DefaultAnsiCP);
 }
 
-bool CFtpControl::FindFirstFile( const char *DirOrMask, FtpFindInfo &FindInfo ) _throw_NE
+bool CFtpControl::FindFirstFile( const char *DirOrMask, FtpFindInfo &FindInfo, DTP_TYPE useDTP/* = NO_DTP*/ ) _throw_NE
 {
-  if( !rawwriteConvParam("STAT %s\r\n", DirOrMask) ) return false;
+  if( NO_DTP != useDTP ) {
+//     rawwrite("TYPE A\r\n");
+//     skipresponse();
+    if( !rawwriteConvParam("LIST %s\r\n", DirOrMask, useDTP) ) {
+      LOG_ERR("Failed to LIST %s\n", DirOrMask);
+      return false;
+    }
+  } else if( !rawwriteConvParam("STAT %s\r\n", DirOrMask) ) {
+    LOG_ERR("Failed to STAT %s\n", DirOrMask);
+    return false;
+  }
   CStrBuf listing;
   int n;
-  if( readresponse(listing, n) != '2' )
+  if( NO_DTP != useDTP ){
+    readAllData(listing, n);
+//     rawwrite("TYPE I\r\n");
+//     skipresponse();
+  } else if( readresponse(listing, n) != '2' )
     return false;
   //listing.setsize(n+2);
   //listing.buf[n+1] = '\0';
@@ -389,6 +445,94 @@ char CFtpControl::SendCmdResp( const char *cmd, CStrBuf &resp, int &r_len ) _thr
   return readresponse(resp, r_len);
 }
 
+bool CFtpControl::SendCmdConn(const char *cmd, bool Active) _throw_NE
+{
+  char buf[VSPRINTF_BUFFER_SIZE];
+  if( strlen(cmd) + 3 > VSPRINTF_BUFFER_SIZE )
+    return false;
+  sprintf_s(buf, "%s\r\n", cmd);
+  if( !RawConnCmd(buf, Active) )
+    LOG_THROW(NetDataError, "Cann't initialize %s data connection\n", Active ? "active" : "passive");
+  return true;
+}
+
+bool CFtpControl::SendCmdConnf(const char *cmd, bool Active, ...) _throw_NE
+{
+  char buf[VSPRINTF_BUFFER_SIZE], buff[VSPRINTF_BUFFER_SIZE];
+  if( strlen(cmd) + 3 > VSPRINTF_BUFFER_SIZE )
+    return false;
+  sprintf_s(buff, "%s\r\n", cmd);
+  va_list args;
+  va_start(args, Active);
+  _vsnprintf_s(buf, _TRUNCATE, buff, args);
+  va_end(args);
+  if( !RawConnCmd(buf, Active) )
+    LOG_THROW(NetDataError, "Cann't initialize %s data connection\n", Active ? "active" : "passive");
+  return true;
+}
+
+void CFtpControl::AbortData(void) _throw_NE
+{
+  try {
+    rawwrite("ABOR\r\n");
+    skipresponse();
+  } catch(const NetworkError) {
+    CloseData(true);
+    throw;
+  }
+  CloseData(true);
+}
+
+void CFtpControl::SendData(const void *data, int dlen) _throw_NE
+{
+  LOG_ASSERT(INVALID_SOCKET != dsock, "Invalid socket\n");
+  int i, l = dlen;
+  const char *d = (const char*)data;
+  do
+  {
+    dsockwait(false);
+    if( ( i = send(dsock, d, l, 0) ) == SOCKET_ERROR )
+      LOG_THROW(NetDataError, "Data socket write error\n");
+    if( !( l -= i ) )
+      return;
+    d += i;
+  }
+  while(1);
+}
+
+int CFtpControl::RecvData(void *buffer, int blen, bool waitAll/* = false*/) _throw_NE
+{
+  if( INVALID_SOCKET == dsock )
+    return 0;
+  int i, l = blen;
+  char *b = (char*)buffer;
+  do 
+  {
+    dsockwait(true);
+    if( ( i = recv(dsock, (char *)b, l, 0) ) == SOCKET_ERROR )
+      LOG_THROW(NetDataError, "Data socket read error\n");
+    b += i;
+    l -= i;
+  }
+  while (waitAll && l && i);
+  if( !(blen -= l) )
+    CloseData();
+  return blen;
+}
+
+char CFtpControl::CloseData(bool readresp/* = true*/)
+{
+  if( INVALID_SOCKET == dsock )
+    return 0;
+  closesocket(dsock);
+  dsock = INVALID_SOCKET;
+  if( readresp )
+    try {
+      return skipresponse();
+    } catch(const NetworkError) {}
+  return 0;
+}
+
 #if 0
 bool CFtpControl::IsNetworkError(void)
 {
@@ -409,11 +553,12 @@ const char *CFtpControl::GetLastResponse(void)
 
 char CFtpControl::skipresponse(void) _throw_NE
 {
-  int i, n;
+  int i, n = nb_nextcmd;
   char r_endf[4];
-  do{//get at least 4 response bytes
+  nb_nextcmd = 0;
+  while( n < 4 ){//get at least 4 response bytes
     n = rawread(0);
-  }while( n < 4 );
+  }
   memcpy(r_endf, netbuff, 4);//save the response code
   if( '-' == r_endf[3] ){//if response is multi-line
     r_endf[3] = ' ';//setup line-ending signature
@@ -426,18 +571,21 @@ char CFtpControl::skipresponse(void) _throw_NE
         n = rawread(n);
     }while( strncmp(r_endf, netbuff, 4) );
   }
-  while( findendstr(n) > __NB_SIZE )//get data till the end of line
+  while( ( i = findendstr(n) ) > __NB_SIZE )//get data till the end of line
     n = rawread(0);
+  if( i < n )
+    memmove_s(netbuff, sizeof(netbuff), netbuff + i, nb_nextcmd = n - i);
   return r_endf[0];//return the high part of response code
 }
 
 char CFtpControl::readresponse( CStrBuf &resp, int &r_len ) _throw_NE
 {
-  int i, n, m;
+  int i, n = nb_nextcmd, m;
   char r_endf[4];
-  do{//read at least first 4 bytes
+  nb_nextcmd = 0;
+  while( n < 4 ){//read at least first 4 bytes
     n = rawread(0);
-  } while( n < 4 );
+  }
   memcpy(r_endf, netbuff, 4);//save response code to r_endf
   i = findendstr(n);
   resp.setsize(m = min(n,i)-3);//allocate buffer for obtained data without first 4 bytes
@@ -485,11 +633,25 @@ char CFtpControl::readresponse( CStrBuf &resp, int &r_len ) _throw_NE
         r_len += m;
       }
     };
-    while( findendstr(n) > __NB_SIZE )//read the least of the last response line
+    while( ( i = findendstr(n) ) > __NB_SIZE )//read the least of the last response line
       n = rawread(0);
   }
   r_len[resp.buf()] = '\0';//set ending zero
+  if( i < n )
+    memmove_s(netbuff, sizeof(netbuff), netbuff + i, nb_nextcmd = n - i);
   return r_endf[0];//return the high part of response code
+}
+
+void CFtpControl::readAllData(CStrBuf &data, int &d_len) _throw_NE
+{
+  int len;
+  d_len = 0;
+  do {
+    data.setsize(d_len+__DTP_BUF_SIZE+1);
+    len = RecvData((void*)(data.buf() + d_len), __DTP_BUF_SIZE, true);
+    d_len += len;
+  } while(len);
+  d_len[data.buf()] = '\0';
 }
 
 void CFtpControl::sockwait(bool forread) _throw_NE
@@ -508,6 +670,26 @@ void CFtpControl::sockwait(bool forread) _throw_NE
   if( res<=0 )
     LOG_THROW(NetworkError,
       res ? "Socket is invalid or network error at %s operation\n" : "Wait for %s operation timed out\n",
+      forread ? "read" : "write");
+}
+
+void CFtpControl::dsockwait(bool forread) _throw_NE
+{
+  //should we also check control connection?
+  fd_set fds;
+  timeval timeout;
+  int res;
+  timeout.tv_sec = timeout_sec;
+  timeout.tv_usec = 0;
+  FD_ZERO(&fds);
+  FD_SET(dsock, &fds);
+  if( forread )
+    res = select(dsock + 1, &fds, NULL, NULL, &timeout);
+  else
+    res = select(dsock + 1, NULL, &fds, NULL, &timeout);
+  if( res<=0 )
+    LOG_THROW(NetworkError,
+      res ? "Data socket is invalid or network error at %s operation\n" : "Wait for %s data operation timed out\n",
       forread ? "read" : "write");
 }
 
@@ -537,7 +719,7 @@ void CFtpControl::rawwritef(const char *str, ...) _throw_NE
   rawwrite(buf);
 }
 
-bool CFtpControl::rawwriteConvParam(const char *str, const char *param) _throw_NE
+bool CFtpControl::rawwriteConvParam(const char *str, const char *param, DTP_TYPE initDTP/* = NO_DTP*/) _throw_NE
 {
   char buf[VSPRINTF_BUFFER_SIZE+1];
   if( ICONV_ERROR != _from_utf8 ){
@@ -562,7 +744,10 @@ bool CFtpControl::rawwriteConvParam(const char *str, const char *param) _throw_N
     }
     param = buf;
   }
-  rawwritef(str, param);
+  if( initDTP )
+    return RawConnCmdf(str, DTP_ACTIVE == initDTP, param);
+  else
+    rawwritef(str, param);
   return true;
 }
 
@@ -584,6 +769,102 @@ int CFtpControl::rawread(int nb_start) _throw_NE
   while( i && ( p[-1] != '\n' ) && ( p[-1] != '\r' ) );
   if( i ) *p = '\0';//end string
   return (int)(p - netbuff);
+}
+
+bool CFtpControl::RawConnCmd(const char *str, bool Active) _throw_NE
+{
+  LOG_ASSERT(INVALID_SOCKET == dsock, "Previous connection not closed\n");
+
+  dsock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  LOG_ASSERT(INVALID_SOCKET != dsock, "Cann't create socket\n");
+
+  struct sockaddr_in sa;
+  socklen_t sa_len = sizeof(struct sockaddr_in);
+
+  try {//this is just to handle NetworkError situation (close dsock), exception will be rethrown
+
+    if( Active ){
+      //ACTIVE mode: prepare listening socket and sent it's name with PORT command
+      // then execute command and accept connection
+
+      if( getsockname(sock, (struct sockaddr*)&sa, &sa_len) || sizeof(struct sockaddr_in) != sa_len )
+        LOG_THROW(NetDataError, "Cann't obtain socket name\n");
+      sa.sin_port = 0;
+      if( bind(dsock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in)) )
+        LOG_THROW(NetDataError, "Bind error\n");
+
+      if( listen(dsock, 1) )
+        LOG_THROW(NetDataError, "Listen error\n");
+      if( getsockname(dsock, (struct sockaddr*)&sa, &sa_len) || sizeof(struct sockaddr_in) != sa_len )
+        LOG_THROW(NetDataError, "Cann't obtain socket name\n");
+      rawwritef("PORT %u,%u,%u,%u,%u,%u\r\n",
+        in_addr_byte(sa.sin_addr,1),
+        in_addr_byte(sa.sin_addr,2),
+        in_addr_byte(sa.sin_addr,3),
+        in_addr_byte(sa.sin_addr,4),
+        in_port_byte(sa.sin_port,1),
+        in_port_byte(sa.sin_port,2));
+
+      if( '2' == skipresponse() ) {
+        rawwrite(str);//execute command
+        if( !safe_accept(dsock, timeout_sec) )
+          skipresponse();
+        else if( '1' == skipresponse() )
+          return true;
+      }
+
+    } else {
+      //PASSIVE mode: obtain server socket name from reply on PASV command
+      // then execute command and connect
+
+      CStrBuf p_reply;
+      int r_len = 0;
+      rawwrite("PASV\r\n");
+      if( '2' == readresponse(p_reply, r_len) && r_len ) {
+        const char *sname = p_reply.buf();
+        while( ( *sname < '0' || *sname > '9' ) && *++sname );
+        if( !*sname )
+          LOG_THROW(NetDataError, "Invalid PASV response format\n");
+        unsigned int b1, b2, b3, b4, p1, p2;
+        b1 = b2 = b3 = b4 = p1 = p2 = 0;
+        if( sscanf_s(sname, "%u,%u,%u,%u,%u,%u", &b1, &b2, &b3, &b4, &p1, &p2) != 6 )
+          LOG_THROW(NetDataError, "Invalid PASV response format\n");
+        memset(&sa, 0, sizeof(sa));
+        sa.sin_family = AF_INET;
+        in_addr_byte(sa.sin_addr,1) = b1;
+        in_addr_byte(sa.sin_addr,2) = b2;
+        in_addr_byte(sa.sin_addr,3) = b3;
+        in_addr_byte(sa.sin_addr,4) = b4;
+        in_port_byte(sa.sin_port,1) = p1;
+        in_port_byte(sa.sin_port,2) = p2;
+
+        rawwrite(str);//execute command
+        if( !safe_connect(dsock, &sa, timeout_sec) )
+          skipresponse();
+        else if( '1' == skipresponse() )
+          return true;
+      }
+    }
+
+  } catch(const NetworkError) {
+    closesocket(dsock);
+    dsock = INVALID_SOCKET;
+    throw;
+  }
+
+  closesocket(dsock);
+  dsock = INVALID_SOCKET;
+  return false;
+}
+
+bool CFtpControl::RawConnCmdf(const char *str, bool Active, ...) _throw_NE
+{
+  char buf[VSPRINTF_BUFFER_SIZE];
+  va_list args;
+  va_start(args, Active);
+  _vsnprintf_s(buf, _TRUNCATE, str, args);
+  va_end(args);
+  return RawConnCmd(buf, Active);
 }
 
 int CFtpControl::findendstr(int end)
