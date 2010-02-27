@@ -36,6 +36,7 @@
 
 #include <Winsock2.h>
 #include <Windows.h>
+#define usleep(x) Sleep((x)/1000)
 
 #define in_addr_byte(in,N) ((in).S_un.S_un_b.s_b##N)
 typedef int socklen_t;
@@ -148,30 +149,6 @@ static bool safe_connect(SOCKET sock, struct sockaddr_in *sa, int _timeout)
     return true;
   LOG_ERR("Connection is broken\n");
   return false;
-}
-
-static bool safe_accept(SOCKET &sock, int _timeout)
-{
-  timeval timeout;
-  timeout.tv_sec = _timeout;
-  timeout.tv_usec = 0;
-  fd_set fds;
-  FD_ZERO(&fds);
-  FD_SET(sock, &fds);
-  if( select(sock + 1, &fds, NULL, NULL, &timeout) < 1 ) {
-    LOG_ERR("Waiting for incoming connection timed out\n");
-    return false;
- }
-
-  SOCKET s = accept(sock, NULL, NULL);
-  if( INVALID_SOCKET == s ) {
-    LOG_ERR("Cann't accept connection\n");
-    return false;
-  }
-
-  closesocket(sock);
-  sock = s;
-  return true;
 }
 
 //class CFtpControl
@@ -791,28 +768,66 @@ bool CFtpControl::RawConnCmd(const char *str, bool Active) _throw_NE
 
       if( getsockname(sock, (struct sockaddr*)&sa, &sa_len) || sizeof(struct sockaddr_in) != sa_len )
         LOG_THROW(NetDataError, "Cann't obtain socket name\n");
-      sa.sin_port = 0;
-      if( bind(dsock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in)) )
-        LOG_THROW(NetDataError, "Bind error\n");
+      for(int busy_retries = 2; busy_retries > 0; --busy_retries){
+        sa.sin_port = 0;
+        if( bind(dsock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in)) )
+          LOG_THROW(NetDataError, "Bind error\n");
 
-      if( listen(dsock, 1) )
-        LOG_THROW(NetDataError, "Listen error\n");
-      if( getsockname(dsock, (struct sockaddr*)&sa, &sa_len) || sizeof(struct sockaddr_in) != sa_len )
-        LOG_THROW(NetDataError, "Cann't obtain socket name\n");
-      rawwritef("PORT %u,%u,%u,%u,%u,%u\r\n",
-        in_addr_byte(sa.sin_addr,1),
-        in_addr_byte(sa.sin_addr,2),
-        in_addr_byte(sa.sin_addr,3),
-        in_addr_byte(sa.sin_addr,4),
-        in_port_byte(sa.sin_port,1),
-        in_port_byte(sa.sin_port,2));
+        if( listen(dsock, 1) )
+          LOG_THROW(NetDataError, "Listen error\n");
+        if( getsockname(dsock, (struct sockaddr*)&sa, &sa_len) || sizeof(struct sockaddr_in) != sa_len )
+          LOG_THROW(NetDataError, "Cann't obtain socket name\n");
+        rawwritef("PORT %u,%u,%u,%u,%u,%u\r\n",
+          in_addr_byte(sa.sin_addr,1),
+          in_addr_byte(sa.sin_addr,2),
+          in_addr_byte(sa.sin_addr,3),
+          in_addr_byte(sa.sin_addr,4),
+          in_port_byte(sa.sin_port,1),
+          in_port_byte(sa.sin_port,2));
+        if( '2' != skipresponse() ) break;
 
-      if( '2' == skipresponse() ) {
         rawwrite(str);//execute command
-        if( !safe_accept(dsock, timeout_sec) )
+
+        timeval timeout;
+        timeout.tv_sec = timeout_sec;
+        timeout.tv_usec = 0;
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(dsock, &fds);
+        FD_SET(sock, &fds);
+        if( select(max(sock, dsock) + 1, &fds, NULL, NULL, &timeout) < 1 ) {
+          LOG_ERR("Waiting for incoming connection timed out\n");
           skipresponse();
-        else if( '1' == skipresponse() )
+          break;
+        }
+        if( !FD_ISSET(dsock, &fds) && FD_ISSET(sock, &fds) ) {
+          bool is_error = true;
+          switch( skipresponse() ){
+          case '4':
+            LOG_ERR("Server wasn't able to connect:\n\t%s\t%s", str, GetLastResponse());
+            usleep(1000000*timeout_sec/5);
+            closesocket(dsock);
+            dsock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+            LOG_ASSERT(INVALID_SOCKET != dsock, "Cann't create socket\n");
+            continue;
+          case '1':
+            is_error = false;
+          }
+          if( is_error ) break;
+        }
+
+        SOCKET s = accept(dsock, NULL, NULL);
+        if( INVALID_SOCKET == s ) {
+          LOG_ERR("Cann't accept connection\n");
+          skipresponse();
+          break;
+        }
+
+        closesocket(dsock);
+        dsock = s;
+        if( '1' == skipresponse() )
           return true;
+        break;
       }
 
     } else {
