@@ -19,6 +19,10 @@
 #define min(x,y) ((x)>(y)?(y):(x))
 #endif
 
+#ifndef max
+#define max(x,y) ((x)>=(y)?(x):(y))
+#endif
+
 #define CheckArg(x, to_do) \
 if( !(x) ) \
 	do { \
