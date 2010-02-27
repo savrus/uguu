@@ -151,12 +151,12 @@ CFtpControl::~CFtpControl(void)
 
 bool CFtpControl::tryconn(void)
 {
-  if( INVALID_SOCKET != sock ) return false;
+  LOG_ASSERT(INVALID_SOCKET == sock, "Still connected\n");
 
   struct sockaddr_in sa;
 
   sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if( INVALID_SOCKET == sock ) return false;
+  LOG_ASSERT(INVALID_SOCKET != sock, "Cann't create socket\n");
 
   do{
     memset(&sa, 0, sizeof(sa));
@@ -339,7 +339,7 @@ bool CFtpControl::FindNextFile( FtpFindInfo &FindInfo )
     if( !FindInfo.ConvertBuff )
       FindInfo.ConvertBuff = (char*)malloc(VSPRINTF_BUFFER_SIZE+1);
     iconv_cchar *src = FindInfo.Data.name;
-	char *dst = FindInfo.ConvertBuff;
+    char *dst = FindInfo.ConvertBuff;
     size_t srclen = FindInfo.Data.namelen, dstlen = VSPRINTF_BUFFER_SIZE;
     if( !iconv(_to_utf8, &src, &srclen, &dst, &dstlen) )
       return FindNextFile(FindInfo);
@@ -505,10 +505,10 @@ void CFtpControl::sockwait(bool forread) _throw_NE
     res = select(sock + 1, &fds, NULL, NULL, &timeout);
   else
     res = select(sock + 1, NULL, &fds, NULL, &timeout);
-  if( res<0 )
-    LOG_THROW(NetworkError, "Socket is invalid or network error at %s operation\n", forread ? "read" : "write");
-  else if( !res )
-    LOG_THROW(NetworkError, "Wait operation timed out\n");
+  if( res<=0 )
+    LOG_THROW(NetworkError,
+      res ? "Socket is invalid or network error at %s operation\n" : "Wait for %s operation timed out\n",
+      forread ? "read" : "write");
 }
 
 void CFtpControl::rawwrite(const char *str) _throw_NE
