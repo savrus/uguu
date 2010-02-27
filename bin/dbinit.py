@@ -190,6 +190,8 @@ def ddl_index(db):
 
 def fill(db):
     cursor = db.cursor()
+    #scantypes with greater priority will be tested before those with smaller one
+    #scantypes with priority<=0 are only for manual use
     cursor.execute("""
         INSERT INTO networks (network, lookup_config)
         VALUES ('official', %(msu)s);
@@ -197,7 +199,12 @@ def fill(db):
         INSERT INTO scantypes (protocol, scan_command, priority)
         VALUES ('smb', 'smbscan -d', 2),
                ('smb', 'smbscan -a', 1),
-               ('ftp', 'ftpscan -c cp1251', 1);
+               ('smb', 'smbscan', 0),
+               ('ftp', 'ftpscan -c cp1251 -Ra', 10),
+               ('ftp', 'ftpscan -c cp1251 -Rp', 0),
+               ('ftp', 'ftpscan -c cp1251',     5),
+               ('ftp', 'ftpscan -c cp1251 -Ma', 0),
+               ('ftp', 'ftpscan -c cp1251 -Mp', 1);
         """, {'msu': """
 # retrieving computer's DNS records in official MSU network
 [StandardHosts]
