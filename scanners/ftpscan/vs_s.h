@@ -19,6 +19,10 @@
 #define min(x,y) ((x)>(y)?(y):(x))
 #endif
 
+#ifndef max
+#define max(x,y) ((x)>=(y)?(x):(y))
+#endif
+
 #define CheckArg(x, to_do) \
 if( !(x) ) \
 	do { \
@@ -67,6 +71,9 @@ static inline int _vsnprintf_s(char * _DstBuf, size_t _SizeInBytes, size_t _MaxC
 	}
 	return result;
 }
+
+//sscanf is not used for strings
+#define sscanf_s sscanf
 
 static inline errno_t memmove_s(void * _Dst, size_t _DstSize, const void * _Src, size_t _MaxCount)
 {

@@ -16,6 +16,7 @@ import tempfile
 import os
 import sys
 import traceback
+import psycopg2.extensions
 from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr
 
 
@@ -55,6 +56,7 @@ class PsycoCache:
         self.query = []
         self.fquery = []
         self.cursor = cursor
+        self.totalsize = 0
     def append(self, q, vars):
         self.query.append(self.cursor.mogrify(q, vars))
         if len(self.query) > 1024:
@@ -109,7 +111,7 @@ def scan_line(cursor, share, line, qcache):
                 {'p':path, 'f':file, 'i':items, 'sz':size, 's':share, 'd':dirid})
         if path == 0:
             # if share root then it's size is the share size
-            qcache.append("UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s", {'sz':size, 's':share})
+            qcache.totalsize = size
         else:
             # not share root
             # save all info into the files table
@@ -177,9 +179,9 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             """, {'s': share_id})
         cursor.execute("""
             UPDATE shares
-            SET last_scan = now(), hash = %(h)s
+            SET size = %(sz)s, last_scan = now(), hash = %(h)s
             WHERE share_id = %(s)s
-            """, {'s':share_id, 'h': hash.hexdigest()})
+            """, {'s':share_id, 'h': hash.hexdigest(), 'sz': qcache.totalsize})
         db.commit()
         log("Scanning %s succeded. Database updated.", hoststr)
 
@@ -192,6 +194,7 @@ if __name__ == "__main__":
         sys.exit()
     shares = db.cursor()
     while True:
+        db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         shares.execute("""
             SELECT share_id, shares.protocol, hostname, port, hash, scan_command
             FROM shares
@@ -200,18 +203,19 @@ if __name__ == "__main__":
             ORDER BY next_scan LIMIT 1
             """)
         if shares.rowcount == 0:
-            db.rollback()
             break
         id, proto, host, port, hash, command = shares.fetchone()
         shares.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
-            WHERE share_id = %(s)s;
+            WHERE share_id = %(s)s AND (next_scan IS NULL OR next_scan < now())
             """, {'s':id, 'w': wait_until_next_scan})
-        # release lock on commit
-        db.commit()
+        if shares.statusmessage != 'UPDATE 1':
+            continue
+        db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
         try:
             scan_share(db, id, proto, host, port, hash, command)
         except:
             log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
             traceback.print_exc()
+            db.rollback()
 
