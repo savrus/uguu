@@ -229,7 +229,7 @@ bool CFtpControl::Logon(void) _throw_NE
   int res;
   rawwritef("USER %s\r\n", login?login:"anonymous");
   res = skipresponse();
-  if( res < '2' )
+  if( res < '2' || res > '3' )
     return false;
   if( res == '2' )
     return true;
