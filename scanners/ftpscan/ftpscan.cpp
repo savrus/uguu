@@ -218,7 +218,7 @@ static void TryReconnect(CFtpControlEx *ftp)
 	}
 	if( !ftp->Logon() ) {
 		LOG_ERR("Cannot logon: %s\n", ftp->GetLastResponse());
-		throw CFtpControl::NetworkError();
+		throw CFtpControlEx::LogonError();
 	}
 	ftp->ChDir(ftp->curpath.c_str());
 }
