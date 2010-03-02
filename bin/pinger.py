@@ -12,6 +12,7 @@ import socket
 import subprocess
 import string
 import re
+import datetime
 import psycopg2.extensions
 from network import dns_cache, scan_all_hosts
 from common import connectdb, log, default_ports
