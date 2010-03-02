@@ -14,6 +14,7 @@ import re
 import collections
 import traceback
 import datetime
+import psycopg2.extensions
 from common import connectdb, log, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
 from network import dns_cache, ns_domain, scan_all_hosts
 
