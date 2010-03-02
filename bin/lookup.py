@@ -13,6 +13,7 @@ import string
 import re
 import collections
 import traceback
+import datetime
 from common import connectdb, log, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
 from network import dns_cache, ns_domain, scan_all_hosts
 
@@ -498,6 +499,7 @@ if __name__ == "__main__":
         print 'Invalid command-line, try %s help' % sys.argv[0]
         sys.exit(1)
 
+    start = datetime.datetime.now()
     for (net, config) in get_networks(db, netw):
         try:
             log("Looking up for network \"%s\"...", net)
@@ -522,5 +524,5 @@ if __name__ == "__main__":
     db.cursor().execute("DELETE FROM shares WHERE last_lookup + interval %s < now()",
                         (wait_until_delete_share,))
     db.commit()
-    log("All network lookups finished")
+    log("All network lookups finished (running time %s)", datetime.datetime.now() - start)
 

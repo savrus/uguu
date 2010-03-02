@@ -63,6 +63,7 @@ if __name__ == "__main__":
     log("Starting pinger...")
     shares = 0
     online = 0
+    start = datetime.datetime.now()
 
     for proto in default_ports.iteritems():
         on, off = update_shares_state(db, "protocol='%s' AND port=0" % proto[0], proto[1])
@@ -74,5 +75,5 @@ if __name__ == "__main__":
         shares += on + off
         online += on
 
-    log("Updated state for %4d shares, %4d are online.", (shares, online))
+    log("Updated state for %4d shares, %4d are online (running time %s).", (shares, online, datetime.datetime.now() - start))
 
