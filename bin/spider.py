@@ -16,6 +16,7 @@ import tempfile
 import os
 import sys
 import traceback
+import datetime
 import psycopg2.extensions
 from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr
 
@@ -126,6 +127,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
     hoststr = sharestr(proto, host, port)
     address = socket.gethostbyname(host)
     log("Scanning %s (%s) ...", (hoststr, address))
+    start = datetime.datetime.now()
     data = run_scanner(command, address, proto, port)
     save = tempfile.TemporaryFile(bufsize=-1)
     hash = hashlib.sha256()
@@ -136,7 +138,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             kill_process(data)
             data.stdout.close()
             data.wait()
-            log("Scanning %s failed. Too many lines from scanner.", hoststr)
+            log("Scanning %s failed. Too many lines from scanner (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
             return
         hash.update(line)
         save.write(line)
@@ -148,15 +150,17 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             WHERE share_id = %(s)s;
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         db.commit()
-        log("Scanning %s failed.", hoststr)
+        log("Scanning %s failed (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
     elif hash.hexdigest() == oldhash:
         cursor.execute("""
             UPDATE shares SET last_scan = now()
             WHERE share_id = %(s)s
             """, {'s':share_id})
         db.commit()
-        log("Scanning %s succeded. No changes found.", hoststr)
+        log("Scanning %s succeded. No changes found (scan time %s).", (hoststr, datetime.datetime.now() - start))
     else:
+        scan_time = datetime.datetime.now() - start
+        start = datetime.datetime.now()
         cursor.execute("""
             DELETE FROM files WHERE share_id = %(s)s;
             DELETE FROM paths WHERE share_id = %(s)s;
@@ -183,7 +187,7 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             WHERE share_id = %(s)s
             """, {'s':share_id, 'h': hash.hexdigest(), 'sz': qcache.totalsize})
         db.commit()
-        log("Scanning %s succeded. Database updated.", hoststr)
+        log("Scanning %s succeded. Database updated (scan time %s, update time %s).", (hoststr, scan_time, datetime.datetime.now() - start))
 
 
 if __name__ == "__main__":
