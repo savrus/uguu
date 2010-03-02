@@ -70,7 +70,6 @@ params is lookup_data for initializing lookup engine
 known_hosts is dictionary of "host" : "lookup engine name"
 """
         self.__cursor = db.cursor()
-        self.__commit = lambda: db.commit()
         self.__network = network
         self.__params = params
         self.__hosts = known_hosts
@@ -171,10 +170,8 @@ returns permissions to add shares
                 routine(_dict[portproto])
         WalkDict(self.__newshares, RemoveOfflines)
         WalkDict(self.__newshares, InsertHosts)
-        self.__commit()
         WalkDict(self.__checkshares, RemoveOfflines)
         WalkDict(self.__checkshares, UpdateHosts)
-        self.__commit()
 
 class ParseConfig(object):
     """
@@ -469,6 +466,7 @@ if __name__ == "__main__":
     except:
         print "I am unable to connect to the database, exiting."
         sys.exit(1)
+    db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
 
     scantypes = get_scantypes(db)
     if 'showscantypes' in sys.argv:
@@ -523,6 +521,5 @@ if __name__ == "__main__":
 
     db.cursor().execute("DELETE FROM shares WHERE last_lookup + interval %s < now()",
                         (wait_until_delete_share,))
-    db.commit()
     log("All network lookups finished (running time %s)", datetime.datetime.now() - start)
 
