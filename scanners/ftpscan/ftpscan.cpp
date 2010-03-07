@@ -172,6 +172,12 @@ bool CFtpControlEx::CacheDirs( bool Active )
 
 void CFtpControlEx::extend_cache(std::string &_dir, char *data)
 {
+	if (_dir.size() > 1){
+		if ('/' == _dir[1])
+			_dir.erase(0, 1);
+		if ('/' != _dir[_dir.size()-1])
+			_dir += '/';
+	}
 	if( ICONV_ERROR != _to_utf8 && _dir.size() > 1 ){
 		iconv_cchar *src = const_cast<char *>(_dir.c_str());
 		char buff[2*VSPRINTF_BUFFER_SIZE], *dst = buff;
