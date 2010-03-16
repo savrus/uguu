@@ -77,8 +77,14 @@ class list_adapter(object):
         return self.__str
     def getquoted(self):
         return str(self)
+class None_adapter(object):
+    def __str__(self):
+        return 'NULL'
+    def getquoted(self):
+        return 'NULL'
 
 psycopg2.extensions.register_adapter(list, list_adapter)
+psycopg2.extensions.register_adapter(type(None), None_adapter)
 
 if __name__ == "__main__":
     try:
