@@ -78,6 +78,8 @@ class list_adapter(object):
     def getquoted(self):
         return str(self)
 class None_adapter(object):
+    def __init__(self,obj):
+        pass
     def __str__(self):
         return 'NULL'
     def getquoted(self):
