@@ -311,7 +311,7 @@ def do_search(request, index, searchform):
     parsedq.setoption("offset", offset)
     parsedq.setoption("limit", search_items_per_page)
     sqlquery = cursor.mogrify("""
-        SELECT protocol, hostname,
+        SELECT protocol, hostname, hostaddr,
             paths.path AS path, files.sharedir_id AS dirid,
             filenames.name AS filename, files.size AS size, port,
             shares.share_id, paths.sharepath_id as path_id,
@@ -333,7 +333,9 @@ def do_search(request, index, searchform):
         utfpath = unicode(row['path'], "utf-8")
         utffile = unicode(row['filename'], "utf-8")
         urlpath = "/" + utfpath if utfpath != "" else ""
-        urlhost = row['hostname']
+        host = row['hostname']
+        urlhost = row['hostaddr'] if row['hostaddr'] else row['hostname']
+        host += ":" + str(row['port']) if row['port'] != 0 else ""
         urlhost += ":" + str(row['port']) if row['port'] != 0 else ""
         urlproto = protocol_prepare(request, row['protocol'])
         viewargs = [row['protocol'], row['hostname'], row['port']]
@@ -353,7 +355,7 @@ def do_search(request, index, searchform):
             newrow['type'] = ""
             newrow['filelink'] = urlproto + urlhost \
                 + urlquote(urlpath + "/" + utffile)
-        newrow['path'] = row['protocol'] + "://" + urlhost + urlpath
+        newrow['path'] = row['protocol'] + "://" + host + urlpath
         newrow['size'] = row['size']
         newrow['state'] = row['state']
         result.append(newrow)
