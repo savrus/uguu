@@ -92,6 +92,7 @@ def ddl(db):
             network varchar(32) REFERENCES networks ON DELETE CASCADE NOT NULL,
             protocol proto NOT NULL,
             hostname varchar(64) NOT NULL,
+            hostaddr inet,
             port smallint DEFAULT 0,
             state availability DEFAULT 'offline',
             size bigint DEFAULT 0,

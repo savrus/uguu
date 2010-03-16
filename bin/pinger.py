@@ -17,6 +17,9 @@ import psycopg2.extensions
 from network import dns_cache, scan_all_hosts
 from common import connectdb, log, default_ports
 
+# max hosts in state-update query
+max_update_query_hosts = 15
+
 def get_names_list(ips):
     res = set()
     for ip in ips:
@@ -31,25 +34,51 @@ def check_online_shares(hostlist, port):
     online = get_names_list(online) & hostlist
     return online, hostlist - online
 
+def set_shares_state(cursor, hostlist, state):
+    while len(hostlist):
+        cursor.execute("""
+            UPDATE shares SET state='%s',hostaddr=inet(sharelist.column2)
+            FROM (VALUES %s) sharelist WHERE share_id=sharelist.column1
+            """ % (
+                'online' if state else 'offline',
+                cursor.mogrify('%s', (tuple(hostlist[:max_update_query_hosts]),))[1:-1]
+                ))
+        del hostlist[:max_update_query_hosts]
+
 def update_shares_state(db, selwhere, port):
     cursor = db.cursor()
     cursor.execute("SELECT share_id, hostname FROM shares WHERE %s" % selwhere)
-    itemdict = dict([(row['hostname'], row['share_id']) for row in cursor.fetchall()])
+    itemdict = dict((row['hostname'], [row['share_id'],  nscache(row['hostname'])]) for row in cursor.fetchall())
     if len(itemdict) == 0:
         return
     online, offline = check_online_shares(itemdict.keys(), port)
-    if len(online):
-        cursor.execute("UPDATE shares SET state='online' WHERE share_id IN %s", \
-        	(tuple(itemdict[host] for host in online),))
-    if len(offline):
-        cursor.execute("UPDATE shares SET state='offline' WHERE share_id IN %s", \
-        	(tuple(itemdict[host] for host in offline),))
+    set_shares_state(cursor, [itemdict[host] for host in online], True)
+    set_shares_state(cursor, [itemdict[host] for host in offline], False)
     return len(online), len(offline)
 
 def get_shares_ports(db):
     cursor = db.cursor()
     cursor.execute("SELECT DISTINCT(port) FROM shares WHERE port>0")
     return [p[0] for p in cursor.fetchall()]
+
+# psycopg2 adapter for list object, surrounds object with parenthesis
+# this is required becaouse psycopg2's tuple adapter fails with None 
+class list_adapter(object):
+    def __init__(self, l):
+        self.__list = l
+        self.__str = None
+    def prepare(self, conn):
+        adapts = [psycopg2.extensions.adapt(it) for it in self.__list]
+        for it in adapts:
+            if hasattr(it, 'prepare'): it.prepare(conn)
+        self.__str = '(' + ', '.join([str(it) for it in adapts]) + ')'
+    def __str__(self):
+        if self.__str is None: self.prepare(db)
+        return self.__str
+    def getquoted(self):
+        return str(self)
+
+psycopg2.extensions.register_adapter(list, list_adapter)
 
 if __name__ == "__main__":
     try:

@@ -26,11 +26,13 @@ class Share(object):
         self.port = port
         self.scantype = scantype
         self.nscache = None # must be set manually
+    def Addr(self):
+        return self.nscache(self.host)
     def ConnectInfo(self):
         port = self.port
         if port == 0:
             port = default_ports[self.proto]
-        return (self.nscache(self.host), port)
+        return (self.Addr(), port)
     def ProtoOrPort(self):
         if self.port == 0:
             return self.proto
@@ -152,10 +154,10 @@ returns permissions to add shares
             for (host, share) in _sharedict.iteritems():
                 self.__cursor.execute("""
                     INSERT INTO shares (scantype_id, network, protocol,
-                        hostname, port, state)
-                    VALUES (%(st)s, %(net)s, %(proto)s, %(host)s, %(port)s, 'online')
-                    """, {'st': share.scantype, 'net': self.__network,
-                          'proto': share.proto, 'host': share.host, 'port': share.port})
+                        hostname, hostaddr, port, state)
+                    VALUES (%(st)s, %(net)s, %(proto)s, %(host)s, inet %(addr)s, %(port)s, 'online')
+                    """, {'st': share.scantype, 'net': self.__network, 'proto': share.proto,
+                          'host': share.host, 'addr': share.Addr(),'port': share.port})
         def UpdateHosts(_sharedict):
             sts = collections.defaultdict(list)
             for (host, share) in _sharedict.iteritems():
