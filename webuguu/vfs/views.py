@@ -127,7 +127,7 @@ def share(request, proto, hostname, port, path=""):
     # detect share
     if share_id != 0:
         cursor.execute("""
-            SELECT protocol, hostname, port, hostaddr
+            SELECT protocol, hostname, port, hostaddr,
                    state, last_scan, next_scan, last_state_change
             FROM shares
             WHERE share_id = %(s)s
