@@ -49,6 +49,9 @@ vfs_items_per_page = 50
 search_items_per_page = 50
 
 
+# number of items in rss feed
+rss_items = 100
+
 # gobar generator
 def generate_go_bar(items, offset):
     if items > 0:
