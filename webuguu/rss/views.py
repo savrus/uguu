@@ -13,9 +13,9 @@ from webuguu.common import connectdb, known_filetypes, rss_items
 
 def alltypes(request):
     feed = feedgenerator.Rss201rev2Feed(
-        title = u"New Files",
+        title = u"all new files",
         link = reverse('webuguu.search.views.search'),
-        description = "New files appeared in the network",
+        description = "All new files appeared in the network",
         language=u"en")
     try:
         db = connectdb()
