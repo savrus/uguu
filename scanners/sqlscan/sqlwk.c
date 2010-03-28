@@ -66,6 +66,9 @@ static int sqlwk_query(struct sqlwk_dir *c, const char *query, ...)
 
 static int sqlwk_query_opendir(struct sqlwk_dir *c)
 {
+    /* dir ids are assigned inside 'dt' in the order items are
+     * received from host. So we sort by sharedir_id here to preserve
+     * that ordering */
     return sqlwk_query(c, "SELECT sharedir_id AS dirid, size, name "
         "FROM files LEFT JOIN filenames USING (filename_id) "
         "WHERE share_id = %llu AND sharepath_id = %llu "
