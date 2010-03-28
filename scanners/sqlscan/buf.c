@@ -35,7 +35,7 @@ struct buf_str *buf_alloc()
 
 void buf_clear(struct buf_str *bs)
 {
-    /* FIXME: mabe reduce bs->s to default size here? */
+    /* FIXME: maybe reduce bs->s to default size here? */
 
     bs->length = 0;
 }
