@@ -40,7 +40,7 @@ ru_matches = {
 
 ru_outs = {
     'html':     u"обычный вывод в HTML",
-    'rss':      u"вывод в формате RSS-ленты",
+    'rss':      u"вывод в формате RSS-ленты (возможно, вам будет полезно также указать <b>order:name.d</b> при запросе)",
 }
 
 def ru_arg_desc(option):
