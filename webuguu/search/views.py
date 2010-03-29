@@ -9,6 +9,7 @@ from django.utils.http import urlencode, urlquote
 from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 from django.utils import feedgenerator
+from django.template import Context, Template
 import string
 import re
 import time
@@ -403,14 +404,16 @@ def do_search(request, index, searchform):
             description = u"Results of a query: " + query,
             language=u"en")
         for file in result:
+            tmpl = Template('<a href="{{r.pathlink|iriencode}}">{{r.path}}</a>'
+                + '/<a class="share" href="{{r.filelink|iriencode}}">{{r.filename}}</a>'
+                + ' ({{r.size|filesizeformat}})')
+            ctx = Context({'r':file})
             feed.add_item(
                 title = file['filename'],
                 link = "http://" + request.META['HTTP_HOST']
                    + reverse('webuguu.search.views.search')
                    + "?q=" + file['filename'] + " match:exact",
-                description = u'<a href="%(pl)s">%(p)s</a>/<a href="%(fl)s">%(f)s</a>'
-                    % {'pl': file['pathlink'], 'p': file['path'],
-                       'fl': file['filelink'], 'f': file['filename']})
+                description = tmpl.render(ctx))
         return HttpResponse(feed.writeString('UTF-8'))
     else:
         return render_to_response('search/error.html',
