@@ -102,7 +102,7 @@ static int sqlwk_query_child(struct sqlwk_dir *c, const char *name)
 }
 
 
-int sqlwk_open(struct sqlwk_dir *c, char *host, const char *conninfo)
+int sqlwk_open(struct sqlwk_dir *c, const char *proto, const char *host, unsigned int port, const char *conninfo)
 {
     int ret;
 
@@ -114,9 +114,11 @@ int sqlwk_open(struct sqlwk_dir *c, char *host, const char *conninfo)
         goto err;
     }
 
-    ret = sqlwk_query(c, "SELECT share_id FROM shares where hostname = '%s';", host);
+    ret = sqlwk_query(c, "SELECT share_id FROM shares WHERE protocol = '%s'"
+                         " AND hostname = '%s' AND port = %d;",
+                         proto, host, port);
     if (ret <= 0) {
-        LOG_ERR("Could not filnd hostname %s in the shares table\n", host);
+        LOG_ERR("Could not filnd  %s://%s:%d in the shares table\n", proto, host, port);
         goto clean_conn;
     }
 

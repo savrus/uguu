@@ -20,7 +20,7 @@ struct sqlwk_dir {
 };
 
 /* initialise the walker */
-int sqlwk_open(struct sqlwk_dir *c, char *host, const char *conninfo);
+int sqlwk_open(struct sqlwk_dir *c, const char *proto, const char *host, unsigned int port, const char *conninfo);
 /* close the walker */
 int sqlwk_close(struct sqlwk_dir *c);
 
