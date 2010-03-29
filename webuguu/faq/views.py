@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# webuguu.vfs.views - vfs view for django framework
+# webuguu.faq.views - faq view for django framework
 #
 # Copyright 2010, savrus
 # Read the COPYING file in the root of the source tree.
