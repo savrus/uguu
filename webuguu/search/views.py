@@ -403,17 +403,30 @@ def do_search(request, index, searchform):
             link = reverse('webuguu.search.views.search'),
             description = u"Results of a query: " + query,
             language=u"en")
+        curdescs = []
+        curname = ""
         for file in result:
+            if file['filename'] != curname:
+                feed.add_item(
+                    title = curname,
+                    link = "http://" + request.META['HTTP_HOST']
+                       + reverse('webuguu.search.views.search')
+                       + "?q=" + curname + " match:exact",
+                    description = string.join(curdescs, " "))
+                curdescs = []
+                curname = file['filename']
             tmpl = Template('<a href="{{r.pathlink|iriencode}}">{{r.path}}</a>'
                 + '/<a class="share" href="{{r.filelink|iriencode}}">{{r.filename}}</a>'
                 + ' ({{r.size|filesizeformat}})')
             ctx = Context({'r':file})
+            curdescs.append(tmpl.render(ctx))
+        if len(curdescs) > 0:
             feed.add_item(
-                title = file['filename'],
+                title = curname,
                 link = "http://" + request.META['HTTP_HOST']
                    + reverse('webuguu.search.views.search')
-                   + "?q=" + file['filename'] + " match:exact",
-                description = tmpl.render(ctx))
+                   + "?q=" + curname + " match:exact",
+                description = string.join(curdescs, "<br> "))
         return HttpResponse(feed.writeString('UTF-8'))
     else:
         return render_to_response('search/error.html',
