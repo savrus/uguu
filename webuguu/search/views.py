@@ -418,7 +418,7 @@ def do_search(request, index, searchform):
                 curname = file['filename']
             tmpl = Template('<a href="{{r.pathlink|iriencode}}">{{r.path}}</a>'
                 + '/<a class="share" href="{{r.filelink|iriencode}}">{{r.filename}}</a>'
-                + ' ({{r.size|filesizeformat}})')
+                + ' ({{r.size|filesizeformat}} {{r.state}})')
             ctx = Context({'r':file})
             curdescs.append(tmpl.render(ctx))
         if len(curdescs) > 0:
