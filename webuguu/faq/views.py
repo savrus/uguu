@@ -38,6 +38,11 @@ ru_matches = {
     'exact':    u"точное совпадение имени файла (будьте внимательны, между именем файла в запросе и опциями должен быть ровно один пробел)",
 }
 
+ru_outs = {
+    'html':     u"обычный вывод в HTML",
+    'rss':      u"вывод в формате RSS-ленты",
+}
+
 def ru_arg_desc(option):
     return string.join([ u"%s: %s" % (bold(x), option[x]) for x in option.keys()], ", ")
 
@@ -83,6 +88,10 @@ ru_qoptions = (
      'args': strargs(tuple(ru_orders.keys()) + \
                      tuple(["%s.d" % x for x in ru_orders.keys()])),
      'desc': u"Сортировать результаты в заданном порядке. Aргументы с суффиксом <b>.d</b> означают сортировку в обратном порядке." + ru_multiarg + u" Аргументы означают следующее. " + ru_arg_desc(ru_orders) + u".",
+    },
+    {'option': "out",
+     'args': strargs(["html", "rss"]),
+     'desc': u"Формат вывода результатов поиска. " + ru_arg_desc(ru_outs) + u".",
     },
     {'option': "scale",
      'args': "<i>integer</i>",
