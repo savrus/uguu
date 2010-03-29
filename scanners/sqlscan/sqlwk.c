@@ -1,4 +1,4 @@
-/* smbwk - smb walker for 'dir tree' engine
+/* sqlwk - sql walker for 'dir tree' engine (database dump)
  *
  * Copyright 2009, 2010, savrus
  * Read the COPYING file in the root of the source tree.
@@ -17,20 +17,14 @@
 static int sqlwk_query(struct sqlwk_dir *c, const char *query, ...)
 {
     struct buf_str *bs;
-    int ret;
     va_list ap;
     PGresult *result;
 
-    bs = buf_alloc();
-    if (bs == NULL) {
-        LOG_ERR("buf_append() returned 0\n");
+    if ((bs = buf_alloc()) == NULL)
         return -1;
-    }
     
     va_start(ap, query);
-    ret = buf_vappendf(bs, query, ap);
-    if (!ret) {
-        LOG_ERR("buf_append() returned 0\n");
+    if (!buf_vappendf(bs, query, ap)) {
         buf_free(bs);
         return -1;
     }
@@ -39,18 +33,21 @@ static int sqlwk_query(struct sqlwk_dir *c, const char *query, ...)
     if (c->res != NULL) {
         PQclear(c->res);
         c->res = NULL;
+        c->rows = 0;
     }
 
     result = PQexec(c->conn, buf_string(bs));
-    buf_free(bs);
     
     if ((result == NULL)
         || ((PQresultStatus(result) != PGRES_TUPLES_OK)
             && (PQresultStatus(result) != PGRES_COMMAND_OK))) {
-        LOG_ERR("PGexec() returned bad result (%s)\n",
+        LOG_ERR("PGexec() returned bad result for query '%s' (%s)\n",
+            buf_string(bs),
             (result == NULL) ? "NULL" : PQresultErrorMessage(result));
+        buf_free(bs);
         return -1;
     }
+    buf_free(bs);
     
     c->res = result;
     c->cur_row = 0;
@@ -110,6 +107,7 @@ int sqlwk_open(struct sqlwk_dir *c, char *host, const char *conninfo)
     int ret;
 
     c->conn = PQconnectdb(conninfo);
+    c->res = NULL;
     
     if ((c->conn == NULL) || (PQstatus(c->conn) != CONNECTION_OK)) {
         LOG_ERR("Unable to connect to database\n");
@@ -133,12 +131,9 @@ int sqlwk_open(struct sqlwk_dir *c, char *host, const char *conninfo)
     }
     
     c->sharepath_id = 1;
-
-    ret = sqlwk_query_opendir(c);
-    if (ret == -1) {
-        LOG_ERR("sqlwk_query() returned -1\n");
+    
+    if (sqlwk_query_opendir(c) == -1)
         goto clean_conn;
-    }
     
     return 1;
 
@@ -170,8 +165,6 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
         return NULL;
     row = c->cur_row;
     c->cur_row++;
-   
-
 
     if (PQgetisnull(c->res, 0, 0)
         ||PQgetisnull(c->res, 0, 0)
@@ -179,11 +172,11 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
         return NULL;
 
     if (sscanf(PQgetvalue(c->res, row, 0), "%llu", &sharedir_id) == 0) {
-        LOG_ERR("sscanf() couldn't read sharedir_id\n");
+        LOG_ERR("Bad query results: couldn't read sharedir_id\n");
         return NULL;
     }
     if (sscanf(PQgetvalue(c->res, row, 1), "%llu", &size) == 0) {
-        LOG_ERR("sscanf() couldn't read size\n");
+        LOG_ERR("Bad query results: couldn't read size\n");
         return NULL;
     }
     
@@ -206,25 +199,20 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
 static int sqlwk_go(dt_go type, char *name, void *curdir)
 {
     struct sqlwk_dir *c = (struct sqlwk_dir*) curdir;
-    int ret;
 
     switch (type) {
         case DT_GO_PARENT:
-            ret = sqlwk_query_parent(c);
-            if (ret == -1)
+            if (sqlwk_query_parent(c) == -1)
                 return -1;
             break;
         case DT_GO_SIBLING:
-            ret = sqlwk_query_parent(c);
-            if (ret == -1)
+            if (sqlwk_query_parent(c) == -1)
                 return -1;
-            ret = sqlwk_query_child(c, name);
-            if (ret == -1)
+            if (sqlwk_query_child(c, name) == -1)
                 return -1;
             break;
         case DT_GO_CHILD:
-            ret = sqlwk_query_child(c, name);
-            if (ret == -1)
+            if (sqlwk_query_child(c, name) == -1)
                 return -1;
             break;
         default:
@@ -235,8 +223,7 @@ static int sqlwk_go(dt_go type, char *name, void *curdir)
     if (type != DT_GO_PARENT) {
         /* 'dir tree' engine won't request readdir afrer go_parent, so we don't
          * have to call sqlwk_query_opendir() in such a case. */ 
-        ret = sqlwk_query_opendir(c);
-        if (ret == -1)
+        if (sqlwk_query_opendir(c) == -1)
             return -1;
     }
     
