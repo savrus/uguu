@@ -4,13 +4,15 @@
 # Read the COPYING file in the root of the source tree.
 #
 
+from django.http import HttpResponse
 from django.utils.http import urlencode, urlquote
 from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
+from django.utils import feedgenerator
 import string
 import re
 import time
-from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host
+from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host, rss_items
 
 default_match_limit = search_items_per_page * 8
 
@@ -187,6 +189,21 @@ class QueryParser:
             self.options['scale'] = m
         else:
             self.error += "Scale %s is too big.\n" % str(m)
+    def parse_option_out_html(self):
+        pass
+    def parse_option_out_rss(self):
+        self.options['offset'] = 0
+        self.options['limit'] = rss_items
+    def parse_option_out(self, option, arg):
+        outs = {
+            'html': self.parse_option_out_html,
+            'rss':  self.parse_option_out_rss,
+        }
+        if arg in outs.keys():
+            self.options['output'] = arg
+            outs[arg]()
+        else:
+            self.error += "Unsupported out argument: '%s'.\n" % arg
     def parse_option_onlyonce_plug(self, option, arg):
         self.error += "Query option '%s' appears more than once.\n" % option
     def __init__(self, query):
@@ -194,6 +211,7 @@ class QueryParser:
         self.options['matchlimit'] = default_match_limit
         self.options['scale'] = 1
         self.options['tsquery'] = 'name'
+        self.options['output'] = 'html'
         self.order = "shares.state, files.size DESC"
         self.error = ""
         self.userquery = query
@@ -213,6 +231,7 @@ class QueryParser:
             'avl':   self.parse_option_avl,
             'order': self.parse_option_order,
             'scale': self.parse_option_scale,
+            'out':   self.parse_option_out,
         }
         qext_executed = dict()
         words = []
@@ -249,7 +268,8 @@ class QueryParser:
         else:
             self.sqlquery = ""
     def setoption(self, opt, val):
-        self.options[opt] = val
+        if self.options.get(opt, None) == None:
+            self.options[opt] = val
     def sqlwhere(self):
         return self.sqlquery
     def sqlorder(self):
@@ -362,19 +382,41 @@ def do_search(request, index, searchform):
         del row
     del res
     fastselflink = "./?" + urlencode(dict([('q', query), ('t', type)]))
-    return render_to_response('search/results.html',
-        {'form': searchform,
-         'query': query,
-         'types': types,
-         'results': result,
-         'offset': offset,
-         'fastself': fastselflink,
-         'gobar': gobar,
-         'sqlecho': sqlecho,
-         'sqlcount': sqlcount,
-         'sqlquery': sqlquery,
-         'gentime': time.time() - generation_started,
-         })
+    if parsedq.getoptions()['output'] == "html":
+        return render_to_response('search/results.html',
+            {'form': searchform,
+             'query': query,
+             'types': types,
+             'results': result,
+             'offset': offset,
+             'fastself': fastselflink,
+             'gobar': gobar,
+             'sqlecho': sqlecho,
+             'sqlcount': sqlcount,
+             'sqlquery': sqlquery,
+             'gentime': time.time() - generation_started,
+             })
+    elif parsedq.getoptions()['output'] == "rss":
+        feed = feedgenerator.Rss201rev2Feed(
+            title = u"Search Results",
+            link = reverse('webuguu.search.views.search'),
+            description = u"Results of a query: " + query,
+            language=u"en")
+        for file in result:
+            feed.add_item(
+                title = file['filename'],
+                link = "http://" + request.META['HTTP_HOST']
+                   + reverse('webuguu.search.views.search')
+                   + "?q=" + file['filename'] + " match:exact",
+                description = u'<a href="%(pl)s">%(p)s</a>/<a href="%(fl)s">%(f)s</a>'
+                    % {'pl': file['pathlink'], 'p': file['path'],
+                       'fl': file['filelink'], 'f': file['filename']})
+        return HttpResponse(feed.writeString('UTF-8'))
+    else:
+        return render_to_response('search/error.html',
+            {'form': searchform, 'types': types, 'query': query,
+             'error':"Unsupported output."})
+        
 
 def search(request):
     return do_search(request, "search/index.html", "search/searchform.html")
