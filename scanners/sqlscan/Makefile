@@ -2,14 +2,15 @@ CFLAGS += -Wall -O3
 LDFLAGS += -lpq
 
 OBJ = dt.o buf.o sqlwk.o sqlscan.o
+NAME = sqlscan
 
-sqlscan: $(OBJ)
+$(NAME): $(OBJ)
 
-install: sqlscan
-	cp sqlscan ../../bin/
+install: $(NAME)
+	cp $(NAME) ../../bin/
 
 clean:
-	rm -f $(OBJ) sqlscan
+	rm -f $(OBJ) $(NAME)
 
 cleanall: clean
-	rm -f ../../bin/sqlscan
+	rm -f ../../bin/$(NAME)
