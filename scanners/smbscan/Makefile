@@ -1,13 +1,20 @@
-CFLAGS += -Wall -O3
+CFLAGS += -Wall -O3 -I../libuguu
 LDFLAGS += -lsmbclient
 
-smbscan: dt.o smbwk.o smbscan.o
+LIBUGUU = ../libuguu/libuguu.a
+OBJ = smbwk.o smbscan.o
+NAME = smbscan
 
-install: smbscan
-	cp smbscan ../../bin/
+$(NAME): $(OBJ) $(LIBUGUU)
+
+$(LIBUGUU):
+	$(MAKE) -C ../libuguu
+
+install: $(NAME)
+	cp $(NAME) ../../bin/
 
 clean:
-	rm -f dt.o smbwk.o smbscan.o smbscan
+	rm -f $(OBJ) $(NAME)
 
 cleanall: clean
-	rm -f ../../bin/smbscan
+	rm -f ../../bin/$(NAME)

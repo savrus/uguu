@@ -1,10 +1,14 @@
-CFLAGS += -Wall -O3
+CFLAGS += -Wall -O3 -I../libuguu
 LDFLAGS += -lpq
 
-OBJ = dt.o buf.o sqlwk.o sqlscan.o
+LIBUGUU = ../libuguu/libuguu.a
+OBJ = sqlwk.o sqlscan.o
 NAME = sqlscan
 
-$(NAME): $(OBJ)
+$(NAME): $(OBJ) $(LIBUGUU)
+
+$(LIBUGUU):
+	$(MAKE) -C ../libuguu
 
 install: $(NAME)
 	cp $(NAME) ../../bin/
