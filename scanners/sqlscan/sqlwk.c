@@ -4,14 +4,9 @@
  * Read the COPYING file in the root of the source tree.
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <libpq-fe.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <string.h>
-#include <errno.h>
 
 #include "dt.h"
 #include "estat.h"
@@ -36,7 +31,7 @@ static int sqlwk_query(struct sqlwk_dir *c, const char *query, ...)
     ret = buf_vappendf(bs, query, ap);
     if (!ret) {
         LOG_ERR("buf_append() returned 0\n");
-        free(bs);
+        buf_free(bs);
         return -1;
     }
     va_end(ap);
