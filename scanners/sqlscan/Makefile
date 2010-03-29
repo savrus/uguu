@@ -1,4 +1,4 @@
-CFLAGS += -Wall -O0 -g
+CFLAGS += -Wall -O3
 LDFLAGS += -lpq
 
 OBJ = dt.o buf.o sqlwk.o sqlscan.o
