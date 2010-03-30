@@ -130,6 +130,7 @@ int main(int argc, char **argv)
     if ((bs = buf_alloc()) == NULL)
         exit(ESTAT_FAILURE);
 
+    /* FIXME: the code below doesn't support paraemters with "'" */
     ret = ! buf_appendf(bs, "user='%s' dbname='%s'", dbuser, dbname);
     if (dbhost != NULL)
         ret += ! buf_appendf(bs, " host='%s'", dbhost);

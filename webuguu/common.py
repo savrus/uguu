@@ -6,6 +6,7 @@
 
 import re
 import string
+from django.core.urlresolvers import reverse
 
 # database connection settings
 import psycopg2
@@ -51,6 +52,17 @@ search_items_per_page = 50
 
 # number of items in rss feed
 rss_items = 100
+
+# add an item too rss feed
+def rss_feed_add_item(request, feed, name, desc):
+    feed.add_item(
+        title = name,
+        link = "http://%(r)s%(v)s?q=%(q)s match:exact"
+            % {'r': request.META['HTTP_HOST'],
+               'v': reverse('webuguu.search.views.search'),
+               'q': name},
+        description = desc)
+
 
 # gobar generator
 def generate_go_bar(items, offset):

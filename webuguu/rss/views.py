@@ -9,7 +9,7 @@ from django.utils import feedgenerator
 from django.utils.http import urlquote
 from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response
-from webuguu.common import connectdb, known_filetypes, rss_items
+from webuguu.common import connectdb, known_filetypes, rss_items, rss_feed_add_item
 
 def alltypes(request):
     feed = feedgenerator.Rss201rev2Feed(
@@ -26,12 +26,7 @@ def alltypes(request):
         SELECT name FROM filenames ORDER BY filename_id DESC LIMIT %(l)s
         """, {'l': rss_items})
     for file in cursor.fetchall():
-        feed.add_item(
-            title = file['name'],
-            link = "http://" + request.META['HTTP_HOST']
-                   + reverse('webuguu.search.views.search')
-                   + "?q=" + file['name'] + " match:exact",
-            description = file['name'])
+        rss_feed_add_item(request, feed, file['name'], file['name'])
     return HttpResponse(feed.writeString('UTF-8'))
 
 def singletype(request, type):
@@ -55,12 +50,7 @@ def singletype(request, type):
         ORDER BY filename_id DESC LIMIT %(l)s
         """, {'t': type, 'l': rss_items})
     for file in cursor.fetchall():
-        feed.add_item(
-            title = file['name'],
-            link = "http://" + request.META['HTTP_HOST']
-                   + reverse('webuguu.search.views.search')
-                   + "?q=" + file['name'] + " match:exact",
-            description = file['name'])
+        rss_feed_add_item(request, feed, file['name'], file['name'])
     return HttpResponse(feed.writeString('UTF-8'))
 
 def list(request):

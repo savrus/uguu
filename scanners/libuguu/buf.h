@@ -30,15 +30,15 @@ struct buf_str *buf_alloc();
 void buf_clear(struct buf_str *bs);
 
 /* append a string
- * returns 0 on failure, otherwise resulting string length */
+ * returns 0 on failure, otherwise appended string length */
 size_t buf_append(struct buf_str *bs, const char *s);
 
 /* append a formatted string
- * returns 0 on failure, otherwise resulting string length */
+ * returns 0 on failure, otherwise appended string length */
 size_t buf_appendf(struct buf_str *bs, const char *fmt, ...);
 
 /* append a formatted string
- * returns 0 on failure, otherwise resulting string length */
+ * returns 0 on failure, otherwise appended string length */
 size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap);
 
 /* get a string */
