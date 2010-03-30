@@ -12,6 +12,10 @@
 
 #include "estat.h"
 
+#ifdef __cplusplus
+extren "C" {
+#endif
+
 #define LOG_ERR(...) \
 do { \
     fprintf(stderr, "%s: ", __func__); \
@@ -28,6 +32,10 @@ do { \
         exit(ESTAT_FAILURE); \
     } \
 } while(0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LOG_H */
 
