@@ -10,6 +10,10 @@
 #include <stddef.h>
 #include <stdarg.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define BUF_SIZE_STEP 128
 
 struct buf_str {
@@ -43,5 +47,8 @@ const char* buf_string(struct buf_str *bs);
 /* free a buffer */
 void buf_free(struct buf_str *bs);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BUF_H */
