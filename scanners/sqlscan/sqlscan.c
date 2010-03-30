@@ -140,7 +140,9 @@ int main(int argc, char **argv)
     if (ret)
         exit(ESTAT_FAILURE);
 
-    if (sqlwk_open(&curdir, proto, host, port, buf_string(bs)) < 0)
+    ret = sqlwk_open(&curdir, proto, host, port, buf_string(bs));
+    buf_free(bs);
+    if (ret < 0)
         exit(ESTAT_FAILURE);
 
     if (lookup) {
