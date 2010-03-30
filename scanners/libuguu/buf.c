@@ -4,17 +4,18 @@
  * Read the COPYING file in the root of the source tree.
  */
 
-#include "buf.h"
-#include "log.h"
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+
+#include "buf.h"
+#include "log.h"
 
 struct buf_str *buf_alloc()
 {
     struct buf_str *bs;
 
-    bs = (struct buf_str *) malloc(sizeof(struct buf_str *));
+    bs = (struct buf_str *) malloc(sizeof(struct buf_str));
     if (bs == NULL) {
         LOG_ERR("malloc() returned NULL\n");
         return NULL;
@@ -57,7 +58,7 @@ size_t buf_append(struct buf_str *bs, const char *s)
     }
     strcpy(bs->s + bs->length, s);
     bs->length += n;
-    return bs->length;
+    return n;
 }
 
 size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap)
@@ -83,7 +84,7 @@ size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap)
     }
     bs->length += ret;
 
-    return bs->length;
+    return ret;
 }
 
 size_t buf_appendf(struct buf_str *bs, const char *fmt, ...)

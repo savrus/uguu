@@ -13,7 +13,7 @@ from django.template import Context, Template
 import string
 import re
 import time
-from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host, rss_items
+from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host, rss_items, rss_feed_add_item
 
 default_match_limit = search_items_per_page * 8
 
@@ -408,12 +408,7 @@ def do_search(request, index, searchform):
         for file in result:
             if file['filename'] != curname:
                 if curname != "":
-                    feed.add_item(
-                        title = curname,
-                        link = "http://" + request.META['HTTP_HOST']
-                           + reverse('webuguu.search.views.search')
-                           + "?q=" + curname + " match:exact",
-                        description = string.join(curdescs, "<br>"))
+                    rss_feed_add_item(request, feed, curname, string.join(curdescs, "<br>"))
                 curdescs = []
                 curname = file['filename']
             tmpl = Template('<a href="{{r.pathlink|iriencode}}">{{r.path}}</a>'
@@ -422,12 +417,7 @@ def do_search(request, index, searchform):
             ctx = Context({'r':file})
             curdescs.append(tmpl.render(ctx))
         if len(curdescs) > 0:
-            feed.add_item(
-                title = curname,
-                link = "http://" + request.META['HTTP_HOST']
-                   + reverse('webuguu.search.views.search')
-                   + "?q=" + curname + " match:exact",
-                description = string.join(curdescs, "<br>"))
+            rss_feed_add_item(request, feed, curname, string.join(curdescs, "<br>"))
         return HttpResponse(feed.writeString('UTF-8'))
     else:
         return render_to_response('search/error.html',
