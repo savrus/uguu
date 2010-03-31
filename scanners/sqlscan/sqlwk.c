@@ -56,6 +56,31 @@ static int sqlwk_query(struct sqlwk_dir *c, const char *query, ...)
     return c->rows;
 }
 
+static struct buf_str * sqlwk_escape(const char *s)
+{
+    struct buf_str *bs;
+    char *sc;
+    int ret = 0;
+
+    if ((bs = buf_alloc()) == NULL)
+        return NULL;
+
+    while ((sc = strpbrk(s, "\\\'")) != NULL) {
+        char c = *sc;
+        ret += ! buf_appendn(bs, s, (size_t) sc - (size_t) s);
+        ret += ! buf_appendf(bs, "\\%c", c);
+        s = sc + 1;
+    }
+    ret += ! buf_append(bs, s);
+
+    if (ret) {
+        buf_free(bs);
+        return NULL;
+    }
+
+    return bs;
+}
+
 static int sqlwk_query_opendir(struct sqlwk_dir *c)
 {
     /* dir ids are assigned inside 'dt' in the order items are
@@ -86,11 +111,16 @@ static int sqlwk_query_child(struct sqlwk_dir *c, const char *name)
 {
     int ret;
     unsigned long long id;
+    struct buf_str *bs;
+
+    if ((bs = sqlwk_escape(name)) == NULL)
+        return -1;
     ret = sqlwk_query(c, "SELECT sharedir_id FROM files WHERE "
         "share_id = %llu AND sharepath_id = %llu "
         "AND filename_id IN "
-        "(SELECT filename_id FROM filenames where name = '%s');",
-        c->share_id, c->sharepath_id, name);
+        "(SELECT filename_id FROM filenames where name = E'%s');",
+        c->share_id, c->sharepath_id, buf_string(bs));
+    buf_free(bs);
     if (ret == -1)
         return -1;
     if (PQgetisnull(c->res, 0, 0))
