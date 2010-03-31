@@ -33,6 +33,10 @@ void buf_clear(struct buf_str *bs);
  * returns 0 on failure, otherwise appended string length */
 size_t buf_append(struct buf_str *bs, const char *s);
 
+/* append a string of length at most n
+ * returns 0 on failure, otherwise appended string length */
+size_t buf_appendn(struct buf_str *bs, const char *s, size_t n);
+
 /* append a formatted string
  * returns 0 on failure, otherwise appended string length */
 size_t buf_appendf(struct buf_str *bs, const char *fmt, ...);
