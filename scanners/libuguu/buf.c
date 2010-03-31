@@ -61,6 +61,29 @@ size_t buf_append(struct buf_str *bs, const char *s)
     return n;
 }
 
+size_t buf_appendn(struct buf_str *bs, const char *s, size_t n)
+{
+    size_t m;
+    char *c;
+
+    m = strlen(s);
+    n = (m < n) ? m : n;
+
+    if (bs->length + n >= bs->size) {
+        c = realloc(bs->s, (bs->size + n) * sizeof(char));
+        if (c == NULL) {
+            LOG_ERR("realloc() returned NULL\n");
+            return 0;
+        }
+        bs->s = c;
+        bs->size += n;
+    }
+    strncpy(bs->s + bs->length, s, n);
+    bs->length += n;
+    bs->s[bs->length] = 0;
+    return n;
+}
+
 size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap)
 {
     int ret;
