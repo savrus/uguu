@@ -92,8 +92,6 @@ int main(int argc, char **argv)
                     case 'd':
                         i++; dbname = argv[i]; break;
                     case 'P':
-                        printf("Password: ");
-                        fflush(stdout);
                         tcgetattr(fileno(stdin), &torig);
                         tset = torig;
                         tset.c_lflag &= ~ECHO;
@@ -107,7 +105,6 @@ int main(int argc, char **argv)
                             exit(ESTAT_FAILURE);
                         }
                         dbpass[strlen(dbpass)-1] = 0;
-                        printf("\n");
                         break;
                     default:
                         usage(argv[0], ESTAT_FAILURE);
