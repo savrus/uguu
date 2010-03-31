@@ -139,9 +139,14 @@ int sqlwk_open(struct sqlwk_dir *c, const char *proto, const char *host, unsigne
     c->conn = PQconnectdb(conninfo);
     c->res = NULL;
     
-    if ((c->conn == NULL) || (PQstatus(c->conn) != CONNECTION_OK)) {
-        LOG_ERR("Unable to connect to database\n");
+    if (c->conn == NULL) {
+        LOG_ERR("PQconnectdb() returned NULL\n");
         goto err;
+    }
+    
+    if (PQstatus(c->conn) != CONNECTION_OK) {
+        LOG_ERR("Unable to connect to database\n");
+        goto clean_conn;
     }
 
     ret = sqlwk_query(c, "SELECT share_id FROM shares WHERE protocol = '%s'"
