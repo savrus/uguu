@@ -20,6 +20,7 @@ struct buf_str {
     char *s;
     size_t length;
     size_t size;
+    char error;
 };
 
 /* allocate a new buf_str
@@ -47,6 +48,9 @@ size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap);
 
 /* get a string */
 const char* buf_string(struct buf_str *bs);
+
+/* check if error occured while working with buffer */
+char buf_error(struct buf_str *bs);
 
 /* free a buffer */
 void buf_free(struct buf_str *bs);

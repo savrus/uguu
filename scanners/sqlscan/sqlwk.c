@@ -24,7 +24,8 @@ static int sqlwk_query(struct sqlwk_dir *c, const char *query, ...)
         return -1;
     
     va_start(ap, query);
-    if (!buf_vappendf(bs, query, ap)) {
+    buf_vappendf(bs, query, ap);
+    if (buf_error(bs)) {
         buf_free(bs);
         return -1;
     }
@@ -61,20 +62,19 @@ static struct buf_str * sqlwk_escape(const char *s)
 {
     struct buf_str *bs;
     char *sc;
-    int ret = 0;
 
     if ((bs = buf_alloc()) == NULL)
         return NULL;
 
     while ((sc = strpbrk(s, "\\\'")) != NULL) {
         char c = *sc;
-        ret += ! buf_appendn(bs, s, (size_t) sc - (size_t) s);
-        ret += ! buf_appendf(bs, "\\%c", c);
+        buf_appendn(bs, s, (size_t) sc - (size_t) s);
+        buf_appendf(bs, "\\%c", c);
         s = sc + 1;
     }
-    ret += ! buf_append(bs, s);
+    buf_append(bs, s);
 
-    if (ret) {
+    if (buf_error(bs)) {
         buf_free(bs);
         return NULL;
     }
@@ -114,8 +114,10 @@ static int sqlwk_query_child(struct sqlwk_dir *c, const char *name)
     unsigned long long id;
     struct buf_str *bs;
 
-    if ((bs = sqlwk_escape(name)) == NULL)
+    if ((bs = sqlwk_escape(name)) == NULL) {
+        printf ("got NULL %s\n", name);
         return -1;
+    }
     ret = sqlwk_query(c, "SELECT sharedir_id FROM files WHERE "
         "share_id = %llu AND sharepath_id = %llu "
         "AND filename_id IN "
