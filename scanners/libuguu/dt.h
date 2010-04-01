@@ -38,7 +38,6 @@ struct dt_dentry {
 
 typedef enum {
     DT_GO_PARENT,
-    DT_GO_SIBLING,
     DT_GO_CHILD,
 } dt_go;
 
@@ -48,26 +47,18 @@ typedef enum {
  *
  * The following notations will be used:
  * goup = go(DT_GO_PARENT)
- * gosibling = go(DT_GO_SIBLING)
  * gochild = go(DT_GO_CHILD)
  *
  * Walking algorithm: starting from the root of the share 'dir tree' walks
- * the filesystem using goup(), gosibling() or gochild(). In each directory
+ * the filesystem using goup() gochild(). In each directory
  * (including the root) readdir() is executed as many times as necessary to
  * get all curdir files/subdirs.
  * After that navigatoin is performed in the following order:
  * if there is a non-visited subdirectory go there by executing gochild(),
- * if there is a non-visited sibling directory go there by executing
- * gosibling(),
  * else go up by executing goup()
- * One may have noticed that gosibling() is equivalent to goup() combined with
- * gochild() for next non-visited child.
- * If gosibling() or gochild() fails then current directory should not be
- * changed. But since readdir() will not be invoked, for gosibling() it is not
- * that strict (however, walker must ratain the same level in the file tree).
+ * If gochild() fails then current directory should not be changed.
  * If goup() fails then 'dir tree' is terminated.
  * The following conditions are guaranteed:
- *   gosibling() is executed only for siblings obtained by readir()
  *   gochild() is executed only for childs obtained by realdir()
  *   goup() is never executed when we are in the root of the share
  *   readdir() is executed exactly once for each directory including the root
