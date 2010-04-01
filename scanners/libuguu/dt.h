@@ -31,7 +31,6 @@ struct dt_dentry {
     struct dt_dentry *sibling;
     struct dt_dentry *child;
     struct dt_dentry *file_child;
-    int stamp;
     unsigned int id;
     unsigned int fid;
     unsigned int items;
