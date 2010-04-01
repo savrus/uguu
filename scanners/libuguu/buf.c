@@ -31,6 +31,7 @@ struct buf_str *buf_alloc()
     bs->s[0] = 0;
     bs->length = 0;
     bs->size = BUF_SIZE_STEP;
+    bs->error = 0;
     return bs;
 }
 
@@ -51,6 +52,7 @@ size_t buf_append(struct buf_str *bs, const char *s)
         c = realloc(bs->s, (bs->size + n) * sizeof(char));
         if (c == NULL) {
             LOG_ERR("realloc() returned NULL\n");
+            bs->error = 1;
             return 0;
         }
         bs->s = c;
@@ -73,6 +75,7 @@ size_t buf_appendn(struct buf_str *bs, const char *s, size_t n)
         c = realloc(bs->s, (bs->size + n) * sizeof(char));
         if (c == NULL) {
             LOG_ERR("realloc() returned NULL\n");
+            bs->error = 1;
             return 0;
         }
         bs->s = c;
@@ -97,6 +100,7 @@ size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap)
         c = (char *) realloc(bs->s, (bs->size + ret) * sizeof(char));
         if (c == NULL) {
             LOG_ERR("realloc() returned NULL\n");
+            bs->error = 1;
             return 0;
         }
         bs->s = c;
@@ -125,6 +129,11 @@ size_t buf_appendf(struct buf_str *bs, const char *fmt, ...)
 const char* buf_string(struct buf_str *bs)
 {
     return bs->s;
+}
+
+char buf_error(struct buf_str *bs)
+{
+    return bs->error;
 }
 
 void buf_free(struct buf_str *bs)

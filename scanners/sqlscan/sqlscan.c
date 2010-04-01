@@ -128,15 +128,17 @@ int main(int argc, char **argv)
         exit(ESTAT_FAILURE);
 
     /* FIXME: the code below doesn't support paraemters with "'" */
-    ret = ! buf_appendf(bs, "user='%s' dbname='%s'", dbuser, dbname);
+    buf_appendf(bs, "user='%s' dbname='%s'", dbuser, dbname);
     if (dbhost != NULL)
-        ret += ! buf_appendf(bs, " host='%s'", dbhost);
+        buf_appendf(bs, " host='%s'", dbhost);
     if (dbport != NULL)
-        ret += ! buf_appendf(bs, " port='%s'", dbport);
+        buf_appendf(bs, " port='%s'", dbport);
     if (*dbpass != 0)
-        ret += ! buf_appendf(bs, " password='%s'", dbpass);
-    if (ret)
+        buf_appendf(bs, " password='%s'", dbpass);
+    if (buf_error(bs)){
+        buf_free(bs);
         exit(ESTAT_FAILURE);
+    }
 
     ret = sqlwk_open(&curdir, proto, host, port, buf_string(bs));
     buf_free(bs);
