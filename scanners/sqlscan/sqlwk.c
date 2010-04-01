@@ -36,6 +36,7 @@ static int sqlwk_query(struct sqlwk_dir *c, const char *query, ...)
         c->rows = 0;
     }
 
+    //printf("%s\n", buf_string(bs));
     result = PQexec(c->conn, buf_string(bs));
     
     if ((result == NULL)
@@ -89,7 +90,7 @@ static int sqlwk_query_opendir(struct sqlwk_dir *c)
     return sqlwk_query(c, "SELECT sharedir_id AS dirid, size, name "
         "FROM files LEFT JOIN filenames USING (filename_id) "
         "WHERE share_id = %llu AND sharepath_id = %llu "
-        "ORDER BY sharedir_id", c->share_id, c->sharepath_id );
+        "ORDER BY sharedir_id;", c->share_id, c->sharepath_id );
 }
 
 static int sqlwk_query_parent(struct sqlwk_dir *c)
@@ -236,6 +237,7 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
 static int sqlwk_go(dt_go type, char *name, void *curdir)
 {
     struct sqlwk_dir *c = (struct sqlwk_dir*) curdir;
+    unsigned long id;
 
     switch (type) {
         case DT_GO_PARENT:
@@ -243,10 +245,13 @@ static int sqlwk_go(dt_go type, char *name, void *curdir)
                 return -1;
             break;
         case DT_GO_SIBLING:
+            id = c->sharepath_id;
             if (sqlwk_query_parent(c) == -1)
                 return -1;
-            if (sqlwk_query_child(c, name) == -1)
+            if (sqlwk_query_child(c, name) == -1) {
+                c->sharepath_id = id;
                 return -1;
+            }
             break;
         case DT_GO_CHILD:
             if (sqlwk_query_child(c, name) == -1)
