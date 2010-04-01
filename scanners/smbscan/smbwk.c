@@ -42,14 +42,6 @@ static void smbwk_url_suspend(char *url)
         *c = 0;
 }
 
-/* undo the last suspend of file/dir from nll-terminated url string */
-static void smbwk_url_suspend_undo(char *url)
-{
-    int n = strlen(url);
-    if (n < SMBWK_PATH_MAX_LEN - 1)
-        url[n] = '/';
-}
-
 /* reallocate null-terminated url string to have length new_len. new_len must exceed strlen(url) */
 /* returns 0 if failed, 1 otherwise */
 static int smbwk_url_realloc(char **url, size_t new_len)
@@ -215,15 +207,7 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
     switch (type) {
         case DT_GO_PARENT:
             smbwk_url_suspend(c->url);
-            break;
-        case DT_GO_SIBLING:
-            smbwk_url_suspend(c->url);
-            if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
-                LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
-                        c->url, name, type);
-                smbwk_url_suspend_undo(c->url);
-                return -1;
-            }
+            fd_real = 0;
             break;
         case DT_GO_CHILD:
             if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
@@ -231,28 +215,25 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
                         c->url, name, type);
                 return -1;
             }
+
+            /* 'dir tree' engine won't request readdir afrer go_parent,
+             * so we don't have to call smbc_opendir() in such a case.
+             * We track if fd points to an opened directory in fd_read
+             * field of smbwk_dir structure */
+            if ((fd = smbc_opendir(c->url)) < 0) {
+                LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n", c->url, type);
+                if (errno == ETIMEDOUT)
+                    exit(ESTAT_FAILURE);
+                smbwk_url_suspend(c->url);
+                return -1;
+            }
+            fd_real = 1;
             break;
         default:
             LOG_ERR("unknown smbwk_go_type %d, url: %s\n", type, c->url);
             return -1;
     }
    
-    if (type != DT_GO_PARENT) {
-        /* 'dir tree' engine won't request readdir afrer go_parent, so we don't
-         * have to call smbc_opendir() in such a case. We track if fd points to an
-         * opened directory in fd_read field of smbwk_dir structure */
-        if ((fd = smbc_opendir(c->url)) < 0) {
-            LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n", c->url, type);
-            if (errno == ETIMEDOUT)
-                exit(ESTAT_FAILURE);
-            if (type == DT_GO_CHILD)
-                smbwk_url_suspend(c->url);
-            return -1;
-        }
-        fd_real = 1;
-    } else
-        fd_real = 0;
-
     if (c->fd_real == 1)
         if (smbc_closedir(c->fd) < 0)
             LOG_ERR("smbc_closedir() returned error. url: %s, go_type: %d\n", c->url, type);
