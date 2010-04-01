@@ -239,24 +239,18 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
 static int sqlwk_go(dt_go type, char *name, void *curdir)
 {
     struct sqlwk_dir *c = (struct sqlwk_dir*) curdir;
-    unsigned long id;
 
     switch (type) {
         case DT_GO_PARENT:
             if (sqlwk_query_parent(c) == -1)
                 return -1;
             break;
-        case DT_GO_SIBLING:
-            id = c->sharepath_id;
-            if (sqlwk_query_parent(c) == -1)
-                return -1;
-            if (sqlwk_query_child(c, name) == -1) {
-                c->sharepath_id = id;
-                return -1;
-            }
-            break;
         case DT_GO_CHILD:
             if (sqlwk_query_child(c, name) == -1)
+                return -1;
+
+            /* 'dir tree' only requires this for go_child */
+            if (sqlwk_query_opendir(c) == -1)
                 return -1;
             break;
         default:
@@ -264,13 +258,6 @@ static int sqlwk_go(dt_go type, char *name, void *curdir)
             return -1;
     }
    
-    if (type != DT_GO_PARENT) {
-        /* 'dir tree' engine won't request readdir afrer go_parent, so we don't
-         * have to call sqlwk_query_opendir() in such a case. */ 
-        if (sqlwk_query_opendir(c) == -1)
-            return -1;
-    }
-    
     return 1;
 }
 
