@@ -32,7 +32,6 @@ static void dt_init_root(struct dt_dentry *root, unsigned int *id)
     root->sibling = NULL;
     root->child = NULL;
     root->file_child = NULL;
-    root->stamp = 0;
     root->id = (*id)++;
 }
 
@@ -173,7 +172,6 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
             dt_free(dn);
             break;
         }
-        dn->stamp = 0;
         dn->parent = d;
         if (dn->type == DT_DIR) {
             dirs++;
@@ -275,10 +273,6 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 
     dt_init_root(root, &id);
 
-    /* invariants:
-     * d->type == DT_DIR
-     * if v->stamp = 1 then descendants of v are processed
-     */
     for (d = root; d != NULL;) {
         if (enter) {
             dt_readdir(wk, d, curdir, &id);
@@ -286,8 +280,6 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
                 d = dc;
                 continue;
             }
-        } else {
-            d->stamp = 0;
         }
         dt_list_sum(d, &(d->file_child));
         dt_list_sum(d, &(d->child));
@@ -304,9 +296,7 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
                 d = dc;
                 continue;
             }
-        } else { 
-            d->stamp = 0;
-        }
+        } 
         dt_list_free(&(d->child));
         d = dt_next_sibling_or_parent(d, &enter);
     }
@@ -354,8 +344,6 @@ void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
                 d = dc;
                 continue;
             }
-        } else {
-            d->stamp = 0;
         }
         dt_list_print_sum_free(d, &(d->child), dt_printfile_reverse);
         d = dt_go_sibling_or_parent(wk, d, curdir, &enter);
