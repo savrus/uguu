@@ -200,17 +200,23 @@ static struct dt_dentry * dt_go_sibling_or_parent(struct dt_walker *wk, struct d
 {
     struct dt_dentry *dn = d;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
-    while (((dn = dn->sibling) != NULL)
-           && (wk->go(DT_GO_SIBLING, dn->name, curdir) < 0))
-        ;
-    if (dn == NULL) {
-        dn = d->parent;
-        if ((dn != NULL) && (wk->go(DT_GO_PARENT, NULL, curdir) < 0)) {
-            LOG_ERR("Unable to return to parent directory.\n"); 
-            exit(ESTAT_FAILURE);
-        }
+
+    if (d->parent == NULL)
+        return NULL;
+
+    if (wk->go(DT_GO_PARENT, NULL, curdir) < 0) {
+        LOG_ERR("Unable to return to parent directory.\n"); 
+        exit(ESTAT_FAILURE);
     }
-    return dn;
+
+    while (((dn = dn->sibling) != NULL)
+           && (wk->go(DT_GO_CHILD, dn->name, curdir) < 0))
+        ;
+
+    if (dn != NULL)
+        return dn;
+    else
+        return d->parent;
 }
 
 static struct dt_dentry * dt_go_child(struct dt_walker *wk, struct dt_dentry *d, void *curdir)
