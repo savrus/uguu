@@ -211,13 +211,8 @@ static struct dt_dentry * dt_go_sibling_or_parent(struct dt_walker *wk, struct d
            && (wk->go(DT_GO_CHILD, dn->name, curdir) < 0))
         ;
 
-    if (dn != NULL) {
-        *went_to_sibling = 1;
-        return dn;
-    } else {
-        *went_to_sibling = 0;
-        return d->parent;
-    }
+    *went_to_sibling = (dn != NULL);
+    return (dn != NULL) ? dn : d->parent;
 }
 
 static struct dt_dentry * dt_go_child(struct dt_walker *wk, struct dt_dentry *d, void *curdir)
@@ -235,13 +230,8 @@ static struct dt_dentry * dt_go_child(struct dt_walker *wk, struct dt_dentry *d,
 static struct dt_dentry * dt_next_sibling_or_parent(struct dt_dentry *d, int *went_to_sibling)
 {
     LOG_ASSERT(d != NULL, "Bad arguments\n");
-    if (d->sibling != NULL) {
-        *went_to_sibling = 1;
-        return d->sibling;
-    } else {
-        *went_to_sibling = 0;
-        return d->parent;
-    }
+    *went_to_sibling = (d->sibling != NULL);
+    return (d->sibling != NULL) ? d->sibling : d->parent;
 }
 
 static void dt_printpath(struct dt_dentry *d)
