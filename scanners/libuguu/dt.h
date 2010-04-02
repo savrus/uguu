@@ -50,7 +50,7 @@ typedef enum {
  * gochild = go(DT_GO_CHILD)
  *
  * Walking algorithm: starting from the root of the share 'dir tree' walks
- * the filesystem using goup() gochild(). In each directory
+ * the filesystem using goup() and gochild(). In each directory
  * (including the root) readdir() is executed as many times as necessary to
  * get all curdir files/subdirs.
  * After that navigatoin is performed in the following order:
@@ -63,7 +63,7 @@ typedef enum {
  *   goup() is never executed when we are in the root of the share
  *   readdir() is executed exactly once for each directory including the root
  *
- * curdir is the data structure that contains an abstract pointer into
+ * curdir is the data structure which contains an abstract pointer into
  * current directory for external walker. curdir must be initialized before
  * calling dt_full() or dt_reverse()
  */
