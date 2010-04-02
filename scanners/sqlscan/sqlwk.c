@@ -206,10 +206,12 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
     row = c->cur_row;
     c->cur_row++;
 
-    if (PQgetisnull(c->res, 0, 0)
-        ||PQgetisnull(c->res, 0, 0)
-        ||PQgetisnull(c->res, 0, 0))
+    if (PQgetisnull(c->res, row, 0)
+        ||PQgetisnull(c->res, row, 1)
+        ||PQgetisnull(c->res, row, 2)) {
+        LOG_ERR("Some results in current row are NULL\n");
         return NULL;
+    }
 
     if (sscanf(PQgetvalue(c->res, row, 0), "%llu", &sharedir_id) == 0) {
         LOG_ERR("Bad query results: couldn't read sharedir_id\n");
