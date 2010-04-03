@@ -254,7 +254,7 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 {
     struct dt_dentry *d, *dc;
     unsigned int id = 1;
-    int enter = 1;
+    int enter;
 
     if ((root == NULL) || (wk == NULL)) {
         LOG_ERR("Bad arguments\n");
@@ -263,7 +263,7 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 
     dt_init_root(root, &id);
 
-    for (d = root; d != NULL;) {
+    for (d = root, enter = 1; d != NULL;) {
         if (enter) {
             dt_readdir(wk, d, curdir, &id);
             if ((dc = dt_go_child(wk, d, curdir)) != NULL) {
@@ -276,9 +276,8 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
         d = dt_go_sibling_or_parent(wk, d, curdir, &enter);
     }
 
-    enter = 1;
     dt_printfile_full(root);
-    for (d = root; d != NULL;) {
+    for (d = root, enter = 1; d != NULL;) {
         if (enter) {
             dt_list_print(&(d->child), dt_printfile_full);
             dt_list_print_free(&(d->file_child), dt_printfile_full);
@@ -315,7 +314,7 @@ void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 {
     struct dt_dentry *d, *dc;
     unsigned int id = 1;
-    int enter = 1;
+    int enter;
 
     if ((root == NULL) || (wk == NULL)) {
         LOG_ERR("Bad arguments\n");
@@ -325,7 +324,7 @@ void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     dt_init_root(root, &id);
     dt_printdir_reverse(root);
 
-    for (d = root; d != NULL;) {
+    for (d = root, enter = 1; d != NULL;) {
         if (enter) {
             dt_readdir(wk, d, curdir, &id);
             dt_list_print(&(d->child), dt_printdir_reverse);
