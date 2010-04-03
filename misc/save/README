@@ -1,0 +1,29 @@
+Dumping and restoring database
+
+When database schema is changed easiest way to update uguu to new version is
+to empty database and rescan each share. Because this would take a significant
+amount of thime dumping/restoring mechanism have been created.
+
+
+Dumping
+
+First you need to install 'sqlscan' scanner to your 'bin' directory in
+the uguu tree. This could be done by typing 'make install' in the sqlscan
+directory.
+Second you need to create 'save' directory in yor 'bin' directory and put
+'dump.py' coming with this archive in 'bin' directory.
+Then dump file lists for all shares from your database by typing
+'python dump.py'
+
+
+Restoring
+
+Restoring is done by a slightly modified version of the spider. Patch is
+attached and can be applied by typing command 'patch -p1 < spider.py.patch'
+in 'bin' directory.
+Then database shares table should be prepared for updating all shares: execute
+SQL command "UPDATE shares SET state='online', hash='', next_scan=now();".
+Finally, run the patched 'spider.py' script, for each share it will get
+contents from the directory 'save' instead of executing corresponding scanner.
+
+
