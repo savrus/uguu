@@ -88,7 +88,7 @@ static int sqlwk_query_opendir(struct sqlwk_dir *c)
      * received from host. So we sort by sharedir_id here to preserve
      * that ordering */
     return sqlwk_query(c, "SELECT sharedir_id AS dirid, size, name "
-        "FROM files LEFT JOIN filenames USING (filename_id) "
+        "FROM files "
         "WHERE share_id = %llu AND sharepath_id = %llu "
         "ORDER BY sharedir_id;", c->share_id, c->sharepath_id );
 }
@@ -97,7 +97,9 @@ static int sqlwk_query_parent(struct sqlwk_dir *c)
 {
     int ret;
     unsigned long long id;
-    ret = sqlwk_query(c, "SELECT parent_id FROM paths WHERE share_id = %llu AND sharepath_id = %llu;", c->share_id, c->sharepath_id);
+    ret = sqlwk_query(c, "SELECT parent_id FROM paths "
+        "WHERE share_id = %llu AND sharepath_id = %llu;",
+        c->share_id, c->sharepath_id);
     if (ret == -1)
         return -1;
     if (PQgetisnull(c->res, 0, 0))
@@ -120,8 +122,7 @@ static int sqlwk_query_child(struct sqlwk_dir *c, const char *name)
     }
     ret = sqlwk_query(c, "SELECT sharedir_id FROM files WHERE "
         "share_id = %llu AND sharepath_id = %llu "
-        "AND filename_id IN "
-        "(SELECT filename_id FROM filenames where name = E'%s');",
+        "AND name = E'%s';",
         c->share_id, c->sharepath_id, buf_string(bs));
     buf_free(bs);
     if (ret == -1)
