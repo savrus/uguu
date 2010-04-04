@@ -297,7 +297,7 @@ def do_search(request, index, searchform):
         viewargs = [row['protocol'], row['hostname'], row['port']]
         if utfpath != u"":
             viewargs.append(utfpath)
-        vfs = urlquote(reverse('webuguu.vfs.views.share', args=viewargs))
+        vfs = reverse('webuguu.vfs.views.share', args=viewargs)
         vfs_offset = int(row['fileid']) / vfs_items_per_page
         newrow['pathlink'] = vfs + "?" + urlencode(dict(
             [('s', row['share_id']), ('p', row['path_id'])] +
