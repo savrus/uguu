@@ -15,13 +15,6 @@ import re
 import time
 from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host, rss_items, rss_feed_add_item
 
-default_match_limit = search_items_per_page * 8
-
-# for types other than recognizable by scanner
-qopt_type = {
-    'dir':      "(files.sharedir_id != 0)"
-}
-
 # for ordering query option 
 qopt_order = {
     'avl':      "shares.state",
@@ -38,50 +31,20 @@ qopt_order = {
     'host.d':   "shares.hostname DESC",
     'size':     "files.size DESC",
     'size.d':   "files.size",
-    'name':     "filenames.name",
-    'name.d':   "filenames.name DESC",
-    'type':     "filenames.type DESC, (files.sharedir_id != 0) DESC",
-    'type.d':   "filenames.type, (files.sharedir_id != 0)",
+    'name':     "files.name",
+    'name.d':   "files.name DESC",
+    'type':     "files.type",
+    'type.d':   "files.type DESC",
     'sharesize':     "shares.size DESC",
     'sharesize.d':   "shares.size",
 }
 
 qopt_match = {
-# Query optimization: get only limited number of strin values. 
-  'scaled': {
-    'name': """filename_id IN
-               (SELECT filename_id
-                FROM filenames 
-                WHERE tsname @@ to_tsquery('uguu', %(query)s)
-                ORDER BY filename_id
-                LIMIT %(matchlimit)s)""",
-    'full': """(files.share_id, files.sharepath_id, files.pathfile_id) IN
-               (SELECT share_id, sharepath_id, pathfile_id
-                FROM files
-                WHERE files.tsfullpath @@ to_tsquery('uguu',%(query)s)
-                ORDER BY share_id, sharepath_id, pathfile_id
-                LIMIT %(matchlimit)s)""",
-    'name.p': """filename_id IN
-               (SELECT filename_id
-                FROM filenames 
-                WHERE tsname @@ to_tsquery('uguu', %(query)s)
-                ORDER BY filename_id
-                LIMIT %(matchlimit)s)""",
-    'full.p': """(files.share_id, files.sharepath_id, files.pathfile_id) IN
-               (SELECT share_id, sharepath_id, pathfile_id
-                FROM files
-                WHERE files.tsfullpath @@ to_tsquery('uguu',%(query)s)
-                ORDER BY share_id, sharepath_id, pathfile_id
-                LIMIT %(matchlimit)s)""",
-    'exact': "lower(filenames.name) = lower(%(equery)s)",
-    },
-  'unlimited': {
-    'name': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
-    'full': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
-    'name.p': "filenames.tsname @@  to_tsquery('uguu', %(query)s)",
-    'full.p': "files.tsfullpath @@ to_tsquery('uguu',%(query)s)",
-    'exact': "lower(filenames.name) = lower(%(equery)s)",
-    },
+    'name': "files.tsname @@  to_tsquery('uguu', %(query)s)",
+    'full': "files.tspath || files.tsname @@ to_tsquery('uguu',%(query)s)",
+    'name.p': "files.tsname @@  to_tsquery('uguu', %(query)s)",
+    'full.p': "files.tspath || files.tsname @@ to_tsquery('uguu',%(query)s)",
+    'exact': "lower(files.name) = lower(%(equery)s)",
 }
 
 class QueryParser:
@@ -99,8 +62,6 @@ class QueryParser:
         return int(s)
     def parse_option_match_full(self):
         pass
-    def parse_option_match_path(self):
-        self.sqlcount_joinpath = True
     def parse_option_match_name(self):
         pass
     def parse_option_match_full_prefix(self):
@@ -127,14 +88,12 @@ class QueryParser:
         conds = []
         common = []
         for t in string.split(arg, ","):
-            if qopt_type.get(t):
-                conds.append(qopt_type[t])
-            elif t in known_filetypes:
+            if t in known_filetypes:
                 common.append(t)
             else:
                 self.error += "Unknown type option argument: '%s'.\n" % t
         if len(common) > 0:
-            sqlcommon = "filenames.type IN %%(%s)s" % option
+            sqlcommon = "files.type IN %%(%s)s" % option
             conds.append(sqlcommon)
             self.options[option] = tuple(common)
         self.sqlcond.append("(" + string.join(conds, " OR ") + ")")
@@ -179,17 +138,6 @@ class QueryParser:
                 self.error += "Unknown sorting parameter: '%s'.\n" % x
         orders = string.join(orders, ",")
         self.order = orders
-    def parse_option_scale(self, option, arg):
-        m =  re.match(r'(?u)(\d+)', arg, re.UNICODE)
-        if m == None:
-            self.error += "Bad %s argument: '%s'.\n" % (option, arg)
-            return
-        m = m.groups()
-        m = int(m[0])
-        if m <= 1000:
-            self.options['scale'] = m
-        else:
-            self.error += "Scale %s is too big.\n" % str(m)
     def parse_option_out_html(self):
         pass
     def parse_option_out_rss(self):
@@ -209,8 +157,6 @@ class QueryParser:
         self.error += "Query option '%s' appears more than once.\n" % option
     def __init__(self, query):
         self.options = dict()
-        self.options['matchlimit'] = default_match_limit
-        self.options['scale'] = 1
         self.options['tsquery'] = 'name'
         self.options['output'] = 'html'
         self.order = "shares.state, files.size DESC"
@@ -231,7 +177,6 @@ class QueryParser:
             'net':   self.parse_option_net,
             'avl':   self.parse_option_avl,
             'order': self.parse_option_order,
-            'scale': self.parse_option_scale,
             'out':   self.parse_option_out,
         }
         qext_executed = dict()
@@ -249,11 +194,7 @@ class QueryParser:
                     self.error += "No arguments for query option '%s'.\n" % w[0]
             else:
                 self.error += "Unknown query option: '%s'.\n" % w[0]
-        if self.options['scale'] == 0:
-            self.sqltsquery = qopt_match['unlimited'][self.options['tsquery']]
-        else:
-            self.sqltsquery = qopt_match['scaled'][self.options['tsquery']]
-            self.options['matchlimit'] *= self.options['scale']
+        self.sqltsquery = qopt_match[self.options['tsquery']]
         if self.sql_full_search_prefix:
             ## prefix search in postgres 8.4, for postgres 8.3 just remove
             words = [x + ":*" for x in words]
@@ -277,10 +218,6 @@ class QueryParser:
         return self.order
     def sqlcount(self):
         str = ""
-        if self.sqlcount_joinpath:
-            str += """
-                JOIN paths USING (share_id, sharepath_id)
-                """
         if self.sqlcount_joinshares:
             str += """
                 JOIN shares USING (share_id)
@@ -319,8 +256,7 @@ def do_search(request, index, searchform):
              'error': parsedq.geterror()})
     sqlcount = cursor.mogrify("""
         SELECT count(*) as count
-        FROM filenames
-        JOIN files USING (filename_id)
+        FROM files
         """ + parsedq.sqlcount(), parsedq.getoptions())
     cursor.execute(sqlcount)
     items = int(cursor.fetchone()['count'])
@@ -334,11 +270,10 @@ def do_search(request, index, searchform):
     sqlquery = cursor.mogrify("""
         SELECT protocol, hostname, hostaddr,
             paths.path AS path, files.sharedir_id AS dirid,
-            filenames.name AS filename, files.size AS size, port,
+            files.name AS filename, files.size AS size, port,
             shares.share_id, paths.sharepath_id as path_id,
             files.pathfile_id as fileid, shares.state
-        FROM filenames
-        JOIN files USING (filename_id)
+        FROM files
         JOIN paths USING (share_id, sharepath_id)
         JOIN shares USING (share_id)
         """ + parsedq.sqlwhere() + """
