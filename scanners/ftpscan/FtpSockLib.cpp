@@ -74,7 +74,7 @@ struct in_port_bytes { unsigned char b1,b2; };
 #include <stdio.h>
 
 #include "FtpSockLib.h"
-#include "logpp.h"
+#include "log.h"
 #ifndef _MSC_VER
 #include "vs_s.h"
 #endif

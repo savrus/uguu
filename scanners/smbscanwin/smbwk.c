@@ -15,9 +15,9 @@
 #include <string.h>
 
 #include "dt.h"
+#include "estat.h"
 #include "smbwk.h"
 #include "log.h"
-#include "estat.h"
 
 #define SHARELIST_TMP_DECLARE size_t listlen = 0, listsize = 0, itemlen
 #define SHARELIST_APPEND_WSTR(slist, wstr) \
@@ -234,15 +234,6 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
 			if (!--c->subdir)
 				SHARELIST_START_ENUM(*c);
             break;
-        case DT_GO_SIBLING:
-            smbwk_url_suspend(c->url);
-            if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
-                LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
-                        c->url, name, type);
-                smbwk_url_suspend_undo(c->url);
-                return -1;
-            }
-            break;
         case DT_GO_CHILD:
             if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
                 LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
@@ -250,30 +241,26 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
                 return -1;
             }
 			c->subdir++;
+            /* 'dir tree' engine won't request readdir afrer go_parent,
+            * so we don't have to call FindFirstFile() in such a case. */
+            wcscat_s(c->url, c->url_len, L"\\*");//no need another checks or convertation from utf8
+            c->find = FindFirstFile(c->url, &c->data);
+            smbwk_url_suspend(c->url);
+            if (INVALID_HANDLE_VALUE == c->find) {
+                LOG_ERR("Enumeration failed for %S (%d)\n", c->url, res = GetLastError());
+                if (NETWORK_LASTERROR(res)) exit(ESTAT_NOCONNECT);
+                if (type == DT_GO_CHILD) {
+                    smbwk_url_suspend(c->url);
+                    c->subdir--;
+                }
+                return -1;
+            }
             break;
         default:
             LOG_ERR("unknown smbwk_go_type %d, url: %s\n", type, c->url);
             return -1;
     }
    
-    if (type != DT_GO_PARENT) {
-        /* 'dir tree' engine won't request readdir afrer go_parent, so we don't
-        * have to call smbc_opendir() in such a case. We track if fd points to an
-        * opened directory in fd_read field of smbwk_dir structure */
-		wcscat_s(c->url, c->url_len, L"\\*");//no need another checks or convertation from utf8
-		c->find = FindFirstFile(c->url, &c->data);
-		smbwk_url_suspend(c->url);
-		if (INVALID_HANDLE_VALUE == c->find) {
-			LOG_ERR("Enumeration failed for %S (%d)\n", c->url, res = GetLastError());
-			if (NETWORK_LASTERROR(res)) exit(ESTAT_NOCONNECT);
-			if (type == DT_GO_CHILD) {
-				smbwk_url_suspend(c->url);
-				c->subdir--;
-			}
-			return -1;
-		}
-    }
-
     return 1;
 }
 

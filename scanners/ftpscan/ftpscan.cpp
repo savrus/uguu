@@ -34,9 +34,9 @@
 #endif
 
 #include "dt.h"
-#include "logpp.h"
-#include "FtpSockLib.h"
 #include "estat.h"
+#include "FtpSockLib.h"
+#include "log.h"
 
 #define DEFAULT_ANSI_CODEPAGE "latin1"
 #define LS_R_BUFFER_LEN 8192
@@ -239,6 +239,7 @@ static struct dt_dentry *fill_dentry(FtpFindInfo &fi)
 	return result;
 }
 
+#ifdef CHECK_UTF8
 static bool valid_utf8(const char *str)
 {
 	LOG_ASSERT(str, "Bad arguments\n");
@@ -255,6 +256,7 @@ static bool valid_utf8(const char *str)
 	}
 	return true;
 }
+#endif // CHECK_UTF8
 
 static struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 {
@@ -274,8 +276,11 @@ static struct dt_dentry * ftp_readdir_fn(CFtpControlEx *ftp)
 			}
 		}
 	} while( !strcmp(".", ftp->findinfo.Data.name) || 
-			!strcmp("..", ftp->findinfo.Data.name) || 
-			!valid_utf8(ftp->findinfo.Data.name));
+			!strcmp("..", ftp->findinfo.Data.name)
+#ifdef CHECK_UTF8
+			|| !valid_utf8(ftp->findinfo.Data.name)
+#endif // CHECK_UTF8
+			);
 	return fill_dentry(ftp->findinfo);
 }
 
