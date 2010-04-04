@@ -44,7 +44,7 @@ int dt_compare(const void *dd1, const void *dd2)
 
 /* sorts list of dt_detnries by names and
  * assignes fids according to the order starting from s */
-static struct dt_dentry * dt_list_sort(struct dt_dentry *d, size_t nmemb, unsigned int s)
+static struct dt_dentry * dt_list_sort(struct dt_dentry *d, size_t nmemb, unsigned int s, unsigned int *id)
 {
     struct dt_dentry **da;
     struct dt_dentry *dp;
@@ -55,9 +55,11 @@ static struct dt_dentry * dt_list_sort(struct dt_dentry *d, size_t nmemb, unsign
     for (da[0] = d, i = 1; i < nmemb; i++)
         da[i] = da[i-1]->sibling;
     qsort (da, nmemb, sizeof(struct dt_dentry *), dt_compare);
-    for (i = 1, dp = da[0], dp->fid = s++; i < nmemb; i++) {
+    for (i = 1, dp = da[0], dp->fid = s++,
+            dp->id = (id != NULL) ? (*id)++ : 0; i < nmemb; i++) {
         dp->sibling = da[i];
         dp = da[i];
+        dp->id = (id != NULL) ? (*id)++ : 0;
         dp->fid = s++;
     }
     dp->sibling = NULL;
@@ -175,7 +177,6 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
         dn->parent = d;
         if (dn->type == DT_DIR) {
             dirs++;
-            dn->id = (*id)++;
             ddc = dt_linkchild(&(d->child), ddc, dn);
         } else {
             files++;
@@ -188,9 +189,9 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
         dfc->sibling = NULL;
 
     if (dirs > 0)
-        d->child = dt_list_sort(d->child, dirs, 0);
+        d->child = dt_list_sort(d->child, dirs, 0, id);
     if (files > 0)
-        d->file_child = dt_list_sort(d->file_child, files, dirs);
+        d->file_child = dt_list_sort(d->file_child, files, dirs, NULL);
     d->items = files + dirs;
 }
 
