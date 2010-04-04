@@ -1,6 +1,6 @@
 CC = gcc
 CXX = g++
-CALLFLAGS = -Wall -O3
+CALLFLAGS = -Wall -O3 -I../libuguu
 CFLAGS += $(CALLFLAGS)
 CXXFLAGS += $(CALLFLAGS)
 LDFLAGS += 
@@ -8,11 +8,15 @@ LDFLAGS +=
 CCCMD = $(CC) $(CFLAGS)
 CXXCMD = $(CXX) $(CXXFLAGS)
 
-ftpscan: dt.o ftpparse.o FtpSockLib.o vs_s.o ftpscan.o
-	$(CXXCMD) dt.o ftpparse.o FtpSockLib.o vs_s.o ftpscan.o -o ftpscan
+LIBUGUU = ../libuguu/libuguu.a
+OBJ = ftpparse.o FtpSockLib.o vs_s.o ftpscan.o
+NAME = ftpscan
 
-dt.o: dt.c dt.h logpp.h
-	$(CCCMD) -c dt.c -o dt.o
+$(NAME): $(OBJ) $(LIBUGUU)
+	$(CXXCMD) $(OBJ) $(LIBUGUU) -o $(NAME)
+
+$(LIBUGUU):
+	$(MAKE) -C ../libuguu
 
 vs_s.o: vs_s.c vs_s.h
 	$(CCCMD) -c vs_s.c -o vs_s.o
@@ -20,17 +24,17 @@ vs_s.o: vs_s.c vs_s.h
 ftpparse.o: ftpparse.c ftpparse.h vs_s.h
 	$(CCCMD) -c ftpparse.c -o ftpparse.o
 
-FtpSockLib.o: FtpSockLib.cpp FtpSockLib.h ftpparse.h vs_s.h logpp.h
+FtpSockLib.o: FtpSockLib.cpp FtpSockLib.h ftpparse.h vs_s.h $(LIBUGUU)
 	$(CXXCMD) -c FtpSockLib.cpp -o FtpSockLib.o
 
-ftpscan.o: ftpscan.cpp FtpSockLib.h dt.h logpp.h
+ftpscan.o: ftpscan.cpp FtpSockLib.h $(LIBUGUU)
 	$(CXXCMD) -c ftpscan.cpp -o ftpscan.o
 
-install: ftpscan
-	cp ftpscan ../../bin/
+install: $(NAME)
+	cp $(NAME) ../../bin/
 
 clean:
-	rm -f dt.o ftpscan.o ftpparse.o FtpSockLib.o vs_s.o ftpscan
+	rm -f $(OBJ) $(NAME)
 
 cleanall: clean
-	rm -f ../../bin/ftpscan
+	rm -f ../../bin/$(NAME)

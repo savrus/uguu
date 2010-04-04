@@ -44,8 +44,7 @@ void buf_clear(struct buf_str *bs)
 
 size_t buf_append(struct buf_str *bs, const char *s)
 {
-    size_t n;
-    n = strlen(s);
+    size_t n = strlen(s);
     char *c;
 
     if (bs->length + n >= bs->size) {

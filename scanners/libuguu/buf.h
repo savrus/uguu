@@ -59,4 +59,9 @@ void buf_free(struct buf_str *bs);
 }
 #endif
 
+#ifdef _MSC_VER
+/* C99 support */
+#define va_copy(dst,src) (dst) = (src)
+#endif
+
 #endif /* BUF_H */
