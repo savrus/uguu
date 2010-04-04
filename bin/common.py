@@ -63,7 +63,7 @@ def run_scanner(cmd, ip, proto, port, ext = ""):
 # copy known_filetypes and knows_protocols to webuguu/common.py
 # required by dbinit.py
 known_protocols = ('smb', 'ftp')
-known_filetypes = ('audio', 'video',  'archive', 'cdimage', 'exe', 'lib',
+known_filetypes = ('dir', 'video', 'audio', 'archive', 'cdimage', 'exe', 'lib',
                    'script', 'image', 'document')
 #types of files recognizable by the spider
 filetypes = {

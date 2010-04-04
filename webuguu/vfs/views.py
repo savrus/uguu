@@ -196,7 +196,6 @@ def share(request, proto, hostname, port, path=""):
     cursor.execute("""
         SELECT sharedir_id AS dirid, size, name
         FROM files
-        LEFT JOIN filenames ON (files.filename_id = filenames.filename_id)
         WHERE share_id = %(s)s
             AND sharepath_id = %(p)s
             AND pathfile_id >= %(o)s

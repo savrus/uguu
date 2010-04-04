@@ -111,15 +111,13 @@ def ddl(db):
             path text NOT NULL,
             items integer DEFAULT 0,
             size bigint DEFAULT 0,
-            tspath tsvector,
             UNIQUE (share_id, path),
             PRIMARY KEY (share_id, sharepath_id)
         );
         CREATE TABLE filenames (
             filename_id BIGSERIAL PRIMARY KEY,
             name text UNIQUE NOT NULL,
-            type filetype,
-            tsname tsvector
+            type filetype
         );
         CREATE TABLE files (
             share_id integer,
@@ -127,8 +125,10 @@ def ddl(db):
             pathfile_id integer,
             sharedir_id integer DEFAULT 0,
             size bigint DEFAULT 0,
-            filename_id bigint REFERENCES filenames ON DELETE RESTRICT,
-            tsfullpath tsvector,
+            name text NOT NULL,
+            type filetype,
+            tsname tsvector,
+            tspath tsvector,
             FOREIGN KEY (share_id, sharepath_id) REFERENCES paths
                 ON DELETE CASCADE,
             PRIMARY KEY (share_id, sharepath_id, pathfile_id)
@@ -156,17 +156,15 @@ def ddl_prog(db):
             EXECUTE PROCEDURE share_state_change();
         
         CREATE OR REPLACE FUNCTION gfid(
-                IN text, IN filetype, IN text)
-            RETURNS integer AS $$
+                IN text, IN filetype)
+            RETURNS void AS $$
             DECLARE id INTEGER;
             BEGIN
                 SELECT INTO id filename_id FROM filenames WHERE name = $1;
                 IF NOT FOUND THEN
-                    INSERT INTO filenames (name, type, tsname)
-                    VALUES ($1, $2, to_tsvector('uguu', $3));
-                    RETURN lastval();
+                    INSERT INTO filenames (name, type)
+                    VALUES ($1, $2);
                 END IF;
-                RETURN id;
             END;
             $$ LANGUAGE 'plpgsql' VOLATILE;
 	""")
@@ -175,14 +173,13 @@ def ddl_prog(db):
 def ddl_index(db):
     cursor = db.cursor()
     cursor.execute("""
-        CREATE INDEX filenames_name ON filenames USING hash(lower(name));
-        CREATE INDEX filenames_tsname ON filenames USING gin(tsname);
-        CREATE INDEX filenames_type ON filenames (type);
         CREATE INDEX paths_path ON paths USING hash(path);
-        CREATE INDEX files_filename ON files (filename_id);
-        CREATE INDEX files_sharedir ON files ((sharedir_id != 0));
+        CREATE INDEX filenames_name ON files USING hash(name);
+        CREATE INDEX files_name ON files USING hash(lower(name));
+        CREATE INDEX files_tsname ON files USING gin(tsname);
+        CREATE INDEX files_type ON files (type);
         CREATE INDEX files_size ON files (size);
-        CREATE INDEX files_tsfullpath ON files USING gin(tsfullpath);
+        CREATE INDEX files_tsfullpath ON files USING gin((tspath || tsname));
         CREATE INDEX shares_hostname ON shares USING hash(hostname);
         CREATE INDEX shares_network ON shares USING hash(network);
         CREATE INDEX shares_state ON shares USING hash(state);
@@ -283,7 +280,7 @@ def grant_access(db, db_user, ReadOnly):
             ON SEQUENCE shares_share_id_seq, filenames_filename_id_seq
             TO %(u)s;
             GRANT EXECUTE
-            ON FUNCTION share_state_change(), gfid(IN text, IN filetype, IN text)
+            ON FUNCTION share_state_change(), gfid(IN text, IN filetype)
             TO %(u)s;
             """ % {'u': db_user})
 

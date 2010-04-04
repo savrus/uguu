@@ -25,7 +25,7 @@ def connectdb():
 
 # this must be the same as in bin/common.py
 known_protocols = ('smb', 'ftp')
-known_filetypes = ('audio', 'video',  'archive', 'cdimage', 'exe', 'lib',
+known_filetypes = ('dir', 'video', 'audio', 'archive', 'cdimage', 'exe', 'lib',
                    'script', 'image', 'document')
 # types selectable by user search. 'type:' value corresponds to filetypes
 # table in bin/common.py with single exception for 'type:dir'

@@ -46,11 +46,11 @@ def suffix(filename):
 def tsprepare(string):
     relax = re.sub(r'(?u)\W', ' ', string, re.UNICODE)
     relax = re.sub(r'(?u)([Ss])(\d+)([Ee])(\d+)',
-                   '\\1\\2\\3\\4 \\2 \\4', relax, re.UNICODE)
+                   '\\1\\2\\3\\4 \\1\\2 \\3\\4 \\2 \\4 ', relax, re.UNICODE)
     return relax
 
-fquery_select = "INSERT INTO files (share_id, sharepath_id, pathfile_id, sharedir_id, size, filename_id) VALUES "
-fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, gfid(%(n)s, %(t)s, %(r)s))"
+fquery_select = "INSERT INTO files (share_id, sharepath_id, pathfile_id, sharedir_id, size, name, type, tsname, tspath) VALUES "
+fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(n)s, %(t)s, to_tsvector('uguu', %(r)s), to_tsvector('uguu', %(rt)s))"
 
 class PsycoCache:
     def __init__(self, cursor):
@@ -78,7 +78,7 @@ class PsycoCache:
     def allcommit(self):
         self.fcommit()
 
-def scan_line(cursor, share, line, qcache):
+def scan_line(cursor, share, line, qcache, paths_buffer):
     try:
         line = unicode(line, scanners_locale)
     except:
@@ -92,8 +92,10 @@ def scan_line(cursor, share, line, qcache):
             l, id = string.split(s=line, sep=' ', maxsplit=2)
             path = ""
         id = int(id)
-        qcache.append("INSERT INTO paths (share_id, sharepath_id, path, tspath) VALUES (%(s)s, %(id)s, %(p)s, to_tsvector('uguu', %(t)s))",
-            {'s':share, 'id':id, 'p':path, 't':tsprepare(path)})
+        paths_buffer[id] = tsprepare(path)
+        qcache.append("INSERT INTO paths (share_id, sharepath_id, path) VALUES (%(s)s, %(id)s, %(p)s)",
+            {'s':share, 'id':id, 'p':path})
+
     else:
         # 'file' type of line
         try:
@@ -110,6 +112,7 @@ def scan_line(cursor, share, line, qcache):
             # if directory then update paths table
             qcache.append("UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s WHERE share_id = %(s)s AND sharepath_id = %(d)s",
                 {'p':path, 'f':file, 'i':items, 'sz':size, 's':share, 'd':dirid})
+            paths_buffer.pop(dirid)
         if path == 0:
             # if share root then it's size is the share size
             qcache.totalsize = size
@@ -117,9 +120,9 @@ def scan_line(cursor, share, line, qcache):
             # not share root
             # save all info into the files table
             suf = suffix(name)
-            type = filetypes_reverse.get(suf)
+            type = filetypes_reverse.get(suf) if dirid == 0 else 'dir'
             qcache.fappend({'s':share, 'p':path, 'f':file, 'did':dirid,
-                'sz':size, 'n':name, 't':type, 'r':tsprepare(name)})
+                'sz':size, 'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path]})
 
 
 def scan_share(db, share_id, proto, host, port, oldhash, command):
@@ -166,21 +169,12 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
             DELETE FROM paths WHERE share_id = %(s)s;
             """, {'s':share_id})
         qcache = PsycoCache(cursor)
+        paths_buffer = dict()
         save.seek(0)
         for line in save:
-            scan_line(cursor, share_id, line.strip('\n'), qcache)
+            scan_line(cursor, share_id, line.strip('\n'), qcache, paths_buffer)
         qcache.allcommit()
         save.close()
-        cursor.execute("""
-            UPDATE ONLY files SET tsfullpath = paths.tspath || filenames.tsname
-            FROM files AS f
-            JOIN filenames USING (filename_id)
-            JOIN paths  USING (share_id, sharepath_id)
-            WHERE files.share_id = f.share_id
-                AND files.sharepath_id = f.sharepath_id
-                AND files.pathfile_id = f.pathfile_id
-                AND files.share_id = %(s)s
-            """, {'s': share_id})
         cursor.execute("""
             UPDATE shares
             SET size = %(sz)s, last_scan = now(), hash = %(h)s
