@@ -95,20 +95,21 @@ size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap)
     va_copy(aq, ap);
     ret = vsnprintf(bs->s + bs->length, bs->size - bs->length, fmt, aq);
     va_end(aq);
-    while (ret >= bs->size - bs->length) {
-        c = (char *) realloc(bs->s, (bs->size + ret) * sizeof(char));
+    while ((ret < 0) || ((size_t) ret >= bs->size - bs->length)) {
+        size_t uret = (ret < 0) ? BUF_SIZE_STEP : (size_t) ret;
+        c = (char *) realloc(bs->s, (bs->size + uret) * sizeof(char));
         if (c == NULL) {
             LOG_ERR("realloc() returned NULL\n");
             bs->error = 1;
             return 0;
         }
         bs->s = c;
-        bs->size += ret;
+        bs->size += uret;
         va_copy(aq, ap);
         ret = vsnprintf(bs->s + bs->length, bs->size - bs->length, fmt, aq);
         va_end(aq);
     }
-    bs->length += ret;
+    bs->length += (size_t) ret;
 
     return ret;
 }
