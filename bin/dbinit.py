@@ -87,7 +87,8 @@ def ddl(db):
             priority smallint NOT NULL DEFAULT -1
         );
         CREATE TABLE shares (
-            share_id SERIAL PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
+            share_id int DEFAULT NULL NOT NULL,
             scantype_id integer REFERENCES scantypes ON DELETE RESTRICT NOT NULL,
             network varchar(32) REFERENCES networks ON DELETE CASCADE NOT NULL,
             protocol proto NOT NULL,
@@ -129,8 +130,6 @@ def ddl(db):
             type filetype,
             tsname tsvector,
             tspath tsvector,
-            FOREIGN KEY (share_id, sharepath_id) REFERENCES paths
-                ON DELETE CASCADE,
             PRIMARY KEY (share_id, sharepath_id, pathfile_id)
         );
         """)
@@ -154,6 +153,17 @@ def ddl_prog(db):
         CREATE TRIGGER share_stage_change_trigger
             BEFORE UPDATE ON shares FOR EACH ROW
             EXECUTE PROCEDURE share_state_change();
+        
+        CREATE OR REPLACE FUNCTION share_init_share_id()
+            RETURNS trigger AS
+            $$BEGIN
+                NEW.share_id = NEW.id;
+                RETURN NEW;
+            END;$$
+            LANGUAGE 'plpgsql' VOLATILE COST 100;
+        CREATE TRIGGER share_init_share_id_trigger
+            BEFORE INSERT ON shares FOR EACH ROW
+            EXECUTE PROCEDURE share_init_share_id();
         
         CREATE OR REPLACE FUNCTION gfid(
                 IN text, IN filetype)

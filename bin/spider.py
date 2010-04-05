@@ -125,7 +125,7 @@ def scan_line(cursor, share, line, qcache, paths_buffer):
                 'sz':size, 'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path]})
 
 
-def scan_share(db, share_id, proto, host, port, oldhash, command):
+def scan_share(db, id, proto, host, port, oldhash, command):
     cursor = db.cursor()
     hoststr = sharestr(proto, host, port)
     address = socket.gethostbyname(host)
@@ -150,36 +150,70 @@ def scan_share(db, share_id, proto, host, port, oldhash, command):
         # acquire lock on the shares table again
         shares.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
-            WHERE share_id = %(s)s;
-            """, {'s':share_id, 'w': wait_until_next_scan_failed})
+            WHERE id = %(s)s;
+            """, {'s':id, 'w': wait_until_next_scan_failed})
         db.commit()
         log("Scanning %s failed (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
     elif hash.hexdigest() == oldhash:
         cursor.execute("""
             UPDATE shares SET last_scan = now()
-            WHERE share_id = %(s)s
-            """, {'s':share_id})
+            WHERE id = %(s)s
+            """, {'s':id})
         db.commit()
         log("Scanning %s succeded. No changes found (scan time %s).", (hoststr, datetime.datetime.now() - start))
     else:
         scan_time = datetime.datetime.now() - start
         start = datetime.datetime.now()
+        # FIXME: aquire lock on shares
         cursor.execute("""
-            DELETE FROM files WHERE share_id = %(s)s;
-            DELETE FROM paths WHERE share_id = %(s)s;
-            """, {'s':share_id})
+            SELECT share_id FROM shares WHERE id = %(s)s
+            """, {'s': id})
+        if id == cursor.fetchone()['share_id']:
+            # This share is not a link, check if there are links to it
+            cursor.execute("""
+                SELECT id FROM shares WHERE share_id = %(s)s AND id != %(s)s
+                """, {'s': id})
+            if cursor.rowcount > 0:
+                # There are links. Give all contents to new owner
+                new_id = cursor.fetchone()['id']
+                cursor.execute("""
+                    UPDATE shares SET share_id = %(n)s WHERE share_id = %(s)s AND id != %(s)s;
+                    UPDATE paths SET share_id = %(n)s WHERE share_id = %(s)s;
+                    UPDATE files SET share_id = %(n)s WHERE share_id = %(s)s;
+                    """, {'s': id, 'n': new_id })
+            else:
+                cursor.execute("""
+                    DELETE FROM files WHERE share_id = %(s)s;
+                    DELETE FROM paths WHERE share_id = %(s)s;
+                    """, {'s':id})
+        # Check if current share can be linked to some other share
+        cursor.execute("""
+            SELECT id, size, protocol, hostname, port
+            FROM shares WHERE id = share_id AND hash = %(h)s
+            """, {'h': hash.hexdigest()})
+        if cursor.rowcount > 0:
+            nid, nsize, nproto, nhost, nport = cursor.fetchone()
+            cursor.execute("""
+                UPDATE shares
+                SET share_id = %(n)s, size = %(sz)s, last_scan = now(), hash = %(h)s
+                WHERE id = %(s)s
+                """, {'s': id, 'n': nid, 'sz': nsize, 'h':hash.hexdigest()})
+            db.commit()
+            log("Scanning %s succeded. Found same contents at share %s and link to it (scan time %s, update time %s).", (hoststr, sharestr(nproto, nhost, nport), scan_time, datetime.datetime.now() - start))
+            return
+        # FIXME: release lock on shares
         qcache = PsycoCache(cursor)
         paths_buffer = dict()
         save.seek(0)
         for line in save:
-            scan_line(cursor, share_id, line.strip('\n'), qcache, paths_buffer)
+            scan_line(cursor, id, line.strip('\n'), qcache, paths_buffer)
         qcache.allcommit()
         save.close()
         cursor.execute("""
             UPDATE shares
-            SET size = %(sz)s, last_scan = now(), hash = %(h)s
-            WHERE share_id = %(s)s
-            """, {'s':share_id, 'h': hash.hexdigest(), 'sz': qcache.totalsize})
+            SET share_id = %(s)s, size = %(sz)s, last_scan = now(), hash = %(h)s
+            WHERE id = %(s)s
+            """, {'s':id, 'h': hash.hexdigest(), 'sz': qcache.totalsize})
         db.commit()
         log("Scanning %s succeded. Database updated (scan time %s, update time %s).", (hoststr, scan_time, datetime.datetime.now() - start))
 
@@ -194,7 +228,7 @@ if __name__ == "__main__":
     while True:
         db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         shares.execute("""
-            SELECT share_id, shares.protocol, hostname, port, hash, scan_command
+            SELECT id, shares.protocol, hostname, port, hash, scan_command
             FROM shares
             LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
             WHERE state = 'online' AND (next_scan IS NULL OR next_scan < now())
@@ -205,7 +239,7 @@ if __name__ == "__main__":
         id, proto, host, port, hash, command = shares.fetchone()
         shares.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
-            WHERE share_id = %(s)s AND (next_scan IS NULL OR next_scan < now())
+            WHERE id = %(s)s AND (next_scan IS NULL OR next_scan < now())
             """, {'s':id, 'w': wait_until_next_scan})
         if shares.statusmessage != 'UPDATE 1':
             continue

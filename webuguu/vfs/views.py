@@ -127,15 +127,13 @@ def share(request, proto, hostname, port, path=""):
     # detect share
     if share_id != 0:
         cursor.execute("""
-            SELECT protocol, hostname, port, hostaddr,
-                   state, last_scan, next_scan, last_state_change
+            SELECT hostaddr, state, last_scan, next_scan, last_state_change
             FROM shares
-            WHERE share_id = %(s)s
-            """, {'s':share_id})
+            WHERE share_id = %(s)s AND protocol = %(pr)s
+                AND hostname = %(h)s AND port = %(p)s
+            """, {'s':share_id, 'pr': proto, 'h': hostname, 'p': port})
         try:
-            d_proto, d_hostname, d_port, hostaddr, state, scantime, nexttime, changetime = cursor.fetchone()
-            if [proto, hostname, int(port)] != [d_proto, d_hostname, d_port]:
-                return HttpResponseRedirect(".")
+            hostaddr, state, scantime, nexttime, changetime = cursor.fetchone()
         except: 
             return HttpResponseRedirect(".")
     else:
