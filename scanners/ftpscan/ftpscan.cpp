@@ -214,12 +214,9 @@ static void TryReconnect(CFtpControlEx *ftp)
 {
 	ftp->Quit();
 	if( !ftp->tryconn() ) {
-		LOG_ERR("Cannot connect %d.%d.%d.%d:%d\n", 
-			 ftp->ServerIP        & 0xFF,
-			(ftp->ServerIP >>  8) & 0xFF,
-			(ftp->ServerIP >> 16) & 0xFF,
-			 ftp->ServerIP >> 24,
-			 ftp->ServerPORT);
+		LOG_ERR("Cannot connect %s:%d\n", 
+			inet_ntoa(ftp->ServerIP),
+			ftp->ServerPORT);
 		throw CFtpControl::NetworkError();
 	}
 	if( !ftp->Logon() ) {
