@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)\win&quot;;&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -63,7 +63,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libuguu.lib libiconv.lib Ws2_32.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;$(ProjectDir)\win&quot;;&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalLibraryDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)\win&quot;;&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -138,7 +138,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libuguu.lib libiconv.lib Ws2_32.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(ProjectDir)\win&quot;;&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalLibraryDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -195,7 +195,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)\win&quot;;&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -216,7 +216,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libuguu.lib libiconv.lib Ws2_32.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(ProjectDir)\win&quot;;&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalLibraryDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -281,12 +281,6 @@
 				RelativePath=".\FtpSockLib.h"
 				>
 			</File>
-		</Filter>
-		<Filter
-			Name="Resource Files"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
-			>
 		</Filter>
 	</Files>
 	<Globals>

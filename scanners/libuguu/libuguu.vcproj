@@ -156,6 +156,10 @@
 				RelativePath=".\dt.c"
 				>
 			</File>
+			<File
+				RelativePath=".\getpass.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -172,6 +176,10 @@
 			</File>
 			<File
 				RelativePath=".\estat.h"
+				>
+			</File>
+			<File
+				RelativePath=".\getpass.h"
 				>
 			</File>
 			<File

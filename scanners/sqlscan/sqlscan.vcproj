@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9,00"
-	Name="smbscan"
-	ProjectGUID="{2960CCC5-F5D2-4BEF-BAE0-12B26AB47AC8}"
-	RootNamespace="smbscanwin"
+	Name="sqlscan"
+	ProjectGUID="{B83A9B5D-CA4C-48C7-B8C2-83C5DDCE6EBD}"
+	RootNamespace="sqlscan"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -61,9 +61,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libuguu.lib Mpr.lib Netapi32.lib"
+				AdditionalDependencies="libuguu.lib libpq.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalLibraryDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -136,9 +136,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libuguu.lib Mpr.lib Netapi32.lib"
+				AdditionalDependencies="libuguu.lib libpq.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalLibraryDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -194,7 +194,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -213,9 +213,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libuguu.lib Mpr.lib Netapi32.lib"
+				AdditionalDependencies="libuguu.lib libpq.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(SolutionDir)\libuguu&quot;"
+				AdditionalLibraryDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -255,11 +255,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\smbscan.c"
+				RelativePath=".\sqlscan.c"
 				>
 			</File>
 			<File
-				RelativePath=".\smbwk.c"
+				RelativePath=".\sqlwk.c"
 				>
 			</File>
 		</Filter>
@@ -269,7 +269,7 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\smbwk.h"
+				RelativePath=".\sqlwk.h"
 				>
 			</File>
 		</Filter>
