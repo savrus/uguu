@@ -14,6 +14,10 @@
 #include "log.h"
 #include "buf.h"
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)
+#endif
+
 static int sqlwk_query(struct sqlwk_dir *c, const char *query, ...)
 {
     struct buf_str *bs;

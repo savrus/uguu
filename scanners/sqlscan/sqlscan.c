@@ -7,13 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
-#include <unistd.h>
 
 #include "dt.h"
 #include "sqlwk.h"
 #include "estat.h"
 #include "buf.h"
+#include "getpass.h"
 
 #define MAX_PASSWORD_LENGTH 100
 
@@ -48,8 +47,7 @@ int main(int argc, char **argv)
     char *dbport = NULL;
     char *dbuser = "postgres";
     char *dbname = "uguu";
-    char dbpass[MAX_PASSWORD_LENGTH];
-    struct termios tset, torig;
+    char dbpass[MAX_PASSWORD_LENGTH+2];
     struct buf_str *bs;
     int i;
     int ret;
@@ -92,19 +90,10 @@ int main(int argc, char **argv)
                     case 'd':
                         i++; dbname = argv[i]; break;
                     case 'P':
-                        tcgetattr(fileno(stdin), &torig);
-                        tset = torig;
-                        tset.c_lflag &= ~ECHO;
-                        tcsetattr(fileno(stdin), TCSADRAIN, &tset);
-                        if (fgets(dbpass, MAX_PASSWORD_LENGTH, stdin) == NULL)
-                            exit(ESTAT_FAILURE);
-                        tcsetattr(fileno(stdin), TCSADRAIN, &torig);
-                        if ((strlen(dbpass) == 0)
-                            || (dbpass[strlen(dbpass)-1] != '\n')) {
-                            fprintf(stderr, "Too long or bad password");
+                        if (gp_readline(dbpass, MAX_PASSWORD_LENGTH+2) == 0) {
+                            fprintf(stderr, "Too long, bad or no password\n");
                             exit(ESTAT_FAILURE);
                         }
-                        dbpass[strlen(dbpass)-1] = 0;
                         break;
                     default:
                         usage(argv[0], ESTAT_FAILURE);
