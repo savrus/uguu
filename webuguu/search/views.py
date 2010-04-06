@@ -181,7 +181,7 @@ class QueryParser:
         }
         qext_executed = dict()
         words = []
-        for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,)*)?', query, re.UNICODE):
+        for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,|\-)*)?', query, re.UNICODE):
             if w[1] == "":
                 words.append(w[0])
             elif qext.get(w[0]):
