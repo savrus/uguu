@@ -271,7 +271,7 @@ def do_search(request, index, searchform):
         SELECT protocol, hostname, hostaddr,
             paths.path AS path, files.sharedir_id AS dirid,
             files.name AS filename, files.size AS size, port,
-            shares.share_id, paths.sharepath_id as path_id,
+            shares.id AS share_id, paths.sharepath_id as path_id,
             files.pathfile_id as fileid, shares.state
         FROM files
         JOIN paths USING (share_id, sharepath_id)

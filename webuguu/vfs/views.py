@@ -76,7 +76,7 @@ def sharelist(request, column, name, is_this_host):
             {'error':"No shares within %s '%s'" % (column, name)})
     offset, gobar = offset_prepare(request, items, vfs_items_per_page)
     cursor.execute("""
-        SELECT share_id, state, size, network, protocol, hostname, port
+        SELECT id as share_id, state, size, network, protocol, hostname, port
         FROM shares
         WHERE %s = %%(n)s
         ORDER BY state, hostname
@@ -114,39 +114,39 @@ def share(request, proto, hostname, port, path=""):
             {'error':"Unsupported protocol: '%s'" % proto})
     cursor = db.cursor()
     try:
-        share_id = int(request.GET.get('s', 0))
+        id = int(request.GET.get('s', 0))
         path_id = int(request.GET.get('p', 0))
         page_offset = int(request.GET.get('o', 0))
         url = dict()
-        url['share'] = [('s', share_id)]
+        url['share'] = [('s', id)]
         url['path'] = [('p', path_id)]
         url['offset'] = [('o', page_offset)] if page_offset > 0 else []
     except:
         return render_to_response('vfs/error.html',
             {'error':"Wrong parameters."})
     # detect share
-    if share_id != 0:
+    if id != 0:
         cursor.execute("""
-            SELECT hostaddr, state, last_scan, next_scan, last_state_change
+            SELECT share_id, hostaddr, state, last_scan, next_scan, last_state_change
             FROM shares
-            WHERE share_id = %(s)s AND protocol = %(pr)s
+            WHERE id = %(s)s AND protocol = %(pr)s
                 AND hostname = %(h)s AND port = %(p)s
-            """, {'s':share_id, 'pr': proto, 'h': hostname, 'p': port})
+            """, {'s':id, 'pr': proto, 'h': hostname, 'p': port})
         try:
-            hostaddr, state, scantime, nexttime, changetime = cursor.fetchone()
+            share_id, hostaddr, state, scantime, nexttime, changetime = cursor.fetchone()
         except: 
             return HttpResponseRedirect(".")
     else:
         cursor.execute("""
-            SELECT share_id, hostaddr, state, last_scan, next_scan, last_state_change
+            SELECT id, share_id, hostaddr, state, last_scan, next_scan, last_state_change
             FROM shares
             WHERE protocol = %(p)s
                 AND hostname = %(h)s
                 AND port = %(port)s
             """, {'p': proto, 'h': hostname, 'port': port})
         try:
-            share_id, hostaddr, state, scantime, nexttime, changetime = cursor.fetchone()
-            url['share'] = [('s', share_id)] 
+            id, share_id, hostaddr, state, scantime, nexttime, changetime = cursor.fetchone()
+            url['share'] = [('s', id)] 
         except:
             return render_to_response('vfs/error.html',
                 {'error':"Unknown share."})
@@ -226,7 +226,7 @@ def share(request, proto, hostname, port, path=""):
          'urlpath': path,
          'items': items,
          'size': size,
-         'share_id': share_id,
+         'share_id': id,
          'fastup': fastuplink,
          'fastself': fastselflink,
          'offset': offset,
