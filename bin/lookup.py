@@ -309,7 +309,7 @@ def get_networks(db, network = None):
             yield (net[0], net[1])
     else:
         for net in cursor.fetchall():
-            if net == network:
+            if net[0] == network:
                 yield (net[0], net[1])
                 return
         print "Unknown network \"%s\"" % network
@@ -495,7 +495,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 2 and sys.argv[1] == 'runall':
         netw = None
     elif len(sys.argv) == 3 and sys.argv[1] == 'runnet':
-        netw = sys.argv[3]
+        netw = sys.argv[2]
     else:
         print 'Invalid command-line, try %s help' % sys.argv[0]
         sys.exit(1)
