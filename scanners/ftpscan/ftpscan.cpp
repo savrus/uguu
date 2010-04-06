@@ -37,9 +37,11 @@
 #include "estat.h"
 #include "FtpSockLib.h"
 #include "log.h"
+#include "getpass.h"
 
 #define DEFAULT_ANSI_CODEPAGE "latin1"
 #define LS_R_BUFFER_LEN 8192
+#define MAX_PASSWORD_LEN 100
 
 class CFtpControlEx
 : public CFtpControl
@@ -323,7 +325,7 @@ static void usage(char *binname, int err)
 {
     char *bin = strrchr(binname, _DIR_SLASH);
     if (bin) binname = bin + 1;
-	fprintf(stderr, "Usage: %s [-l] [-f] [(-c|-C) cp] [-P##] [-t###] [(-R|-M)#] [-u username] [-p password] [-h] host_ip\n", binname);
+	fprintf(stderr, "Usage: %s [-l] [-f] [(-c|-C) cp] [-P##] [-t###] [(-R|-M)#] [-u username] [-p] [-h] host_ip\n", binname);
     fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
     fprintf(stderr, "  -f\tprint full paths (debug output)\n");
     fprintf(stderr, "  -c cp\tset codepage for non-utf8 servers (default is " DEFAULT_ANSI_CODEPAGE ")\n");
@@ -332,6 +334,7 @@ static void usage(char *binname, int err)
     fprintf(stderr, "  -t###\tconnection timeout ### in seconds (default is " _TOSTRING(DEF_TIMEOUT) ")\n");
 	fprintf(stderr, "  -R#\tscan with LIST -R command, # = a|p for active or passive mode\n");
 	fprintf(stderr, "  -M#\tdisable quick scan, # = a|p for active or passive mode\n");
+	fprintf(stderr, "  -p\tfirst line (ends with newline char) in stdin is password");
     fprintf(stderr, "  -h\tprint this help\n");
     exit(err);
 }
@@ -348,7 +351,7 @@ int main(int argc, char *argv[])
     struct dt_dentry d = {DT_DIR, const_cast<char*>(""), 0, NULL, NULL, NULL, 0};
     CFtpControlEx curdir;
     bool full = false, lookup = false;
-    char *host;
+    char *host, passw[MAX_PASSWORD_LEN+2];
 
     CFtpControl::DefaultAnsiCP = DEFAULT_ANSI_CODEPAGE;
 
@@ -381,7 +384,11 @@ int main(int argc, char *argv[])
 				curdir.login = argv[++i];
 				break;
 			case 'p':
-				curdir.pass = argv[++i];//TODO: read from stdin
+				if (gp_readline(passw, MAX_PASSWORD_LEN+2) == 0) {
+					LOG_ERR("Empty, not completed, too long password or input error\n");
+					usage(argv[0], ESTAT_FAILURE);
+				}
+				curdir.pass = passw;
 				break;
 			case 'R':
 			case 'M':
