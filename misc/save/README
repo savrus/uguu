@@ -20,7 +20,7 @@ Restoring
 
 Restoring is done by a slightly modified version of the spider. Patch is
 attached and can be applied by typing command 'patch -p1 < spider.py.patch'
-in 'bin' directory.
+in 'bin' directory. For Windows, use spider.py.win32.patch instead.
 Then database shares table should be prepared for updating all shares: execute
 SQL command "UPDATE shares SET state='online', hash='', next_scan=now();".
 Finally, run the patched 'spider.py' script, for each share it will get

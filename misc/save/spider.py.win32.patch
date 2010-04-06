@@ -11,7 +11,7 @@ diff -r fcaa1afea4db bin/spider.py
      start = datetime.datetime.now()
 -    data = run_scanner(command, address, proto, port)
 +    import subprocess
-+    data = subprocess.Popen("cat save/%(proto)s_%(host)s_%(port)s"
++    data = subprocess.Popen("type save/%(proto)s_%(host)s_%(port)s"
 +        % {'proto': proto,
 +           'port': str(port),
 +           'host': host},
