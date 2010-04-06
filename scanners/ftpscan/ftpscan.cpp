@@ -214,8 +214,10 @@ static void TryReconnect(CFtpControlEx *ftp)
 {
 	ftp->Quit();
 	if( !ftp->tryconn() ) {
+		struct in_addr in;
+		in.s_addr = ftp->ServerIP;
 		LOG_ERR("Cannot connect %s:%d\n", 
-			inet_ntoa(ftp->ServerIP),
+			inet_ntoa(in),
 			ftp->ServerPORT);
 		throw CFtpControl::NetworkError();
 	}
