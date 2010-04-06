@@ -10,20 +10,26 @@
 #include <string.h>
 #include <crtdbg.h>
 #include <locale.h>
+#include <Windows.h>
 
 #include "dt.h"
 #include "smbwk.h"
 #include "estat.h"
+#include "log.h"
+#include "getpass.h"
+
+#define MAX_PASSWORD_LEN 100
 
 static void usage(wchar_t *binname, int err)
 {
     wchar_t *bin = wcsrchr(binname, L'\\');
     if (bin) binname = bin + 1;
-	fprintf(stderr, "Usage: %S [-l] [-f] [-u username] [-p password] [-a|-d] [-h] host_ip\n", binname);
+	fprintf(stderr, "Usage: %S [-l] [-f] [-u username] [-p] [-a|-d] [-h] host_ip\n", binname);
 	fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
 	fprintf(stderr, "  -f\tprint full paths (debug output)\n");
 	fprintf(stderr, "  -a\tskip admin shares\n");
 	fprintf(stderr, "  -d\tskip shares with trailing dollar (hidden)\n");
+	fprintf(stderr, "  -p\tfirst line (ends with newline char) in stdin is utf8-encoded password");
 	fprintf(stderr, "  -h\tprint this help\n");
 	exit(err);
 }
@@ -33,7 +39,7 @@ int wmain(int argc, wchar_t **argv)
     struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0}, *probe;
     struct smbwk_dir curdir;
     int full = 0, lookup = 0;
-    wchar_t *host, *user = L"Guest", *pass = L"";
+    wchar_t *host, *user = L"Guest", wpass[MAX_PASSWORD_LEN+1] = L"";
     enum_type etype = ENUM_ALL;
     int i;
 
@@ -62,9 +68,19 @@ int wmain(int argc, wchar_t **argv)
             case L'u':
                 user = argv[++i];
                 break;
-            case L'p':
-                pass = argv[++i];//TODO: read from stdin
+            case L'p': {
+                    char pass[MAX_PASSWORD_LEN+2];
+                    size_t passlen;
+                    if ((passlen = gp_readline(pass, MAX_PASSWORD_LEN+2)) == 0) {
+                        LOG_ERR("Empty, not completed, too long password or input error\n");
+                        usage(argv[0], ESTAT_FAILURE);
+                    }
+                    if (!MultiByteToWideChar(CP_UTF8, 0, pass, -1, wpass, MAX_PASSWORD_LEN+1)) {
+                        LOG_ERR("Invalid utf-8 chars in password\n");
+                        usage(argv[0], ESTAT_FAILURE);
+                    }
                 break;
+                }
             case L'a':
             case L'd':
                 if (ENUM_ALL != etype)
@@ -83,7 +99,7 @@ int wmain(int argc, wchar_t **argv)
     
     host = argv[i];
 
-    if ((i = smbwk_open(&curdir, host, user, pass, etype)) != ESTAT_SUCCESS)
+    if ((i = smbwk_open(&curdir, host, user, wpass, etype)) != ESTAT_SUCCESS)
         return i;
 
     if (lookup) {
