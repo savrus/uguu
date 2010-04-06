@@ -53,7 +53,8 @@ def run_scanner(cmd, ip, proto, port, ext = ""):
     if not scanners_logging:
         _stderr = subprocess.PIPE
     process = subprocess.Popen(cmdline, shell=True, stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE, stderr=_stderr)
+                               stdout=subprocess.PIPE, stderr=_stderr,
+                               universal_newlines=True)
     process.stdin.close()
     return process
 
