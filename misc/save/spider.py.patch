@@ -1,0 +1,21 @@
+diff -r fcaa1afea4db bin/spider.py
+--- a/bin/spider.py	Wed Mar 31 00:12:58 2010 +0400
++++ b/bin/spider.py	Wed Mar 31 02:03:06 2010 +0400
+@@ -125,10 +125,15 @@
+ def scan_share(db, share_id, proto, host, port, oldhash, command):
+     cursor = db.cursor()
+     hoststr = sharestr(proto, host, port)
+-    address = socket.gethostbyname(host)
++    address = host
+     log("Scanning %s (%s) ...", (hoststr, address))
+     start = datetime.datetime.now()
+-    data = run_scanner(command, address, proto, port)
++    import subprocess
++    data = subprocess.Popen("cat save/%(proto)s_%(host)s_%(port)s"
++        % {'proto': proto,
++           'port': str(port),
++           'host': host},
++        shell = True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+     save = tempfile.TemporaryFile(bufsize=-1)
+     hash = hashlib.sha256()
+     line_count = 0

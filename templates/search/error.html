@@ -1,0 +1,8 @@
+{% extends "general.html" %}
+{% block htmltitle %}{{error}}{% endblock %}
+{% block htmlbody %}
+<div class="margintop" id="searchform">
+    {% include form %}
+</div>
+<div class="margintop" id="error">{{error}}</div>
+{% endblock %}
