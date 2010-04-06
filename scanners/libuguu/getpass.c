@@ -18,7 +18,7 @@
 
 #ifdef _WIN32
 #define INHNO_ERROR (-2)
-void gp_set(int echo_on, gp_save *gp)
+void gp_set(echo_mode echo, gp_save *gp)
 {
 	static HANDLE hIn = (HANDLE)-3;
 	if (hIn == INVALID_HANDLE_VALUE || hIn == 0) {
@@ -26,37 +26,48 @@ void gp_set(int echo_on, gp_save *gp)
 		return;
 	} else if ((HANDLE)-3 == hIn)
 		hIn = GetStdHandle(STD_INPUT_HANDLE);
-	if (echo_on) {
-		if (echo_on == 2)
-			GetConsoleMode(hIn, gp);
-		SetConsoleMode(hIn, *gp | ENABLE_ECHO_INPUT);
-	} else {
+	switch (echo) {
+	case ECHO_RESTORE:
+		SetConsoleMode(hIn, *gp);
+		break;
+	case ECHO_ON:
+	case ECHO_OFF:
 		if (GetConsoleMode(hIn, gp) == 0)
 			hIn = INVALID_HANDLE_VALUE;
 		else
-			SetConsoleMode(hIn, *gp & ~ENABLE_ECHO_INPUT);
+			SetConsoleMode(hIn, echo
+				? *gp | ENABLE_ECHO_INPUT
+				: *gp & ~ENABLE_ECHO_INPUT);
 	}
 }
 #else
 void gp_set(int echo_on, gp_save *gp)
 {
-	if (!echo_on || echo_on == 2)
+	gp_save newgp;
+	switch (echo) {
+	case ECHO_RESTORE:
+		tcsetattr(fileno(stdin), TCSADRAIN, gp);
+		break;
+	case ECHO_ON:
+	case ECHO_OFF:
 		tcgetattr(fileno(stdin), gp);
-	if (echo_on)
-		gp->c_lflag |= ECHO;
-	else
-		gp->c_lflag &= ~ECHO;
-	tcsetattr(fileno(stdin), TCSADRAIN, gp);
+		newgp = *gp;
+		if (echo)
+			gp->c_lflag |= ECHO;
+		else
+			gp->c_lflag &= ~ECHO;
+		tcsetattr(fileno(stdin), TCSADRAIN, gp);
+	}
 }
 #endif
 
 unsigned int gp_readline(char *buf, unsigned int size)
 {
 	gp_save gp;
-	gp_set(0, &gp);
+	gp_set(ECHO_OFF, &gp);
 	buf[size-1] = 0;
 	buf = fgets(buf, size, stdin);
-	gp_set(1, &gp);
+	gp_set(ECHO_RESTORE, &gp);
 	if (buf && (size = strlen(buf)) > 0 && '\n' == buf[size-1]) {
 		buf[size-1] = 0;
 		return size-1;
