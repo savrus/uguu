@@ -30,10 +30,14 @@ typedef unsigned long gp_save;
 typedef struct termios gp_save;
 #endif
 
+/**
+ * ON/OFF - save terminal mode and set echo ON/OFF
+ * RESTORE - restore previously saved mode
+ */
 typedef enum {
-	GP_ECHO_RESTORE = -1,//restore echo mode saved in gp_save structure by ECHO_ON/ECHO_OFF call
-	GP_ECHO_OFF,
-	GP_ECHO_ON
+    GP_ECHO_OFF = 0,
+    GP_ECHO_ON,
+    GP_ECHO_RESTORE,
 } gp_echo_mode;
 
 #ifdef __cplusplus
