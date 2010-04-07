@@ -1,8 +1,8 @@
 /* getpass.h - definitions and interfaces of echoless input from stdin
-*
-* Copyright 2010, Radist <radist.nt@gmail.com>
-* Read the COPYING file in the root of the source tree.
-*/
+ *
+ * Copyright 2010, Radist <radist.nt@gmail.com>
+ * Read the COPYING file in the root of the source tree.
+ */
 
 #ifndef _GETPASS_H_
 #define _GETPASS_H_

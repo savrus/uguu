@@ -1,9 +1,9 @@
 /* getpass - echoless input from stdin
-*
-* Copyright 2010, Radist <radist.nt@gmail.com>
-* Copyright 2010, savrus
-* Read the COPYING file in the root of the source tree.
-*/
+ *
+ * Copyright 2010, Radist <radist.nt@gmail.com>
+ * Copyright 2010, savrus
+ * Read the COPYING file in the root of the source tree.
+ */
 
 #include <stdio.h>
 #include <string.h>
