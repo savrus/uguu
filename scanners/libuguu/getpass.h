@@ -7,12 +7,6 @@
 #ifndef _GETPASS_H_
 #define _GETPASS_H_
 
-#if defined(_WIN32)
-#include <stddef.h>
-#else
-#include <termios.h>
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,23 +16,6 @@ extern "C" {
  * return value: line length or 0 if buffer too small or input error
  */
 unsigned int gp_readline(char *buf, unsigned int size);
-
-
-#if defined(_WIN32)
-typedef unsigned long gp_save;
-#else
-typedef struct termios gp_save;
-#endif
-
-/**
- * ON/OFF - save terminal mode and set echo ON/OFF
- * RESTORE - restore previously saved mode
- */
-typedef enum {
-    GP_ECHO_OFF = 0,
-    GP_ECHO_ON,
-    GP_ECHO_RESTORE,
-} gp_echo_mode;
 
 #ifdef __cplusplus
 };
