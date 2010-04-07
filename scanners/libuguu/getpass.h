@@ -1,11 +1,11 @@
 /* getpass.h - definitions and interfaces of echoless input from stdin
 *
-* Copyright 2009, 2010, savrus
+* Copyright 2010, Radist <radist.nt@gmail.com>
 * Read the COPYING file in the root of the source tree.
 */
 
-#ifndef _CONS_GETPASS_H_
-#define _CONS_GETPASS_H_
+#ifndef _GETPASS_H_
+#define _GETPASS_H_
 
 #if defined(_WIN32)
 #include <stddef.h>
@@ -31,17 +31,15 @@ typedef struct termios gp_save;
 #endif
 
 typedef enum {
-	ECHO_RESTORE = -1,//restore echo mode saved in gp_save structure by ECHO_ON/ECHO_OFF call
-	ECHO_OFF,
-	ECHO_ON
-} echo_mode;
-
-/* enabling or disabling echo */
-void gp_echo(echo_mode echo, gp_save *gp);
+	GP_ECHO_RESTORE = -1,//restore echo mode saved in gp_save structure by ECHO_ON/ECHO_OFF call
+	GP_ECHO_OFF,
+	GP_ECHO_ON
+} gp_echo_mode;
 
 #ifdef __cplusplus
 };
 #endif
 
 
-#endif//_CONS_GETPASS_H_
+#endif /* _GETPASS_H_ */
+
