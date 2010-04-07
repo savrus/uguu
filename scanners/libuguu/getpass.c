@@ -50,18 +50,18 @@ static void gp_set(gp_echo_mode echo, gp_save *gp)
 {
     gp_save newgp;
     switch (echo) {
-    case GP_ECHO_RESTORE:
-        tcsetattr(fileno(stdin), TCSADRAIN, gp);
-    break;
-    case GP_ECHO_ON:
-    case GP_ECHO_OFF:
-        tcgetattr(fileno(stdin), gp);
-        newgp = *gp;
-        if (echo == GP_ECHO_ON)
-            newgp.c_lflag |= ECHO;
-        else
-            newgp.c_lflag &= ~ECHO;
-        tcsetattr(fileno(stdin), TCSADRAIN, &newgp);
+        case GP_ECHO_RESTORE:
+            tcsetattr(fileno(stdin), TCSADRAIN, gp);
+        break;
+        case GP_ECHO_ON:
+        case GP_ECHO_OFF:
+            tcgetattr(fileno(stdin), gp);
+            newgp = *gp;
+            if (echo == GP_ECHO_ON)
+                newgp.c_lflag |= ECHO;
+            else
+                newgp.c_lflag &= ~ECHO;
+            tcsetattr(fileno(stdin), TCSADRAIN, &newgp);
     }
 }
 
