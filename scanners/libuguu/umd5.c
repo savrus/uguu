@@ -4,7 +4,9 @@
  * Read the COPYING file in the root of the source tree.
  */
 
+#ifndef _WIN32
 #include <inttypes.h>
+#endif
 #include <stddef.h>
 
 #include "umd5.h"

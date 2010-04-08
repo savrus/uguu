@@ -160,6 +160,10 @@
 				RelativePath=".\getpass.c"
 				>
 			</File>
+			<File
+				RelativePath=".\umd5.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -184,6 +188,10 @@
 			</File>
 			<File
 				RelativePath=".\log.h"
+				>
+			</File>
+			<File
+				RelativePath=".\umd5.h"
 				>
 			</File>
 		</Filter>
