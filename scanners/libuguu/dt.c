@@ -180,10 +180,41 @@ static void dt_umd5_update(struct dt_dentry *d, void *arg)
     umd5_update(ctx, (char *) &d->size, sizeof(d->size));
 }
 
+/* return: 1 if recursion detected, 0 otherwise */
+static int dt_recursive_link(struct dt_dentry *d)
+{
+    struct dt_dentry *dp;
+    struct umd5_ctx ctx;
+
+    if (d->items > DT_RECURSION_THRESHOLD) {
+        umd5_init(&ctx);
+        dt_list_call1(&(d->child), dt_umd5_update, (void *) &ctx);
+        dt_list_call1(&(d->file_child), dt_umd5_update, (void *) &ctx);
+        umd5_finish(&ctx);
+
+        if ((d->hash = (char*)malloc(UMD5_VALUE_SIZE*sizeof(char))) == NULL) {
+            LOG_ERR("malloc() returned NULL\n");
+            return 0;
+        }
+
+        umd5_value(&ctx, d->hash);
+
+        for (dp = d->parent; dp != NULL; dp = dp->parent) {
+            if ((dp->hash != NULL) && (!umd5_cmpval(d->hash, dp->hash))) {
+                LOG_ERR("Recursion detected at directory '%s' (id %u). "
+                        "Assuming link target '%s' (id %u)\n",
+                    d->name, d->id, dp->name, dp->id);
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+
 static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, unsigned int *id)
 {
     struct dt_dentry *ddc = NULL, *dfc = NULL, *dn;
-    struct umd5_ctx ctx;
     unsigned int dirs = 0;
     unsigned int files = 0;
     unsigned int oldid = *id;
@@ -217,30 +248,11 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
         d->file_child = dt_list_sort(d->file_child, files, dirs, NULL);
     d->items = files + dirs;
 
-    if (d->items > DT_RECURSION_THRESHOLD) {
-        umd5_init(&ctx);
-        dt_list_call1(&(d->child), dt_umd5_update, (void *) &ctx);
-        dt_list_call1(&(d->file_child), dt_umd5_update, (void *) &ctx);
-        umd5_finish(&ctx);
-
-        if ((d->hash = (char*)malloc(UMD5_VALUE_SIZE*sizeof(char))) == NULL) {
-            LOG_ERR("malloc() returned NULL\n");
-            return;
-        }
-
-        umd5_value(&ctx, d->hash);
-
-        for (dn = d->parent; dn != NULL; dn = dn->parent) {
-            if ((dn->hash != NULL) && (!umd5_cmpval(d->hash, dn->hash))) {
-                LOG_ERR("Recursion detected at  directory '%s' (id %u). "
-                        "Assuming link target '%s' (id %u)\n",
-                    d->name, d->id, dn->name, dn->id);
-                *id = oldid;
-                d->items = 0;
-                dt_list_free(&(d->child));
-                dt_list_free(&(d->file_child));
-            }
-        }
+    if (dt_recursive_link(d)) {
+        *id = oldid;
+        d->items = 0;
+        dt_list_free(&(d->child));
+        dt_list_free(&(d->file_child));
     }
 }
 
