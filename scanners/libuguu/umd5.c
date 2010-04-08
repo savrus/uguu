@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "umd5.h"
+#include "log.h"
 
 uint32_t T[64] = {
  /* Round 1 */
@@ -154,6 +155,8 @@ static void umd5_update_block(struct umd5_ctx *ctx)
 
 void umd5_init(struct umd5_ctx *ctx)
 {
+    LOG_ASSERT(ctx != NULL, "Bad arguments\n");
+    
     ctx->len = 0;
     ctx->A = 0x67452301;
     ctx->B = 0xefcdab89;
@@ -163,7 +166,8 @@ void umd5_init(struct umd5_ctx *ctx)
 
 void umd5_update(struct umd5_ctx *ctx, const char *s, size_t size)
 {
-    /*TODO: assert len < 0xffffffffffffffff - size - UMD5_BLOCK_SIZE */
+    LOG_ASSERT((ctx != NULL) && (s != NULL), "Bad arguments\n");
+    LOG_ASSERT(ctx->len < ((uint64_t) -1) - size, "Too long message\n");
 
     while (size > 0) {
         while (size > 0) {
@@ -185,6 +189,8 @@ void umd5_finish(struct umd5_ctx *ctx)
 {
     char pad[UMD5_BLOCK_SIZE + 8];
     int i = 0;
+    
+    LOG_ASSERT(ctx != NULL, "Bad arguments\n");
     
     /* padding begins with bit 1 */
     pad[i++] = 0x80;
@@ -210,6 +216,8 @@ static void umd5_bswap(char *buf, uint32_t w)
 
 void umd5_value(struct umd5_ctx *ctx, char *buf)
 {
+    LOG_ASSERT((ctx != NULL) && (buf != NULL), "Bad arguments\n");
+    
     umd5_bswap(buf, ctx->A);
     umd5_bswap(&buf[4], ctx->B);
     umd5_bswap(&buf[8], ctx->C);
@@ -219,7 +227,7 @@ void umd5_value(struct umd5_ctx *ctx, char *buf)
 int umd5_cmpval(const char *s1, const char *s2)
 {
     int i;
-    /* TODO assert s1, s2 not NULL */
+    LOG_ASSERT((s1 != NULL) && (s2 != NULL), "Bad arguments\n");
     
     for (i = 0; i < UMD5_VALUE_SIZE; i++)
         if (s1[i] != s2[i])
