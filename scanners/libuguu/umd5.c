@@ -4,9 +4,10 @@
  * Read the COPYING file in the root of the source tree.
  */
 
-#include "umd5.h"
 #include <inttypes.h>
 #include <stddef.h>
+
+#include "umd5.h"
 
 uint32_t T[64] = {
  /* Round 1 */
