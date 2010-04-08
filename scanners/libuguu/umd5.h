@@ -4,12 +4,19 @@
  * Read the COPYING file in the root of the source tree.
  */
 
+#ifndef _UMD5_H_
+#define _UMD5_H_
+
 #include <stddef.h>
 #ifdef _MSC_VER
 typedef unsigned __int64 uint64_t;
 typedef unsigned __int32 uint32_t;
 #else
 #include <inttypes.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #define UMD5_BLOCK_SIZE (4 * 16)
@@ -36,3 +43,8 @@ void umd5_value(struct umd5_ctx *ctx, char *buf);
 /* compare two values, returns 0 if they are same, 1 otherwise */
 int umd5_cmpval(const char *s1, const char *s2);
 
+#ifdef __cplusplus
+};
+#endif
+
+#endif
