@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #define UMD5_BLOCK_SIZE (4 * 16)
+#define UMD5_VALUE_SIZE 16
 
 struct umd5_ctx {
     uint64_t len;
@@ -24,6 +25,9 @@ void umd5_update(struct umd5_ctx *ctx, const char *s, size_t size);
 /* finish */
 void umd5_finish(struct umd5_ctx *ctx);
 
-/* get MD5 value. */
+/* get MD5 value. buf must be of size UMD5_VALUE_SIZE */
 void umd5_value(struct umd5_ctx *ctx, char *buf);
+
+/* compare two values, returns 0 if they are same, 1 otherwise */
+int umd5_cmpval(const char *s1, const char *s2);
 

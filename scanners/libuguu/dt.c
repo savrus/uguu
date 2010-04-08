@@ -14,6 +14,7 @@
 #include "dt.h"
 #include "log.h"
 #include "estat.h"
+#include "umd5.h"
 
 struct dt_dentry * dt_alloc()
 {
@@ -23,6 +24,8 @@ struct dt_dentry * dt_alloc()
 void dt_free(struct dt_dentry *d)
 {
     free(d->name);
+    if (d->hash != NULL)
+        free(d->hash);
     free(d);
 }
 
@@ -32,6 +35,7 @@ static void dt_init_root(struct dt_dentry *root, unsigned int *id)
     root->sibling = NULL;
     root->child = NULL;
     root->file_child = NULL;
+    root->hash = NULL;
     root->id = (*id)++;
 }
 
@@ -117,6 +121,16 @@ static void dt_list_call(struct dt_dentry **c, void (*callie) (struct dt_dentry 
     }
 }
 
+static void dt_list_call1(struct dt_dentry **c, void (*callie) (struct dt_dentry *, void *arg), void *arg)
+{
+    struct dt_dentry *dp = *c, *dn;
+    LOG_ASSERT(c != NULL, "Bad arguments\n");
+    for (; dp != NULL; dp = dn) {
+        dn = dp->sibling;
+        callie(dp, arg);
+    }
+}
+
 static void dt_list_free(struct dt_dentry **c)
 {
     struct dt_dentry *dp = *c, *dn;
@@ -159,11 +173,20 @@ static int dt_exceed_limit(unsigned int value, unsigned int limit, char *str, st
 #define dt_exceed_macro(value, limit, d) \
     dt_exceed_limit(value, limit, #limit, d)
 
+static void dt_umd5_update(struct dt_dentry *d, void *arg)
+{
+    struct umd5_ctx *ctx = (struct umd5_ctx *) arg;
+    umd5_update(ctx, d->name, strlen(d->name) + 1);
+    umd5_update(ctx, (char *) &d->size, sizeof(d->size));
+}
+
 static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, unsigned int *id)
 {
     struct dt_dentry *ddc = NULL, *dfc = NULL, *dn;
+    struct umd5_ctx ctx;
     unsigned int dirs = 0;
     unsigned int files = 0;
+    unsigned int oldid = *id;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
 
     if (dt_exceed_macro(d->id, MAX_DIRS, d))
@@ -193,6 +216,32 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
     if (files > 0)
         d->file_child = dt_list_sort(d->file_child, files, dirs, NULL);
     d->items = files + dirs;
+
+    if (d->items > DT_RECURSION_THRESHOLD) {
+        umd5_init(&ctx);
+        dt_list_call1(&(d->child), dt_umd5_update, (void *) &ctx);
+        dt_list_call1(&(d->file_child), dt_umd5_update, (void *) &ctx);
+        umd5_finish(&ctx);
+
+        if ((d->hash = (char*)malloc(UMD5_VALUE_SIZE*sizeof(char))) == NULL) {
+            LOG_ERR("malloc() returned NULL\n");
+            return;
+        }
+
+        umd5_value(&ctx, d->hash);
+
+        for (dn = d->parent; dn != NULL; dn = dn->parent) {
+            if ((dn->hash != NULL) && (!umd5_cmpval(d->hash, dn->hash))) {
+                LOG_ERR("Recursion detected at  directory '%s' (id %u). "
+                        "Assuming link target '%s' (id %u)\n",
+                    d->name, d->id, dn->name, dn->id);
+                *id = oldid;
+                d->items = 0;
+                dt_list_free(&(d->child));
+                dt_list_free(&(d->file_child));
+            }
+        }
+    }
 }
 
 static struct dt_dentry * dt_go_sibling_or_parent(struct dt_walker *wk, struct dt_dentry *d, void *curdir, int *went_to_sibling)
