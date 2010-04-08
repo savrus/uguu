@@ -14,9 +14,9 @@ extern "C" {
 #endif
 
 /* maximum number of directories that would be scanned */
-#define MAX_DIRS (1 << 16)
+#define DT_MAX_DIRS (1 << 16)
 /* maximum number of items in a directory that would be scanned */
-#define MAX_ITEMS_IN_DIR (1 << 18)
+#define DT_MAX_ITEMS_IN_DIR (1 << 18)
 /* number of files in a directory to try recursion detection */
 #define DT_RECURSION_THRESHOLD 5
 

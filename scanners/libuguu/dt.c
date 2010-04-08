@@ -189,11 +189,11 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
     unsigned int oldid = *id;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
 
-    if (dt_exceed_macro(d->id, MAX_DIRS, d))
+    if (dt_exceed_macro(d->id, DT_MAX_DIRS, d))
         return;
 
     while ((dn = wk->readdir(curdir)) != NULL) {
-        if (dt_exceed_macro(files + dirs + 1, MAX_ITEMS_IN_DIR, d)) {
+        if (dt_exceed_macro(files + dirs + 1, DT_MAX_ITEMS_IN_DIR, d)) {
             dt_free(dn);
             break;
         }
