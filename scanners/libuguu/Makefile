@@ -1,6 +1,6 @@
 CFLAGS += -Wall -O3
 
-OBJ = dt.o buf.o getpass.o
+OBJ = dt.o buf.o getpass.o umd5.o
 NAME = libuguu.a
 
 $(NAME): $(OBJ)
