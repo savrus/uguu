@@ -4,8 +4,13 @@
  * Read the COPYING file in the root of the source tree.
  */
 
-#include <inttypes.h>
 #include <stddef.h>
+#ifdef _WIN32
+typedef unsigned __int64 uint64_t;
+typedef unsigned __int32 uint32_t;
+#else
+#include <inttypes.h>
+#endif
 
 #define UMD5_BLOCK_SIZE (4 * 16)
 #define UMD5_VALUE_SIZE 16
