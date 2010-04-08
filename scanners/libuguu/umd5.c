@@ -113,7 +113,7 @@ static uint32_t umd5_le32_read(const char *b)
            | (((uint32_t) b[3] & 0xff) << 24);
 }
 
-static void umd5_le32_write(char *b, uint64_t w)
+static void umd5_le32_write(char *b, uint32_t w)
 {
     b[0] = (w      ) & 0xff;
     b[1] = (w >>  8) & 0xff;
