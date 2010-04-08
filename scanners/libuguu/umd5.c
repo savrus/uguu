@@ -214,3 +214,15 @@ void umd5_value(struct umd5_ctx *ctx, char *buf)
     umd5_bswap(&buf[12], ctx->D);
 }
 
+int umd5_cmpval(const char *s1, const char *s2)
+{
+    int i;
+    /* TODO assert s1, s2 not NULL */
+    
+    for (i = 0; i < UMD5_VALUE_SIZE; i++)
+        if (s1[i] != s2[i])
+            return 1;
+
+    return 0;
+}
+

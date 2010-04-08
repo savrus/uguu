@@ -17,6 +17,9 @@ extern "C" {
 #define MAX_DIRS (1 << 16)
 /* maximum number of items in a directory that would be scanned */
 #define MAX_ITEMS_IN_DIR (1 << 18)
+/* number of files in a directory to try recursion detection */
+#define DT_RECURSION_THRESHOLD 5
+
 
 typedef enum {
     DT_DIR = 1,
@@ -34,6 +37,7 @@ struct dt_dentry {
     unsigned int id;
     unsigned int fid;
     unsigned int items;
+    char *hash;
 };
 
 typedef enum {
