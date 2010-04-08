@@ -92,17 +92,33 @@ uint32_t T[64] = {
 #define I(X,Y,Z) ((Y) ^ ((X) | ~(Z)))
 
 #define XX(X, ctx, a, b, c, d, k, s, i) \
-    (a) = (b) + umd5_rol(((a) + X((b),(c),(d)) + \
-        ((uint32_t *)((ctx)->block))[(k)] + T[(i)]), (s))
+    (a) = (b) + umd5_rol(((a) + X((b),(c),(d)) \
+          + umd5_le32_read(&((ctx)->block[(k)*4])) + T[(i)]), (s))
 
 #define FF(ctx,a,b,c,d,k,s) XX(F,ctx,a,b,c,d,            k, s,      k)
 #define GG(ctx,a,b,c,d,k,s) XX(G,ctx,a,b,c,d, (1+(k)*5)%16, s, (k)+16)
 #define HH(ctx,a,b,c,d,k,s) XX(H,ctx,a,b,c,d, (5+(k)*3)%16, s, (k)+32)
 #define II(ctx,a,b,c,d,k,s) XX(I,ctx,a,b,c,d,   ((k)*7)%16, s, (k)+48)
 
-static uint32_t umd5_rol (uint32_t val, unsigned int shift)
+static uint32_t umd5_rol(uint32_t val, unsigned int shift)
 {
     return (val << shift) | (val >> (32 - shift));
+}
+
+static uint32_t umd5_le32_read(const char *b)
+{
+    return ((uint32_t) b[0] & 0xff)
+           | (((uint32_t) b[1] & 0xff) << 8)
+           | (((uint32_t) b[2] & 0xff) << 16)
+           | (((uint32_t) b[3] & 0xff) << 24);
+}
+
+static void umd5_le32_write(char *b, uint64_t w)
+{
+    b[0] = (w      ) & 0xff;
+    b[1] = (w >>  8) & 0xff;
+    b[2] = (w >> 16) & 0xff;
+    b[3] = (w >> 24) & 0xff;
 }
 
 static void umd5_update_block(struct umd5_ctx *ctx)
@@ -201,27 +217,20 @@ void umd5_finish(struct umd5_ctx *ctx)
         pad[i++] = 0;
     
     /* append length of message in bits */
-    *(uint64_t *) &pad[i] = ctx->len * 8;
+    umd5_le32_write(&pad[i], (uint32_t) (ctx->len * 8));
+    umd5_le32_write(&pad[i+4], (uint32_t) ((ctx->len * 8) >> 32));
 
     umd5_update(ctx, pad, i + 8);
 }
-
-static void umd5_bswap(char *buf, uint32_t w)
-{
-    buf[0] = (w      ) & 0xff;
-    buf[1] = (w >>  8) & 0xff;
-    buf[2] = (w >> 16) & 0xff;
-    buf[3] = (w >> 24) & 0xff;
-}        
 
 void umd5_value(struct umd5_ctx *ctx, char *buf)
 {
     LOG_ASSERT((ctx != NULL) && (buf != NULL), "Bad arguments\n");
     
-    umd5_bswap(buf, ctx->A);
-    umd5_bswap(&buf[4], ctx->B);
-    umd5_bswap(&buf[8], ctx->C);
-    umd5_bswap(&buf[12], ctx->D);
+    umd5_le32_write(buf, ctx->A);
+    umd5_le32_write(&buf[4], ctx->B);
+    umd5_le32_write(&buf[8], ctx->C);
+    umd5_le32_write(&buf[12], ctx->D);
 }
 
 int umd5_cmpval(const char *s1, const char *s2)
