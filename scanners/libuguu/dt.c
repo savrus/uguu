@@ -72,14 +72,14 @@ static struct dt_dentry * dt_list_sort(struct dt_dentry *d, size_t nmemb, unsign
  * d - parent
  * c - pointer to child list pointer in d structure
  */
-static void dt_list_print_sum_free(struct dt_dentry *d, struct dt_dentry **c, void (*printfile) (struct dt_dentry *))
+static void dt_list_call_sum_free(struct dt_dentry *d, struct dt_dentry **c, void (*callie) (struct dt_dentry *))
 {
     struct dt_dentry *dp = *c, *dn;
     LOG_ASSERT((d != NULL) && (c != NULL), "Bad arguments\n");
     *c = NULL;
     for (; dp != NULL; dp = dn) {
         dn = dp->sibling;
-        printfile(dp);
+        callie(dp);
         d->size += dp->size;
         dt_free(dp);
     }
@@ -95,25 +95,25 @@ static void dt_list_sum(struct dt_dentry *d, struct dt_dentry **c)
     }
 }
 
-static void dt_list_print_free(struct dt_dentry **c, void (*printfile) (struct dt_dentry *))
+static void dt_list_call_free(struct dt_dentry **c, void (*callie) (struct dt_dentry *))
 {
     struct dt_dentry *dp = *c, *dn;
     LOG_ASSERT(c != NULL, "Bad arguments\n");
     *c = NULL;
     for (; dp != NULL; dp = dn) {
         dn = dp->sibling;
-        printfile(dp);
+        callie(dp);
         dt_free(dp);
     }
 }
 
-static void dt_list_print(struct dt_dentry **c, void (*printfile) (struct dt_dentry *))
+static void dt_list_call(struct dt_dentry **c, void (*callie) (struct dt_dentry *))
 {
     struct dt_dentry *dp = *c, *dn;
     LOG_ASSERT(c != NULL, "Bad arguments\n");
     for (; dp != NULL; dp = dn) {
         dn = dp->sibling;
-        printfile(dp);
+        callie(dp);
     }
 }
 
@@ -280,8 +280,8 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     dt_printfile_full(root);
     for (d = root, enter = 1; d != NULL;) {
         if (enter) {
-            dt_list_print(&(d->child), dt_printfile_full);
-            dt_list_print_free(&(d->file_child), dt_printfile_full);
+            dt_list_call(&(d->child), dt_printfile_full);
+            dt_list_call_free(&(d->file_child), dt_printfile_full);
             if ((dc = d->child) != NULL) {
                 d = dc;
                 continue;
@@ -328,14 +328,14 @@ void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     for (d = root, enter = 1; d != NULL;) {
         if (enter) {
             dt_readdir(wk, d, curdir, &id);
-            dt_list_print(&(d->child), dt_printdir_reverse);
-            dt_list_print_sum_free(d, &(d->file_child), dt_printfile_reverse);
+            dt_list_call(&(d->child), dt_printdir_reverse);
+            dt_list_call_sum_free(d, &(d->file_child), dt_printfile_reverse);
             if ((dc = dt_go_child(wk, d, curdir)) != NULL) {
                 d = dc;
                 continue;
             }
         }
-        dt_list_print_sum_free(d, &(d->child), dt_printfile_reverse);
+        dt_list_call_sum_free(d, &(d->child), dt_printfile_reverse);
         d = dt_go_sibling_or_parent(wk, d, curdir, &enter);
     }
 
