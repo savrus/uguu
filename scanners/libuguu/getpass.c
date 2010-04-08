@@ -10,52 +10,67 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+typedef unsigned long gp_save;
 #else
 #include <termios.h>
 #include <unistd.h>
+typedef struct termios gp_save;
 #endif
 
 #include "getpass.h"
-
+#include "log.h"
 
 #ifdef _WIN32
 
-typedef unsigned long gp_save;
-
-static void gp_echo_off(int _set, gp_save *gp)
+static HANDLE gp_console_handle(gp_save *gp)
 {
+    //static variable is required to avoid multiple GetStdHandle calls
+    //it's not clear from msdn whether we should to close handle
     static HANDLE hIn = (HANDLE)-3;
-    if (hIn == INVALID_HANDLE_VALUE || hIn == 0) {
-        hIn = INVALID_HANDLE_VALUE;
-        return;
-    } else if ((HANDLE)-3 == hIn) {
+    if (hIn == INVALID_HANDLE_VALUE)
+        return INVALID_HANDLE_VALUE;
+    else if (hIn == (HANDLE)-3) {
         hIn = GetStdHandle(STD_INPUT_HANDLE);
-        gp_disable_echo(_set, gp);
-        return;
+        if (hIn == INVALID_HANDLE_VALUE || hIn == 0)
+            return hIn = INVALID_HANDLE_VALUE;
     }
-    if (_set) {
-        if (GetConsoleMode(hIn, gp) == 0)
-            hIn = INVALID_HANDLE_VALUE;
-        else
-            SetConsoleMode(hIn, *gp & ~ENABLE_ECHO_INPUT);
-    } else
-        SetConsoleMode(hIn, *gp);
+    if (gp != NULL && GetConsoleMode(hIn, gp) == 0)
+        hIn = INVALID_HANDLE_VALUE;
+    return hIn;
+}
+
+static void gp_echo_off(gp_save *gp)
+{
+    HANDLE h;
+    LOG_ASSERT(gp != NULL, "Bad arguments\n");
+    if ((h = gp_console_handle(gp)) != INVALID_HANDLE_VALUE)
+        SetConsoleMode(h, *gp & ~ENABLE_ECHO_INPUT);
+}
+
+static void gp_echo_restore(gp_save *gp)
+{
+    HANDLE h;
+    LOG_ASSERT(gp != NULL, "Bad arguments\n");
+    if ((h = gp_console_handle(NULL)) != INVALID_HANDLE_VALUE)
+        SetConsoleMode(h, *gp);
 }
 
 #else /* _WIN32 */
 
-typedef struct termios gp_save;
-
-static void gp_echo_off(int _set, gp_save *gp)
+static void gp_echo_off(gp_save *gp)
 {
     gp_save newgp;
-    if (_set) {
-        tcgetattr(fileno(stdin), gp);
-        newgp = *gp;
-        newgp.c_lflag &= ~ECHO;
-        tcsetattr(fileno(stdin), TCSADRAIN, &newgp);
-    } else
-        tcsetattr(fileno(stdin), TCSADRAIN, gp);
+    LOG_ASSERT(gp != NULL, "Bad arguments\n");
+    tcgetattr(fileno(stdin), gp);
+    newgp = *gp;
+    newgp.c_lflag &= ~ECHO;
+    tcsetattr(fileno(stdin), TCSADRAIN, &newgp);
+}
+
+static void gp_echo_restore(gp_save *gp)
+{
+    LOG_ASSERT(gp != NULL, "Bad arguments\n");
+    tcsetattr(fileno(stdin), TCSADRAIN, gp);
 }
 
 #endif /* _WIN32 */
@@ -63,10 +78,11 @@ static void gp_echo_off(int _set, gp_save *gp)
 unsigned int gp_readline(char *buf, unsigned int size)
 {
     gp_save gp;
-    gp_echo_off(1, &gp);
+    LOG_ASSERT(buf != NULL && size > 2, "Bad arguments\n");
+    gp_echo_off(&gp);
     buf[size - 1] = 0;
     buf = fgets(buf, size, stdin);
-    gp_echo_off(0, &gp);
+    gp_echo_restore(&gp);
     if (buf && (size = strlen(buf)) > 0 && buf[size - 1] == '\n') {
         buf[size - 1] = 0;
         return size - 1;
