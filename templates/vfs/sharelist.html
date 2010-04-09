@@ -1,0 +1,34 @@
+{% extends "general.html" %}
+{% block htmltitle %}List of shares{% endblock %}
+{% block htmlbody %}
+<div class="margintop" id="title">
+    {% if ishost %}
+        List of shares at host <span class="shareholder">{{name}}</span><br>
+    {% else %}
+        List of shares in network <span class="shareholder">{{name}}</span><br>
+    {% endif %}
+total shares: {{info.items}},
+<span class="state" id="online">online:</span> {{info.online}},
+<span class="state" id="offline">offline:</span> {{info.offline}},
+total size: <span class="filesize">{{info.size|filesizeformat}}</span>,
+average size: <span class="filesize">{{info.avg|filesizeformat}}</span>
+</div>
+{% if ishost %}
+    <div class="margintop"><a class="share" href="{%url webuguu.vfs.views.network shares.0.network %}">go up</a></div>
+{% else %}
+    <div class="margintop"><a class="share" href="{%url webuguu.vfs.views.net %}">go up</a></div>
+{% endif %}
+<table>
+    {% block sharelist %}
+    {% for s in shares %}
+    <tr>
+        <td><span class="rownum">{{forloop.counter}}.</span></td>
+        <td><span class="state" id="{{s.state}}">{{s.state}}</span></td>
+        <td align="right"><span class="filesize">{{s.size|filesizeformat}}</span></td> 
+        <td class="file"><a class="share" href = "{%url webuguu.vfs.views.share s.protocol, s.hostname, s.port %}?s={{s.share_id}}&amp;p=1"> {{s.protocol}}://{{s.hostname}}{% if s.port %}:{{s.port}}{% endif %}</a></td> 
+    </tr>
+    {% endfor %}
+    {% endblock %}
+</table>
+{% include "gobar.html" %}
+{% endblock %}
