@@ -38,7 +38,7 @@ def set_shares_state(cursor, hostlist, state):
     while len(hostlist):
         cursor.execute("""
             UPDATE shares SET state='%s',hostaddr=inet(sharelist.column2)
-            FROM (VALUES %s) sharelist WHERE share_id=sharelist.column1
+            FROM (VALUES %s) sharelist WHERE id=sharelist.column1
             """ % (
                 'online' if state else 'offline',
                 cursor.mogrify('%s', (tuple(hostlist[:max_update_query_hosts]),))[1:-1]
@@ -47,8 +47,8 @@ def set_shares_state(cursor, hostlist, state):
 
 def update_shares_state(db, selwhere, port):
     cursor = db.cursor()
-    cursor.execute("SELECT share_id, hostname FROM shares WHERE %s" % selwhere)
-    itemdict = dict((row['hostname'], [row['share_id'],  nscache(row['hostname'])]) for row in cursor.fetchall())
+    cursor.execute("SELECT id, hostname FROM shares WHERE %s" % selwhere)
+    itemdict = dict((row['hostname'], [row['id'],  nscache(row['hostname'])]) for row in cursor.fetchall())
     if len(itemdict) == 0:
         return
     online, offline = check_online_shares(itemdict.keys(), port)

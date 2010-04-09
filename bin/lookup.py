@@ -19,8 +19,8 @@ from common import connectdb, log, default_ports, run_scanner, wait_until_next_l
 from network import dns_cache, ns_domain, scan_all_hosts
 
 class Share(object):
-    def __init__(self, host, proto, port=0, scantype=None):
-        self.id = None
+    def __init__(self, host, proto, port=0, scantype=None, _id=None):
+        self.id = _id
         self.host = host
         self.proto = proto
         self.port = port
@@ -82,7 +82,7 @@ known_hosts is dictionary of "host" : "lookup engine name"
         self.default = None
         self.__cursor.execute("""
             SELECT
-                share_id,
+                id,
                 scantype_id,
                 protocol,
                 hostname,
@@ -93,8 +93,7 @@ known_hosts is dictionary of "host" : "lookup engine name"
             """, {'interval': wait_until_next_lookup, 'net': self.__network})
         self.__dbhosts = collections.defaultdict(dict)
         for row in self.__cursor.fetchall():
-            share = Share(row[3], row[2], row[4], row[1])
-            share.id = row[0]
+            share = Share(row[3], row[2], row[4], row[1], row[0])
             self.__dbhosts[share.ProtoOrPort()][share.host] = (share, row[5])
     def __len__(self):
         return len(self.__params)
@@ -131,8 +130,7 @@ scantype == Ellipsis means "read it from database if possible"
 add/check server to checklist, try to add default shares if default_shares,
 returns permissions to add shares
 """
-        if host in self.__hosts and \
-           self.__hosts[host] != type(self).__name__:
+        if host in self.__hosts and self.__hosts[host] != type(self).__name__:
             return False
         self.__hosts[host] = type(self).__name__
         if default_shares:
@@ -166,7 +164,7 @@ returns permissions to add shares
                 self.__cursor.execute("""
                     UPDATE shares
                     SET scantype_id=%(st)s, last_lookup=now()
-                    WHERE share_id IN %(ids)s
+                    WHERE id IN %(ids)s
                     """, {'st': st, 'ids': tuple(share.id for share in shares)})
         def WalkDict(_dict, routine):
             for portproto in _dict.iterkeys():
@@ -522,7 +520,13 @@ if __name__ == "__main__":
             log("Exception at network \"%s\" lookup", net)
             traceback.print_exc()
 
-    db.cursor().execute("DELETE FROM shares WHERE last_lookup + interval %s < now()",
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM shares WHERE last_lookup + interval %s < now() RETURNING share_id",
                         (wait_until_delete_share,))
+    for hash_id in cursor.fetchall():
+        try:
+            cursor.execute("DELETE FROM hashes WHERE share_id = %s", (hash_id[0],))
+        except:
+            pass
     log("All network lookups finished (running time %s)", datetime.datetime.now() - start)
 

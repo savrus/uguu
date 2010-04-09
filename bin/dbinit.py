@@ -27,11 +27,11 @@ def db_is_empty(db):
             WHERE %(t)s_schema='public'
             """ % {'t': type_name}, required_names)
     return check('table', ['networks', 'scantypes', 'shares', 'paths', \
-                           'filenames', 'files']) and \
+                           'filenames', 'files', 'hashes']) and \
            check('routine', ['share_state_change','gfid']) and \
            check('trigger', ['share_stage_change_trigger']) and \
-           check('sequence', ['scantypes_scantype_id_seq', 'shares_share_id_seq', \
-                              'filenames_filename_id_seq']) and \
+           check('sequence', ['scantypes_scantype_id_seq', 'shares_id_seq', \
+                              'filenames_filename_id_seq', 'hashes_share_id_seq']) and \
            check_q("""
             SELECT typname FROM pg_type
             JOIN pg_namespace ON pg_type.typnamespace=pg_namespace.oid
@@ -53,9 +53,9 @@ def drop(db):
             paths_path, files_filename, files_sharedir, files_size,
             shares_hostname, shares_network, shares_state;
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
-            filenames, files CASCADE;
-        DROP FUNCTION IF EXISTS share_state_change() CASCADE;
+            filenames, files, hashes CASCADE;
         """)
+    safe_query(db, "DROP FUNCTION IF EXISTS share_state_change() CASCADE")
     safe_query(db, "DROP FUNCTION IF EXISTS gfid(IN text, IN filetype, IN text) CASCADE")
     cursor.execute("""
         DROP TYPE IF EXISTS filetype, proto, availability CASCADE;
@@ -86,9 +86,17 @@ def ddl(db):
             protocol proto NOT NULL,
             priority smallint NOT NULL DEFAULT -1
         );
+        CREATE TABLE hashes (
+            share_id SERIAL PRIMARY KEY,
+            hash varchar(64) UNIQUE,
+            size bigint NOT NULL DEFAULT 0
+        );
+        ALTER SEQUENCE hashes_share_id_seq
+            MINVALUE -2147483648 MAXVALUE 2147483647
+            CYCLE;
         CREATE TABLE shares (
             id SERIAL PRIMARY KEY,
-            share_id int DEFAULT NULL NOT NULL,
+            share_id int REFERENCES hashes ON DELETE RESTRICT DEFAULT NULL,
             scantype_id integer REFERENCES scantypes ON DELETE RESTRICT NOT NULL,
             network varchar(32) REFERENCES networks ON DELETE CASCADE NOT NULL,
             protocol proto NOT NULL,
@@ -96,30 +104,29 @@ def ddl(db):
             hostaddr inet,
             port smallint DEFAULT 0,
             state availability DEFAULT 'offline',
-            size bigint DEFAULT 0,
+            size bigint NOT NULL DEFAULT 0,
             last_state_change timestamp DEFAULT now(),
             last_scan timestamp,
             next_scan timestamp,
             last_lookup timestamp DEFAULT now(),
-            hash varchar(64),
             UNIQUE (protocol, hostname, port)
         );
         CREATE TABLE paths (
-            share_id integer REFERENCES shares ON DELETE CASCADE,
+            share_id integer REFERENCES hashes ON DELETE CASCADE,
             sharepath_id integer,
             parent_id integer,
             parentfile_id integer,
             path text NOT NULL,
             items integer DEFAULT 0,
-            size bigint DEFAULT 0,
+            size bigint NOT NULL DEFAULT 0,
             UNIQUE (share_id, path),
             PRIMARY KEY (share_id, sharepath_id)
         );
-        CREATE TABLE filenames (
-            filename_id BIGSERIAL PRIMARY KEY,
-            name text UNIQUE NOT NULL,
-            type filetype
-        );
+        --CREATE TABLE filenames (
+        --    filename_id BIGSERIAL PRIMARY KEY,
+        --    name text UNIQUE NOT NULL,
+        --    type filetype
+        --);
         CREATE TABLE files (
             share_id integer,
             sharepath_id integer,
@@ -130,6 +137,8 @@ def ddl(db):
             type filetype,
             tsname tsvector,
             tspath tsvector,
+            FOREIGN KEY (share_id, sharepath_id) REFERENCES paths
+                ON DELETE CASCADE,
             PRIMARY KEY (share_id, sharepath_id, pathfile_id)
         );
         """)
@@ -153,30 +162,30 @@ def ddl_prog(db):
         CREATE TRIGGER share_stage_change_trigger
             BEFORE UPDATE ON shares FOR EACH ROW
             EXECUTE PROCEDURE share_state_change();
+
+        --CREATE OR REPLACE FUNCTION share_init_share_id()
+        --    RETURNS trigger AS
+        --   $$BEGIN
+        --        NEW.share_id = NEW.id;
+        --        RETURN NEW;
+        --    END;$$
+        --    LANGUAGE 'plpgsql' VOLATILE COST 100;
+        --CREATE TRIGGER share_init_share_id_trigger
+        --    BEFORE INSERT ON shares FOR EACH ROW
+        --    EXECUTE PROCEDURE share_init_share_id();
         
-        CREATE OR REPLACE FUNCTION share_init_share_id()
-            RETURNS trigger AS
-            $$BEGIN
-                NEW.share_id = NEW.id;
-                RETURN NEW;
-            END;$$
-            LANGUAGE 'plpgsql' VOLATILE COST 100;
-        CREATE TRIGGER share_init_share_id_trigger
-            BEFORE INSERT ON shares FOR EACH ROW
-            EXECUTE PROCEDURE share_init_share_id();
-        
-        CREATE OR REPLACE FUNCTION gfid(
-                IN text, IN filetype)
-            RETURNS void AS $$
-            DECLARE id INTEGER;
-            BEGIN
-                SELECT INTO id filename_id FROM filenames WHERE name = $1;
-                IF NOT FOUND THEN
-                    INSERT INTO filenames (name, type)
-                    VALUES ($1, $2);
-                END IF;
-            END;
-            $$ LANGUAGE 'plpgsql' VOLATILE;
+        --CREATE OR REPLACE FUNCTION gfid(
+        --        IN text, IN filetype)
+        --    RETURNS void AS $$
+        --    DECLARE id INTEGER;
+        --    BEGIN
+        --        SELECT INTO id filename_id FROM filenames WHERE name = $1;
+        --        IF NOT FOUND THEN
+        --            INSERT INTO filenames (name, type)
+        --            VALUES ($1, $2);
+        --        END IF;
+        --    END;
+        --    $$ LANGUAGE 'plpgsql' VOLATILE;
 	""")
 
 
@@ -193,6 +202,8 @@ def ddl_index(db):
         CREATE INDEX shares_hostname ON shares USING hash(hostname);
         CREATE INDEX shares_network ON shares USING hash(network);
         CREATE INDEX shares_state ON shares USING hash(state);
+        CREATE INDEX shares_hash_id ON shares (share_id);
+        CREATE INDEX hashes_hash ON hashes USING hash(hash);
         """)
 
 
@@ -278,19 +289,19 @@ def grant_access(db, db_user, ReadOnly):
     if ReadOnly:
         cursor.execute("""
             GRANT SELECT
-            ON TABLE shares, paths, filenames, files
+            ON TABLE shares, paths, files
             TO %(u)s
             """ % {'u': db_user})
     else:
         cursor.execute("""
             GRANT SELECT, INSERT, UPDATE, DELETE
-            ON TABLE shares, paths, filenames, files
+            ON TABLE shares, hashes, paths, files
             TO %(u)s;
             GRANT USAGE
-            ON SEQUENCE shares_share_id_seq, filenames_filename_id_seq
+            ON SEQUENCE shares_id_seq, hashes_share_id_seq -- , filenames_filename_id_seq
             TO %(u)s;
             GRANT EXECUTE
-            ON FUNCTION share_state_change(), gfid(IN text, IN filetype)
+            ON FUNCTION share_state_change() -- , gfid(IN text, IN filetype)
             TO %(u)s;
             """ % {'u': db_user})
 
