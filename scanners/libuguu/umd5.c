@@ -5,11 +5,12 @@
  */
 
 #ifndef _WIN32
-#include <inttypes.h>
+#include <stdint.h>
 #endif
 #include <stddef.h>
 
 #include "umd5.h"
+#include "log.h"
 
 uint32_t T[64] = {
  /* Round 1 */
@@ -91,17 +92,33 @@ uint32_t T[64] = {
 #define I(X,Y,Z) ((Y) ^ ((X) | ~(Z)))
 
 #define XX(X, ctx, a, b, c, d, k, s, i) \
-    (a) = (b) + umd5_rol(((a) + X((b),(c),(d)) + \
-        ((uint32_t *)((ctx)->block))[(k)] + T[(i)]), (s))
+    (a) = (b) + umd5_rol(((a) + X((b),(c),(d)) \
+          + umd5_le32_read(&((ctx)->block[(k)*4])) + T[(i)]), (s))
 
 #define FF(ctx,a,b,c,d,k,s) XX(F,ctx,a,b,c,d,            k, s,      k)
 #define GG(ctx,a,b,c,d,k,s) XX(G,ctx,a,b,c,d, (1+(k)*5)%16, s, (k)+16)
 #define HH(ctx,a,b,c,d,k,s) XX(H,ctx,a,b,c,d, (5+(k)*3)%16, s, (k)+32)
 #define II(ctx,a,b,c,d,k,s) XX(I,ctx,a,b,c,d,   ((k)*7)%16, s, (k)+48)
 
-static uint32_t umd5_rol (uint32_t val, unsigned int shift)
+static uint32_t umd5_rol(uint32_t val, unsigned int shift)
 {
     return (val << shift) | (val >> (32 - shift));
+}
+
+static uint32_t umd5_le32_read(const char *b)
+{
+    return ((uint32_t) b[0] & 0xff)
+           | (((uint32_t) b[1] & 0xff) << 8)
+           | (((uint32_t) b[2] & 0xff) << 16)
+           | (((uint32_t) b[3] & 0xff) << 24);
+}
+
+static void umd5_le32_write(char *b, uint32_t w)
+{
+    b[0] = (w      ) & 0xff;
+    b[1] = (w >>  8) & 0xff;
+    b[2] = (w >> 16) & 0xff;
+    b[3] = (w >> 24) & 0xff;
 }
 
 static void umd5_update_block(struct umd5_ctx *ctx)
@@ -114,31 +131,24 @@ static void umd5_update_block(struct umd5_ctx *ctx)
     c = ctx->C;
     d = ctx->D;
 
-    /* Round 1 */
     for (i = 0; i < 4; i++) {
         FF(ctx, a, b, c, d, i*4 + 0,  7);
         FF(ctx, d, a, b, c, i*4 + 1, 12);
         FF(ctx, c, d, a, b, i*4 + 2, 17);
         FF(ctx, b, c, d, a, i*4 + 3, 22);
     }
-     
-    /* Round 2 */
     for (i = 0; i < 4; i++) {
         GG(ctx, a, b, c, d, i*4 + 0,  5);
         GG(ctx, d, a, b, c, i*4 + 1,  9);
         GG(ctx, c, d, a, b, i*4 + 2, 14);
         GG(ctx, b, c, d, a, i*4 + 3, 20);
     }
-
-    /* Round 3 */
     for (i = 0; i < 4; i++) {
         HH(ctx, a, b, c, d, i*4 + 0,  4);
         HH(ctx, d, a, b, c, i*4 + 1, 11);
         HH(ctx, c, d, a, b, i*4 + 2, 16);
         HH(ctx, b, c, d, a, i*4 + 3, 23);
     }
-
-    /* Round 4 */
     for (i = 0; i < 4; i++) {
         II(ctx, a, b, c, d, i*4 + 0,  6);
         II(ctx, d, a, b, c, i*4 + 1, 10);
@@ -154,6 +164,8 @@ static void umd5_update_block(struct umd5_ctx *ctx)
 
 void umd5_init(struct umd5_ctx *ctx)
 {
+    LOG_ASSERT(ctx != NULL, "Bad arguments\n");
+    
     ctx->len = 0;
     ctx->A = 0x67452301;
     ctx->B = 0xefcdab89;
@@ -163,7 +175,8 @@ void umd5_init(struct umd5_ctx *ctx)
 
 void umd5_update(struct umd5_ctx *ctx, const char *s, size_t size)
 {
-    /*TODO: assert len < 0xffffffffffffffff - size - UMD5_BLOCK_SIZE */
+    LOG_ASSERT((ctx != NULL) && (s != NULL), "Bad arguments\n");
+    LOG_ASSERT(ctx->len < ((uint64_t) -1) - size, "Too long message\n");
 
     while (size > 0) {
         while (size > 0) {
@@ -186,6 +199,8 @@ void umd5_finish(struct umd5_ctx *ctx)
     char pad[UMD5_BLOCK_SIZE + 8];
     int i = 0;
     
+    LOG_ASSERT(ctx != NULL, "Bad arguments\n");
+    
     /* padding begins with bit 1 */
     pad[i++] = 0x80;
 
@@ -195,31 +210,26 @@ void umd5_finish(struct umd5_ctx *ctx)
         pad[i++] = 0;
     
     /* append length of message in bits */
-    *(uint64_t *) &pad[i] = ctx->len * 8;
+    umd5_le32_write(&pad[i], (uint32_t) (ctx->len * 8));
+    umd5_le32_write(&pad[i+4], (uint32_t) ((ctx->len * 8) >> 32));
 
     umd5_update(ctx, pad, i + 8);
 }
 
-static void umd5_bswap(char *buf, uint32_t w)
-{
-    buf[0] = (w      ) & 0xff;
-    buf[1] = (w >>  8) & 0xff;
-    buf[2] = (w >> 16) & 0xff;
-    buf[3] = (w >> 24) & 0xff;
-}        
-
 void umd5_value(struct umd5_ctx *ctx, char *buf)
 {
-    umd5_bswap(buf, ctx->A);
-    umd5_bswap(&buf[4], ctx->B);
-    umd5_bswap(&buf[8], ctx->C);
-    umd5_bswap(&buf[12], ctx->D);
+    LOG_ASSERT((ctx != NULL) && (buf != NULL), "Bad arguments\n");
+    
+    umd5_le32_write(buf, ctx->A);
+    umd5_le32_write(&buf[4], ctx->B);
+    umd5_le32_write(&buf[8], ctx->C);
+    umd5_le32_write(&buf[12], ctx->D);
 }
 
 int umd5_cmpval(const char *s1, const char *s2)
 {
     int i;
-    /* TODO assert s1, s2 not NULL */
+    LOG_ASSERT((s1 != NULL) && (s2 != NULL), "Bad arguments\n");
     
     for (i = 0; i < UMD5_VALUE_SIZE; i++)
         if (s1[i] != s2[i])

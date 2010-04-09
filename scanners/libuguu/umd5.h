@@ -4,15 +4,15 @@
  * Read the COPYING file in the root of the source tree.
  */
 
-#ifndef _UMD5_H_
-#define _UMD5_H_
+#ifndef UMD5_H
+#define UMD5_H
 
 #include <stddef.h>
 #ifdef _MSC_VER
 typedef unsigned __int64 uint64_t;
 typedef unsigned __int32 uint32_t;
 #else
-#include <inttypes.h>
+#include <stdint.h>
 #endif
 
 #ifdef __cplusplus
@@ -47,4 +47,5 @@ int umd5_cmpval(const char *s1, const char *s2);
 };
 #endif
 
-#endif
+#endif /* UMD5_H */
+
