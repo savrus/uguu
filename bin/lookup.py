@@ -82,7 +82,7 @@ known_hosts is dictionary of "host" : "lookup engine name"
         self.default = None
         self.__cursor.execute("""
             SELECT
-                id,
+                share_id,
                 scantype_id,
                 protocol,
                 hostname,
@@ -164,7 +164,7 @@ returns permissions to add shares
                 self.__cursor.execute("""
                     UPDATE shares
                     SET scantype_id=%(st)s, last_lookup=now()
-                    WHERE id IN %(ids)s
+                    WHERE share_id IN %(ids)s
                     """, {'st': st, 'ids': tuple(share.id for share in shares)})
         def WalkDict(_dict, routine):
             for portproto in _dict.iterkeys():
@@ -521,11 +521,11 @@ if __name__ == "__main__":
             traceback.print_exc()
 
     cursor = db.cursor()
-    cursor.execute("DELETE FROM shares WHERE last_lookup + interval %s < now() RETURNING share_id",
+    cursor.execute("DELETE FROM shares WHERE last_lookup + interval %s < now() RETURNING tree_id",
                         (wait_until_delete_share,))
-    for hash_id in cursor.fetchall():
+    for tree in cursor.fetchall():
         try:
-            cursor.execute("DELETE FROM hashes WHERE share_id = %s", (hash_id[0],))
+            cursor.execute("DELETE FROM trees WHERE tree_id = %s", (tree[0],))
         except:
             pass
     log("All network lookups finished (running time %s)", datetime.datetime.now() - start)

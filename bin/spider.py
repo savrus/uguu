@@ -49,8 +49,8 @@ def tsprepare(string):
                    '\\1\\2\\3\\4 \\1\\2 \\3\\4 \\2 \\4 ', relax, re.UNICODE)
     return relax
 
-fquery_select = "INSERT INTO files (share_id, sharepath_id, pathfile_id, sharedir_id, size, name, type, tsname, tspath) VALUES "
-fquery_values = "(%(s)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(n)s, %(t)s, to_tsvector('uguu', %(r)s), to_tsvector('uguu', %(rt)s))"
+fquery_select = "INSERT INTO files (tree_id, treepath_id, pathfile_id, treedir_id, size, name, type, tsname, tspath) VALUES "
+fquery_values = "(%(i)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(n)s, %(t)s, to_tsvector('uguu', %(r)s), to_tsvector('uguu', %(rt)s))"
 
 class PsycoCache:
     def __init__(self, cursor):
@@ -78,7 +78,7 @@ class PsycoCache:
     def allcommit(self):
         self.fcommit()
 
-def scan_line(cursor, hash, line, qcache, paths_buffer):
+def scan_line(cursor, tree, line, qcache, paths_buffer):
     try:
         line = unicode(line, scanners_locale)
     except:
@@ -93,8 +93,8 @@ def scan_line(cursor, hash, line, qcache, paths_buffer):
             path = ""
         id = int(id)
         paths_buffer[id] = tsprepare(path)
-        qcache.append("INSERT INTO paths (share_id, sharepath_id, path) VALUES (%(s)s, %(id)s, %(p)s)",
-            {'s':hash, 'id':id, 'p':path})
+        qcache.append("INSERT INTO paths (tree_id, treepath_id, path) VALUES (%(t)s, %(id)s, %(p)s)",
+            {'t':tree, 'id':id, 'p':path})
 
     else:
         # 'file' type of line
@@ -110,8 +110,8 @@ def scan_line(cursor, hash, line, qcache, paths_buffer):
         items = int(items)
         if dirid > 0:
             # if directory then update paths table
-            qcache.append("UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s WHERE share_id = %(s)s AND sharepath_id = %(d)s",
-                {'p':path, 'f':file, 'i':items, 'sz':size, 's':hash, 'd':dirid})
+            qcache.append("UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s WHERE tree_id = %(t)s AND treepath_id = %(d)s",
+                {'p':path, 'f':file, 'i':items, 'sz':size, 't':tree, 'd':dirid})
             paths_buffer.pop(dirid)
         if path == 0:
             # if share root then it's size is the share size
@@ -121,23 +121,23 @@ def scan_line(cursor, hash, line, qcache, paths_buffer):
             # save all info into the files table
             suf = suffix(name)
             type = filetypes_reverse.get(suf) if dirid == 0 else 'dir'
-            qcache.fappend({'s':hash, 'p':path, 'f':file, 'did':dirid,
+            qcache.fappend({'i':tree, 'p':path, 'f':file, 'did':dirid,
                 'sz':size, 'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path]})
 
-def get_hash_id(cursor, newhash):
-    cursor.execute("SELECT share_id, size FROM hashes WHERE hash = %(h)s FOR SHARE", {'h':newhash})
+def get_tree_id(cursor, newhash):
+    cursor.execute("SELECT tree_id, size FROM trees WHERE hash = %(h)s FOR SHARE", {'h':newhash})
     if cursor.rowcount > 0:
         row = cursor.fetchone()
-        return row['size'], row['share_id']
+        return row['size'], row['tree_id']
     try:
-        cursor.execute("INSERT INTO hashes (hash) VALUES (%(h)s) RETURNING share_id", {'h':newhash})
+        cursor.execute("INSERT INTO trees (hash) VALUES (%(h)s) RETURNING tree_id", {'h':newhash})
     except:
         cursor.execute("ABORT")
         # FIXME: analyze unlimited recursion possibility
-        return get_hash_id(cursor, newhash)
-    return None, cursor.fetchone()['share_id']
+        return get_tree_id(cursor, newhash)
+    return None, cursor.fetchone()['tree_id']
 
-def scan_share(db, id, proto, host, port, oldhash_id, oldhash, command):
+def scan_share(db, share_id, proto, host, port, oldtree_id, oldhash, command):
     cursor = db.cursor()
     hoststr = sharestr(proto, host, port)
     address = socket.gethostbyname(host)
@@ -162,47 +162,49 @@ def scan_share(db, id, proto, host, port, oldhash_id, oldhash, command):
         # acquire lock on the shares table again
         cursor.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
-            WHERE id = %(s)s;
-            """, {'s':id, 'w': wait_until_next_scan_failed})
+            WHERE share_id = %(s)s;
+            """, {'s':share_id, 'w': wait_until_next_scan_failed})
         log("Scanning %s failed (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
     elif hash.hexdigest() == oldhash:
         cursor.execute("""
             UPDATE shares SET last_scan = now()
-            WHERE id = %(s)s
-            """, {'s':id})
+            WHERE share_id = %(s)s
+            """, {'s':share_id})
         log("Scanning %s succeded. No changes found (scan time %s).", (hoststr, datetime.datetime.now() - start))
     else:
         db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
         scan_time = datetime.datetime.now() - start
         start = datetime.datetime.now()
-        size, hash_id = get_hash_id(cursor, hash.hexdigest())
+        size, tree_id = get_tree_id(cursor, hash.hexdigest())
         if size is not None:
             cursor.execute("""
-                UPDATE shares SET share_id = %(h)s, size = %(sz)s, last_scan = now()
-                WHERE id = %(s)s;
-                """, {'s':id, 'h':hash_id, 'sz': size})
+                UPDATE shares SET tree_id = %(t)s, size = %(sz)s, last_scan = now()
+                WHERE share_id = %(s)s;
+                """, {'s':share_id, 't':tree_id, 'sz': size})
             db.commit()
-            log("Scanning %s succeded. Hash changed to another share's hash (scan time %s, wait time %s).", (hoststr, scan_time, datetime.datetime.now() - start))
+            log("Scanning %s succeded. Using existing tree (scan time %s, wait time %s).", (hoststr, scan_time, datetime.datetime.now() - start))
         else:
             qcache = PsycoCache(cursor)
             paths_buffer = dict()
             save.seek(0)
             for line in save:
-                scan_line(cursor, hash_id, line.strip('\n'), qcache, paths_buffer)
+                scan_line(cursor, tree_id, line.strip('\n'), qcache, paths_buffer)
             qcache.allcommit()
             save.close()
             cursor.execute("""
-                UPDATE hashes
+                UPDATE trees
                 SET size = %(sz)s
-                WHERE share_id=%(h)s;
+                WHERE tree_id=%(t)s;
                 UPDATE shares
-                SET share_id = %(h)s, size = %(sz)s, last_scan = now()
-                WHERE id = %(s)s;
-                """, {'s':id, 'h':hash_id, 'sz': qcache.totalsize})
+                SET tree_id = %(t)s, size = %(sz)s, last_scan = now()
+                WHERE share_id = %(s)s;
+                """, {'s':share_id, 't':tree_id, 'sz': qcache.totalsize})
             db.commit()
-            log("Scanning %s succeded. Database updated (scan time %s, update time %s).", (hoststr, scan_time, datetime.datetime.now() - start))
+            log("Scanning %s succeded. Added new tree (scan time %s, update time %s).", (hoststr, scan_time, datetime.datetime.now() - start))
         try:
-            cursor.execute("DELETE FROM hashes WHERE share_id = %(s)s", {'s':oldhash_id})
+            # this will whether delete all the associated columns from paths and files, or throw restrict_violation
+            cursor.execute("DELETE FROM trees WHERE tree_id = %(t)s", {'t':oldtree_id})
+            log("Old tree removed.")
             db.commit()
         except:
             db.rollback()
@@ -218,24 +220,24 @@ if __name__ == "__main__":
     while True:
         db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         shares.execute("""
-            SELECT id, shares.share_id, shares.protocol, hostname, port, hash, scan_command
+            SELECT share_id, shares.tree_id, shares.protocol, hostname, port, hash, scan_command
             FROM shares
             LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
-            LEFT JOIN hashes ON shares.share_id = hashes.share_id
+            LEFT JOIN trees ON shares.tree_id = trees.tree_id
             WHERE state = 'online' AND (next_scan IS NULL OR next_scan < now())
             ORDER BY next_scan LIMIT 1
             """)
         if shares.rowcount == 0:
             break
-        id, hash_id, proto, host, port, hash, command = shares.fetchone()
+        id, tree_id, proto, host, port, hash, command = shares.fetchone()
         shares.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
-            WHERE id = %(s)s AND (next_scan IS NULL OR next_scan < now())
+            WHERE share_id = %(s)s AND (next_scan IS NULL OR next_scan < now())
             """, {'s':id, 'w': wait_until_next_scan})
         if shares.statusmessage != 'UPDATE 1':
             continue
         try:
-            scan_share(db, id, proto, host, port, hash_id, hash, command)
+            scan_share(db, id, proto, host, port, tree_id, hash, command)
         except:
             log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
             traceback.print_exc()

@@ -27,11 +27,11 @@ def db_is_empty(db):
             WHERE %(t)s_schema='public'
             """ % {'t': type_name}, required_names)
     return check('table', ['networks', 'scantypes', 'shares', 'paths', \
-                           'filenames', 'files', 'hashes']) and \
+                           'filenames', 'files', 'trees']) and \
            check('routine', ['share_state_change','gfid']) and \
            check('trigger', ['share_stage_change_trigger']) and \
            check('sequence', ['scantypes_scantype_id_seq', 'shares_id_seq', \
-                              'filenames_filename_id_seq', 'hashes_share_id_seq']) and \
+                              'filenames_filename_id_seq', 'trees_tree_id_seq']) and \
            check_q("""
             SELECT typname FROM pg_type
             JOIN pg_namespace ON pg_type.typnamespace=pg_namespace.oid
@@ -53,7 +53,7 @@ def drop(db):
             paths_path, files_filename, files_sharedir, files_size,
             shares_hostname, shares_network, shares_state;
         DROP TABLE IF EXISTS networks, scantypes, shares, paths,
-            filenames, files, hashes CASCADE;
+            filenames, files, hashes, trees CASCADE;
         """)
     safe_query(db, "DROP FUNCTION IF EXISTS share_state_change() CASCADE")
     safe_query(db, "DROP FUNCTION IF EXISTS gfid(IN text, IN filetype, IN text) CASCADE")
@@ -86,23 +86,23 @@ def ddl(db):
             protocol proto NOT NULL,
             priority smallint NOT NULL DEFAULT -1
         );
-        CREATE TABLE hashes (
-            share_id SERIAL PRIMARY KEY,
+        CREATE TABLE trees (
+            tree_id SERIAL PRIMARY KEY,
             hash varchar(64) UNIQUE,
             size bigint NOT NULL DEFAULT 0
         );
-        ALTER SEQUENCE hashes_share_id_seq
+        ALTER SEQUENCE trees_tree_id_seq
             MINVALUE -2147483648 MAXVALUE 2147483647
             CYCLE;
         CREATE TABLE shares (
-            id SERIAL PRIMARY KEY,
-            share_id int REFERENCES hashes ON DELETE RESTRICT DEFAULT NULL,
+            share_id SERIAL PRIMARY KEY,
+            tree_id int REFERENCES trees ON DELETE RESTRICT DEFAULT NULL,
             scantype_id integer REFERENCES scantypes ON DELETE RESTRICT NOT NULL,
             network varchar(32) REFERENCES networks ON DELETE CASCADE NOT NULL,
             protocol proto NOT NULL,
             hostname varchar(64) NOT NULL,
             hostaddr inet,
-            port smallint DEFAULT 0,
+            port smallint NOT NULL DEFAULT 0,
             state availability DEFAULT 'offline',
             size bigint NOT NULL DEFAULT 0,
             last_state_change timestamp DEFAULT now(),
@@ -112,15 +112,15 @@ def ddl(db):
             UNIQUE (protocol, hostname, port)
         );
         CREATE TABLE paths (
-            share_id integer REFERENCES hashes ON DELETE CASCADE,
-            sharepath_id integer,
+            tree_id integer REFERENCES trees ON DELETE CASCADE,
+            treepath_id integer,
             parent_id integer,
             parentfile_id integer,
             path text NOT NULL,
-            items integer DEFAULT 0,
+            items integer NOT NULL DEFAULT 0,
             size bigint NOT NULL DEFAULT 0,
-            UNIQUE (share_id, path),
-            PRIMARY KEY (share_id, sharepath_id)
+            UNIQUE (tree_id, path),
+            PRIMARY KEY (tree_id, treepath_id)
         );
         --CREATE TABLE filenames (
         --    filename_id BIGSERIAL PRIMARY KEY,
@@ -128,18 +128,18 @@ def ddl(db):
         --    type filetype
         --);
         CREATE TABLE files (
-            share_id integer,
-            sharepath_id integer,
+            tree_id integer,
+            treepath_id integer,
             pathfile_id integer,
-            sharedir_id integer DEFAULT 0,
-            size bigint DEFAULT 0,
+            treedir_id integer NOT NULL DEFAULT 0,
+            size bigint NOT NULL DEFAULT 0,
             name text NOT NULL,
             type filetype,
             tsname tsvector,
             tspath tsvector,
-            FOREIGN KEY (share_id, sharepath_id) REFERENCES paths
+            FOREIGN KEY (tree_id, treepath_id) REFERENCES paths
                 ON DELETE CASCADE,
-            PRIMARY KEY (share_id, sharepath_id, pathfile_id)
+            PRIMARY KEY (tree_id, treepath_id, pathfile_id)
         );
         """)
 
@@ -202,8 +202,8 @@ def ddl_index(db):
         CREATE INDEX shares_hostname ON shares USING hash(hostname);
         CREATE INDEX shares_network ON shares USING hash(network);
         CREATE INDEX shares_state ON shares USING hash(state);
-        CREATE INDEX shares_hash_id ON shares (share_id);
-        CREATE INDEX hashes_hash ON hashes USING hash(hash);
+        CREATE INDEX shares_tree_id ON shares (tree_id);
+        CREATE INDEX trees_hash ON trees USING hash(hash);
         """)
 
 
@@ -295,10 +295,10 @@ def grant_access(db, db_user, ReadOnly):
     else:
         cursor.execute("""
             GRANT SELECT, INSERT, UPDATE, DELETE
-            ON TABLE shares, hashes, paths, files
+            ON TABLE shares, trees, paths, files
             TO %(u)s;
             GRANT USAGE
-            ON SEQUENCE shares_id_seq, hashes_share_id_seq -- , filenames_filename_id_seq
+            ON SEQUENCE shares_id_seq, trees_tree_id_seq -- , filenames_filename_id_seq
             TO %(u)s;
             GRANT EXECUTE
             ON FUNCTION share_state_change() -- , gfid(IN text, IN filetype)
