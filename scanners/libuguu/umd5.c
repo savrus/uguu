@@ -5,7 +5,7 @@
  */
 
 #ifndef _WIN32
-#include <inttypes.h>
+#include <stdint.h>
 #endif
 #include <stddef.h>
 
@@ -131,31 +131,24 @@ static void umd5_update_block(struct umd5_ctx *ctx)
     c = ctx->C;
     d = ctx->D;
 
-    /* Round 1 */
     for (i = 0; i < 4; i++) {
         FF(ctx, a, b, c, d, i*4 + 0,  7);
         FF(ctx, d, a, b, c, i*4 + 1, 12);
         FF(ctx, c, d, a, b, i*4 + 2, 17);
         FF(ctx, b, c, d, a, i*4 + 3, 22);
     }
-     
-    /* Round 2 */
     for (i = 0; i < 4; i++) {
         GG(ctx, a, b, c, d, i*4 + 0,  5);
         GG(ctx, d, a, b, c, i*4 + 1,  9);
         GG(ctx, c, d, a, b, i*4 + 2, 14);
         GG(ctx, b, c, d, a, i*4 + 3, 20);
     }
-
-    /* Round 3 */
     for (i = 0; i < 4; i++) {
         HH(ctx, a, b, c, d, i*4 + 0,  4);
         HH(ctx, d, a, b, c, i*4 + 1, 11);
         HH(ctx, c, d, a, b, i*4 + 2, 16);
         HH(ctx, b, c, d, a, i*4 + 3, 23);
     }
-
-    /* Round 4 */
     for (i = 0; i < 4; i++) {
         II(ctx, a, b, c, d, i*4 + 0,  6);
         II(ctx, d, a, b, c, i*4 + 1, 10);
