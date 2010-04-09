@@ -15,8 +15,8 @@ struct sqlwk_dir {
     PGresult *res;
     unsigned long cur_row;
     unsigned long rows;
-    unsigned long long share_id;
-    unsigned long long sharepath_id;
+    unsigned long long tree_id;
+    unsigned long long treepath_id;
 };
 
 /* initialise the walker */

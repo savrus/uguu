@@ -89,12 +89,12 @@ static struct buf_str * sqlwk_escape(const char *s)
 static int sqlwk_query_opendir(struct sqlwk_dir *c)
 {
     /* dir ids are assigned inside 'dt' in the order items are
-     * received from host. So we sort by sharedir_id here to preserve
+     * received from host. So we sort by treedir_id here to preserve
      * that ordering */
-    return sqlwk_query(c, "SELECT sharedir_id AS dirid, size, name "
+    return sqlwk_query(c, "SELECT treedir_id AS dirid, size, name "
         "FROM files "
-        "WHERE share_id = %llu AND sharepath_id = %llu "
-        "ORDER BY sharedir_id;", c->share_id, c->sharepath_id );
+        "WHERE tree_id = %llu AND treepath_id = %llu "
+        "ORDER BY treedir_id;", c->tree_id, c->treepath_id );
 }
 
 static int sqlwk_query_parent(struct sqlwk_dir *c)
@@ -102,15 +102,15 @@ static int sqlwk_query_parent(struct sqlwk_dir *c)
     int ret;
     unsigned long long id;
     ret = sqlwk_query(c, "SELECT parent_id FROM paths "
-        "WHERE share_id = %llu AND sharepath_id = %llu;",
-        c->share_id, c->sharepath_id);
+        "WHERE tree_id = %llu AND treepath_id = %llu;",
+        c->tree_id, c->treepath_id);
     if (ret == -1)
         return -1;
     if (PQgetisnull(c->res, 0, 0))
         return -1;
     if (sscanf(PQgetvalue(c->res, 0, 0), "%llu", &id) == 0)
         return -1;
-    c->sharepath_id = id;
+    c->treepath_id = id;
     return ret;
 }
 
@@ -124,10 +124,10 @@ static int sqlwk_query_child(struct sqlwk_dir *c, const char *name)
         printf ("got NULL %s\n", name);
         return -1;
     }
-    ret = sqlwk_query(c, "SELECT sharedir_id FROM files WHERE "
-        "share_id = %llu AND sharepath_id = %llu "
+    ret = sqlwk_query(c, "SELECT treedir_id FROM files WHERE "
+        "tree_id = %llu AND treepath_id = %llu "
         "AND name = E'%s';",
-        c->share_id, c->sharepath_id, buf_string(bs));
+        c->tree_id, c->treepath_id, buf_string(bs));
     buf_free(bs);
     if (ret == -1)
         return -1;
@@ -135,7 +135,7 @@ static int sqlwk_query_child(struct sqlwk_dir *c, const char *name)
         return -1;
     if (sscanf(PQgetvalue(c->res, 0, 0), "%llu", &id) == 0)
         return -1;
-    c->sharepath_id = id;
+    c->treepath_id = id;
     return ret;
 }
 
@@ -157,7 +157,7 @@ int sqlwk_open(struct sqlwk_dir *c, const char *proto, const char *host, unsigne
         goto clean_conn;
     }
 
-    ret = sqlwk_query(c, "SELECT share_id FROM shares WHERE protocol = '%s'"
+    ret = sqlwk_query(c, "SELECT tree_id FROM shares WHERE protocol = '%s'"
                          " AND hostname = '%s' AND port = %d;",
                          proto, host, port);
     if (ret <= 0) {
@@ -166,16 +166,16 @@ int sqlwk_open(struct sqlwk_dir *c, const char *proto, const char *host, unsigne
     }
 
     if (PQgetisnull(c->res, 0, 0)) {
-        LOG_ERR("PQgetisnull() reports share_id is NULL\n");
+        LOG_ERR("PQgetisnull() reports tree_id is NULL\n");
         goto clean_conn;
     }
 
-    if (sscanf(PQgetvalue(c->res, 0, 0), "%llu", &(c->share_id)) == 0) {
-        LOG_ERR("sscanf() couldn't read share_id\n");
+    if (sscanf(PQgetvalue(c->res, 0, 0), "%llu", &(c->tree_id)) == 0) {
+        LOG_ERR("sscanf() couldn't read tree_id\n");
         goto clean_conn;
     }
     
-    c->sharepath_id = 1;
+    c->treepath_id = 1;
     
     if (sqlwk_query_opendir(c) == -1)
         goto clean_conn;
@@ -203,7 +203,7 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
     struct sqlwk_dir *c = (struct sqlwk_dir*) curdir;
     struct dt_dentry *d;
     unsigned long long size;
-    unsigned long long sharedir_id;
+    unsigned long long treedir_id;
     unsigned long row;
    
     if (c->cur_row >= c->rows)
@@ -218,8 +218,8 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
         return NULL;
     }
 
-    if (sscanf(PQgetvalue(c->res, row, 0), "%llu", &sharedir_id) == 0) {
-        LOG_ERR("Bad query results: couldn't read sharedir_id\n");
+    if (sscanf(PQgetvalue(c->res, row, 0), "%llu", &treedir_id) == 0) {
+        LOG_ERR("Bad query results: couldn't read treedir_id\n");
         return NULL;
     }
     if (sscanf(PQgetvalue(c->res, row, 1), "%llu", &size) == 0) {
@@ -233,7 +233,7 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
         return NULL;
     }
     d->name = strdup(PQgetvalue(c->res, row, 2));
-    if (sharedir_id > 0)
+    if (treedir_id > 0)
         d->type = DT_DIR;
     else {
         d->type = DT_FILE;
@@ -261,7 +261,8 @@ static int sqlwk_go(dt_go type, char *name, void *curdir)
                 return -1;
             break;
         default:
-            LOG_ERR("unknown smbwk_go_type %d, sharepath_id: %llu\n", type, c->sharepath_id);
+            LOG_ERR("unknown smbwk_go_type %d, treepath_id: %llu\n",
+                type, c->treepath_id);
             return -1;
     }
    
