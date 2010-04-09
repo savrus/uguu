@@ -12,7 +12,7 @@
 typedef unsigned __int64 uint64_t;
 typedef unsigned __int32 uint32_t;
 #else
-#include <inttypes.h>
+#include <stdint.h>
 #endif
 
 #ifdef __cplusplus
