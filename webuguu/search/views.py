@@ -220,7 +220,7 @@ class QueryParser:
         str = ""
         if self.sqlcount_joinshares:
             str += """
-                JOIN shares USING (share_id)
+                JOIN shares USING (tree_id)
                 """
         return str + self.sqlquery
     def getoptions(self):
@@ -268,17 +268,17 @@ def do_search(request, index, searchform):
     parsedq.setoption("offset", offset)
     parsedq.setoption("limit", search_items_per_page)
     sqlquery = cursor.mogrify("""
-        SELECT protocol, hostname, hostaddr,
-            paths.path AS path, files.sharedir_id AS dirid,
-            files.name AS filename, files.size AS size, port,
-            shares.id AS share_id, paths.sharepath_id as path_id,
+        SELECT share_id, protocol, hostname, port, hostaddr,
+            paths.path AS path, files.treedir_id AS dirid,
+            files.name AS filename, files.size AS size,
+            paths.treepath_id as path_id,
             files.pathfile_id as fileid, shares.state
         FROM files
-        JOIN paths USING (share_id, sharepath_id)
-        JOIN shares USING (share_id)
+        JOIN paths USING (tree_id, treepath_id)
+        JOIN shares USING (tree_id)
         """ + parsedq.sqlwhere() + """
         ORDER BY """ + parsedq.sqlorder() +
-            """, files.share_id, files.sharepath_id, files.pathfile_id
+            """, files.tree_id, files.treepath_id, files.pathfile_id
         OFFSET %(offset)s LIMIT %(limit)s
         """, parsedq.getoptions())
     cursor.execute(sqlquery)
