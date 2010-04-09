@@ -19,12 +19,6 @@ average size: <span class="filesize">{{info.avg|filesizeformat}}</span>
     <div class="margintop"><a class="share" href="{%url webuguu.vfs.views.net %}">go up</a></div>
 {% endif %}
 <table>
-    <tr>
-        <td></td>
-        <td></td>
-        <td><a class="solid" href="{{fastorder}}&order=size">size</a></td>
-        <td class="file"><a class="solid" href="{{fastorder}}&order=name">name</a></td>
-    </tr>
     {% block sharelist %}
     {% for s in shares %}
     <tr>
