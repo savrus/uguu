@@ -86,19 +86,18 @@ def sharelist(request, column, name, is_this_host):
         'size': "size DESC",
         'name': "state, hostname"
     }
-    if orders.get(order):
-        order = orders[order]
-    else:
-        order = orders['name']
+    if not orders.get(order):
+        order = 'name'
     cursor.execute("""
         SELECT share_id, state, size, network, protocol, hostname, port
         FROM shares
         WHERE %s = %%(n)s
         ORDER BY %s
         OFFSET %%(o)s LIMIT %%(l)s
-        """ % (column, order), {'n':name, 'o':offset, 'l':vfs_items_per_page})
+        """ % (column, orders[order]), {'n':name, 'o':offset, 'l':vfs_items_per_page})
     fastselflink = "./?" + urlencode(url['order'])
     gobar['order'] = "./?"
+    gobar['orders'] = [{'n': k, 's': k==order} for k in orders.keys()]
     return render_to_response("vfs/sharelist.html", \
         {'name': name,
          'ishost': is_this_host,
@@ -230,12 +229,10 @@ def share(request, proto, hostname, port, path=""):
             LIMIT %(l)s;
             """
     }
-    if orders.get(order):
-        query = orders[order]
-    else:
-        query = orders['name']
-    cursor.execute(query, {'t': tree_id, 'p': path_id, 'o': offset, 
-                           'l':vfs_items_per_page})
+    if not orders.get(order):
+        order = 'name'
+    cursor.execute(orders[order], {'t': tree_id, 'p': path_id, 'o': offset, 
+                                   'l':vfs_items_per_page})
     # some additional variables for template
     if hostaddr == None:
         hostaddr = hostname
@@ -254,6 +251,7 @@ def share(request, proto, hostname, port, path=""):
         fastuplink = ""
     fastselflink = "./?" + urlencode(dict(url['share'] + url['path'] + url['order']))
     gobar['order'] = "./?" + urlencode(dict(url['share'] + url['path']))
+    gobar['orders'] = [{'n': k, 's': k==order} for k in orders.keys()]
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,

@@ -13,8 +13,9 @@
 {% if gobar.order %}
         <td></td>
         <td>Order:</td>
-        <td><a class="gobar" href="{{gobar.order}}&amp;order=name">name</a></td>
-        <td><a class="gobar" href="{{gobar.order}}&amp;order=size">size</a></td>
+{% for order in gobar.orders %}
+        <td>{% if order.s %}{{order.n}}{% else %}<a class="gobar" href="{{gobar.order}}&amp;order={{order.n}}">{{order.n}}</a>{% endif %}</td>
+{% endfor %}
 {% endif %}
     </tr></table>
 </div>
