@@ -6,12 +6,6 @@ total items: {{ items }}, total size: <span class="filesize">{{ size|filesizefor
 <div class="margintop">
     <a class="share" href="../{{fastup|iriencode}}">go up</a>
     <table class="files">
-        <tr>
-            <td><span class="rownum"></span></td>
-            <td><span class="filetype"></span></td>
-            <td><a class="solid" href="{{fastorder}}&order=size">size</a></td> 
-            <td class="file"><a class="solid" href="{{fastorder}}&order=name">name</a></td>
-        </tr>
         {% for f in files %}
         <tr>
             <td><span class="rownum">{{forloop.counter|add:offset}}.</span></td>

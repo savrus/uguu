@@ -97,14 +97,13 @@ def sharelist(request, column, name, is_this_host):
         ORDER BY %s
         OFFSET %%(o)s LIMIT %%(l)s
         """ % (column, order), {'n':name, 'o':offset, 'l':vfs_items_per_page})
-    fastselforderedlink = "./?"
     fastselflink = "./?" + urlencode(url['order'])
+    gobar['order'] = "./?"
     return render_to_response("vfs/sharelist.html", \
         {'name': name,
          'ishost': is_this_host,
          'shares': cursor.fetchall(),
          'fastself': fastselflink,
-         'fastorder': fastselforderedlink,
          'gobar': gobar,
          'info': listinfo,
          'gentime': time.time() - generation_started,
@@ -253,8 +252,8 @@ def share(request, proto, hostname, port, path=""):
             ([('o', uplink_offset)] if uplink_offset > 0 else []) ))
     else:
         fastuplink = ""
-    fastselforderedlink = "./?" + urlencode(dict(url['share'] + url['path']))
     fastselflink = "./?" + urlencode(dict(url['share'] + url['path'] + url['order']))
+    gobar['order'] = "./?" + urlencode(dict(url['share'] + url['path']))
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,
@@ -267,7 +266,6 @@ def share(request, proto, hostname, port, path=""):
          'share_id': share_id,
          'fastup': fastuplink,
          'fastself': fastselflink,
-         'fastorder': fastselforderedlink,
          'offset': offset,
          'gobar': gobar,
          'state': state,
