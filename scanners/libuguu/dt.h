@@ -17,7 +17,7 @@ extern "C" {
 #define DT_MAX_DIRS (1 << 16)
 /* maximum number of items in a directory that would be scanned */
 #define DT_MAX_ITEMS_IN_DIR (1 << 18)
-/* number of files in a directory to try recursion detection */
+/* number of intems maches to assume recursion */
 #define DT_RECURSION_THRESHOLD 5
 
 
