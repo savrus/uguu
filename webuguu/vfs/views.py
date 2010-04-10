@@ -96,14 +96,17 @@ def sharelist(request, column, name, is_this_host):
         OFFSET %%(o)s LIMIT %%(l)s
         """ % (column, orders[order]), {'n':name, 'o':offset, 'l':vfs_items_per_page})
     fastselflink = "./?" + urlencode(url['order'])
-    gobar['order'] = "./?"
-    gobar['orders'] = [{'n': k, 's': k==order} for k in orders.keys()]
+    orderbar = dict()
+    orderbar['nontrivial'] = (cursor.rowcount > 1)
+    orderbar['order'] = "./?"
+    orderbar['orders'] = [{'n': k, 's': k==order} for k in orders.keys()]
     return render_to_response("vfs/sharelist.html", \
         {'name': name,
          'ishost': is_this_host,
          'shares': cursor.fetchall(),
          'fastself': fastselflink,
          'gobar': gobar,
+         'orderbar': orderbar,
          'info': listinfo,
          'gentime': time.time() - generation_started,
          })
@@ -250,8 +253,10 @@ def share(request, proto, hostname, port, path=""):
     else:
         fastuplink = ""
     fastselflink = "./?" + urlencode(dict(url['share'] + url['path'] + url['order']))
-    gobar['order'] = "./?" + urlencode(dict(url['share'] + url['path']))
-    gobar['orders'] = [{'n': k, 's': k==order} for k in orders.keys()]
+    orderbar = dict()
+    orderbar['nontrivial'] = (cursor.rowcount > 1)
+    orderbar['order'] = "./?" + urlencode(dict(url['share'] + url['path']))
+    orderbar['orders'] = [{'n': k, 's': k==order} for k in orders.keys()]
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,
@@ -266,6 +271,7 @@ def share(request, proto, hostname, port, path=""):
          'fastself': fastselflink,
          'offset': offset,
          'gobar': gobar,
+         'orderbar': orderbar,
          'state': state,
          'changetime': changetime,
          'scantime': scantime,
