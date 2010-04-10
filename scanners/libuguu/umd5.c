@@ -126,31 +126,27 @@ void umd5_update(struct umd5_ctx *ctx, const char *s, size_t size)
     LOG_ASSERT((ctx != NULL) && (s != NULL), "Bad arguments\n");
     LOG_ASSERT(ctx->len < ((uint64_t) -1) - size, "Too long message\n");
 
-    while (size > 0) {
-        if (ctx->len % UMD5_BLOCK_SIZE != 0) {
-            while ((size > 0) && (ctx->len % UMD5_BLOCK_SIZE != 0)) {
-                ctx->block[ctx->len % UMD5_BLOCK_SIZE] = *s++;
-                size--;
-                ctx->len++;
-            }
-
-            if (ctx->len % UMD5_BLOCK_SIZE != 0)
-                return;
-
-            umd5_update_block(ctx, ctx->block);
-        }
-
-        for (; size >= UMD5_BLOCK_SIZE; size-= UMD5_BLOCK_SIZE) {
-            umd5_update_block(ctx, s);
-            s += UMD5_BLOCK_SIZE;
-            ctx->len += UMD5_BLOCK_SIZE;
-        }
-
-        while (size > 0) {
+    if (ctx->len % UMD5_BLOCK_SIZE != 0) {
+        while ((size > 0) && (ctx->len % UMD5_BLOCK_SIZE != 0)) {
             ctx->block[ctx->len % UMD5_BLOCK_SIZE] = *s++;
             size--;
             ctx->len++;
         }
+        if (ctx->len % UMD5_BLOCK_SIZE != 0)
+            return;
+        umd5_update_block(ctx, ctx->block);
+    }
+
+    for (; size >= UMD5_BLOCK_SIZE; size-= UMD5_BLOCK_SIZE) {
+        umd5_update_block(ctx, s);
+        s += UMD5_BLOCK_SIZE;
+        ctx->len += UMD5_BLOCK_SIZE;
+    }
+
+    while (size > 0) {
+        ctx->block[ctx->len % UMD5_BLOCK_SIZE] = *s++;
+        size--;
+        ctx->len++;
     }
 }
 
