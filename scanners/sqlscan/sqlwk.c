@@ -93,8 +93,8 @@ static int sqlwk_query_opendir(struct sqlwk_dir *c)
      * that ordering */
     return sqlwk_query(c, "SELECT treedir_id AS dirid, size, name "
         "FROM files "
-        "WHERE tree_id = %llu AND treepath_id = %llu "
-        "ORDER BY treedir_id;", c->tree_id, c->treepath_id );
+        "WHERE tree_id = %llu AND treepath_id = %llu;",
+        c->tree_id, c->treepath_id );
 }
 
 static int sqlwk_query_parent(struct sqlwk_dir *c)
