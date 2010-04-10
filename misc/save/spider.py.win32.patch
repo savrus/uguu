@@ -19,3 +19,32 @@ diff -r fcaa1afea4db bin/spider.py
      save = tempfile.TemporaryFile(bufsize=-1)
      hash = hashlib.sha256()
      line_count = 0
+@@ -166,10 +171,6 @@
+             """, {'s':share_id, 'w': wait_until_next_scan_failed})
+         log("Scanning %s failed (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
+     elif hash.hexdigest() == oldhash:
+-        cursor.execute("""
+-            UPDATE shares SET last_scan = now()
+-            WHERE share_id = %(s)s
+-            """, {'s':share_id})
+         log("Scanning %s succeded. No changes found (scan time %s).", (hoststr, datetime.datetime.now() - start))
+     else:
+         db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
+@@ -178,7 +179,7 @@
+         size, tree_id = get_tree_id(cursor, hash.hexdigest())
+         if size is not None:
+             cursor.execute("""
+-                UPDATE shares SET tree_id = %(t)s, size = %(sz)s, last_scan = now()
++                UPDATE shares SET tree_id = %(t)s, size = %(sz)s
+                 WHERE share_id = %(s)s;
+                 """, {'s':share_id, 't':tree_id, 'sz': size})
+             db.commit()
+@@ -196,7 +197,7 @@
+                 SET size = %(sz)s
+                 WHERE tree_id=%(t)s;
+                 UPDATE shares
+-                SET tree_id = %(t)s, size = %(sz)s, last_scan = now()
++                SET tree_id = %(t)s, size = %(sz)s
+                 WHERE share_id = %(s)s;
+                 """, {'s':share_id, 't':tree_id, 'sz': qcache.totalsize})
+             db.commit()
