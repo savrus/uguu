@@ -39,14 +39,14 @@ const uint32_t T[64] = {
 #define H(X,Y,Z) ((X) ^ (Y) ^ (Z))
 #define I(X,Y,Z) ((Y) ^ ((X) | ~(Z)))
 
-#define XX(X, ctx, a, b, c, d, k, s, i) \
+#define XX(X, msg, a, b, c, d, k, s, i) \
     (a) = (b) + umd5_rol(((a) + X((b),(c),(d)) \
-          + umd5_le32_read(&((ctx)->block[(k)*4])) + T[(i)]), (s))
+          + umd5_le32_read(&((msg)[(k)*4])) + T[(i)]), (s))
 
-#define FF(ctx,a,b,c,d,k,s) XX(F,ctx,a,b,c,d,            k, s,      k)
-#define GG(ctx,a,b,c,d,k,s) XX(G,ctx,a,b,c,d, (1+(k)*5)%16, s, (k)+16)
-#define HH(ctx,a,b,c,d,k,s) XX(H,ctx,a,b,c,d, (5+(k)*3)%16, s, (k)+32)
-#define II(ctx,a,b,c,d,k,s) XX(I,ctx,a,b,c,d,   ((k)*7)%16, s, (k)+48)
+#define FF(msg,a,b,c,d,k,s) XX(F,msg,a,b,c,d,            k, s,      k)
+#define GG(msg,a,b,c,d,k,s) XX(G,msg,a,b,c,d, (1+(k)*5)%16, s, (k)+16)
+#define HH(msg,a,b,c,d,k,s) XX(H,msg,a,b,c,d, (5+(k)*3)%16, s, (k)+32)
+#define II(msg,a,b,c,d,k,s) XX(I,msg,a,b,c,d,   ((k)*7)%16, s, (k)+48)
 
 static uint32_t umd5_rol(uint32_t val, unsigned int shift)
 {
@@ -69,7 +69,7 @@ static void umd5_le32_write(char *b, uint32_t w)
     b[3] = (w >> 24) & 0xff;
 }
 
-static void umd5_update_block(struct umd5_ctx *ctx)
+static void umd5_update_block(struct umd5_ctx *ctx, const char *msg)
 {
     uint32_t a, b, c, d;
     int i;
@@ -80,28 +80,28 @@ static void umd5_update_block(struct umd5_ctx *ctx)
     d = ctx->D;
 
     for (i = 0; i < 4; i++) {
-        FF(ctx, a, b, c, d, i*4 + 0,  7);
-        FF(ctx, d, a, b, c, i*4 + 1, 12);
-        FF(ctx, c, d, a, b, i*4 + 2, 17);
-        FF(ctx, b, c, d, a, i*4 + 3, 22);
+        FF(msg, a, b, c, d, i*4 + 0,  7);
+        FF(msg, d, a, b, c, i*4 + 1, 12);
+        FF(msg, c, d, a, b, i*4 + 2, 17);
+        FF(msg, b, c, d, a, i*4 + 3, 22);
     }
     for (i = 0; i < 4; i++) {
-        GG(ctx, a, b, c, d, i*4 + 0,  5);
-        GG(ctx, d, a, b, c, i*4 + 1,  9);
-        GG(ctx, c, d, a, b, i*4 + 2, 14);
-        GG(ctx, b, c, d, a, i*4 + 3, 20);
+        GG(msg, a, b, c, d, i*4 + 0,  5);
+        GG(msg, d, a, b, c, i*4 + 1,  9);
+        GG(msg, c, d, a, b, i*4 + 2, 14);
+        GG(msg, b, c, d, a, i*4 + 3, 20);
     }
     for (i = 0; i < 4; i++) {
-        HH(ctx, a, b, c, d, i*4 + 0,  4);
-        HH(ctx, d, a, b, c, i*4 + 1, 11);
-        HH(ctx, c, d, a, b, i*4 + 2, 16);
-        HH(ctx, b, c, d, a, i*4 + 3, 23);
+        HH(msg, a, b, c, d, i*4 + 0,  4);
+        HH(msg, d, a, b, c, i*4 + 1, 11);
+        HH(msg, c, d, a, b, i*4 + 2, 16);
+        HH(msg, b, c, d, a, i*4 + 3, 23);
     }
     for (i = 0; i < 4; i++) {
-        II(ctx, a, b, c, d, i*4 + 0,  6);
-        II(ctx, d, a, b, c, i*4 + 1, 10);
-        II(ctx, c, d, a, b, i*4 + 2, 15);
-        II(ctx, b, c, d, a, i*4 + 3, 21);
+        II(msg, a, b, c, d, i*4 + 0,  6);
+        II(msg, d, a, b, c, i*4 + 1, 10);
+        II(msg, c, d, a, b, i*4 + 2, 15);
+        II(msg, b, c, d, a, i*4 + 3, 21);
     }
 
     ctx->A += a;
@@ -127,18 +127,30 @@ void umd5_update(struct umd5_ctx *ctx, const char *s, size_t size)
     LOG_ASSERT(ctx->len < ((uint64_t) -1) - size, "Too long message\n");
 
     while (size > 0) {
+        if (ctx->len % UMD5_BLOCK_SIZE != 0) {
+            while ((size > 0) && (ctx->len % UMD5_BLOCK_SIZE != 0)) {
+                ctx->block[ctx->len % UMD5_BLOCK_SIZE] = *s++;
+                size--;
+                ctx->len++;
+            }
+
+            if (ctx->len % UMD5_BLOCK_SIZE != 0)
+                return;
+
+            umd5_update_block(ctx, ctx->block);
+        }
+
+        for (; size >= UMD5_BLOCK_SIZE; size-= UMD5_BLOCK_SIZE) {
+            umd5_update_block(ctx, s);
+            s += UMD5_BLOCK_SIZE;
+            ctx->len += UMD5_BLOCK_SIZE;
+        }
+
         while (size > 0) {
             ctx->block[ctx->len % UMD5_BLOCK_SIZE] = *s++;
             size--;
             ctx->len++;
-            if (ctx->len % UMD5_BLOCK_SIZE == 0)
-                break;
         }
-        if (ctx->len % UMD5_BLOCK_SIZE != 0)
-            return;
-
-        /* block is full now, processing */
-        umd5_update_block(ctx);
     }
 }
 
