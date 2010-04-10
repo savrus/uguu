@@ -27,11 +27,11 @@ def db_is_empty(db):
             WHERE %(t)s_schema='public'
             """ % {'t': type_name}, required_names)
     return check('table', ['networks', 'scantypes', 'shares', 'paths', \
-                           'filenames', 'files', 'trees']) and \
-           check('routine', ['share_state_change','gfid']) and \
+                           'files', 'trees']) and \
+           check('routine', ['share_state_change']) and \
            check('trigger', ['share_stage_change_trigger']) and \
            check('sequence', ['scantypes_scantype_id_seq', 'shares_id_seq', \
-                              'filenames_filename_id_seq', 'trees_tree_id_seq']) and \
+                              'trees_tree_id_seq']) and \
            check_q("""
             SELECT typname FROM pg_type
             JOIN pg_namespace ON pg_type.typnamespace=pg_namespace.oid
@@ -46,17 +46,29 @@ def safe_query(db, query):
     except:
         db.rollback()
 
+        CREATE INDEX paths_path ON paths USING hash(path);
+        CREATE INDEX filenames_name ON files USING hash(name);
+        CREATE INDEX files_name ON files USING hash(lower(name));
+        CREATE INDEX files_tsname ON files USING gin(tsname);
+        CREATE INDEX files_type ON files (type);
+        CREATE INDEX files_size ON files (size);
+        CREATE INDEX files_tsfullpath ON files USING gin((tspath || tsname));
+        CREATE INDEX shares_hostname ON shares USING hash(hostname);
+        CREATE INDEX shares_network ON shares USING hash(network);
+        CREATE INDEX shares_state ON shares USING hash(state);
+        CREATE INDEX shares_tree_id ON shares (tree_id);
+        CREATE INDEX trees_hash ON trees USING hash(hash);
 def drop(db):
     cursor = db.cursor()
     cursor.execute("""
-        DROP INDEX IF EXISTS filenames_name, filenames_tsname, filenames_type,
-            paths_path, files_filename, files_sharedir, files_size,
+        DROP INDEX IF EXISTS filenames_name, files_type,
+            paths_path, files_name, files_size, files_tsname,
+            files_tsfullpath, trees_hash, shares_tree_id,
             shares_hostname, shares_network, shares_state;
-        DROP TABLE IF EXISTS networks, scantypes, shares, paths,
-            filenames, files, hashes, trees CASCADE;
+        DROP TABLE IF EXISTS networks, scantypes, trees, shares,
+            paths, files CASCADE;
         """)
     safe_query(db, "DROP FUNCTION IF EXISTS share_state_change() CASCADE")
-    safe_query(db, "DROP FUNCTION IF EXISTS gfid(IN text, IN filetype, IN text) CASCADE")
     cursor.execute("""
         DROP TYPE IF EXISTS filetype, proto, availability CASCADE;
         DROP TEXT SEARCH CONFIGURATION IF EXISTS uguu CASCADE;
@@ -109,7 +121,6 @@ def ddl(db):
             last_scan timestamp,
             next_scan timestamp,
             last_lookup timestamp DEFAULT now(),
-            hash varchar(64) UNIQUE,
             UNIQUE (protocol, hostname, port)
         );
         CREATE TABLE paths (
@@ -123,11 +134,6 @@ def ddl(db):
             UNIQUE (tree_id, path),
             PRIMARY KEY (tree_id, treepath_id)
         );
-        --CREATE TABLE filenames (
-        --    filename_id BIGSERIAL PRIMARY KEY,
-        --    name text UNIQUE NOT NULL,
-        --    type filetype
-        --);
         CREATE TABLE files (
             tree_id integer,
             treepath_id integer,
@@ -163,30 +169,6 @@ def ddl_prog(db):
         CREATE TRIGGER share_stage_change_trigger
             BEFORE UPDATE ON shares FOR EACH ROW
             EXECUTE PROCEDURE share_state_change();
-
-        --CREATE OR REPLACE FUNCTION share_init_share_id()
-        --    RETURNS trigger AS
-        --   $$BEGIN
-        --        NEW.share_id = NEW.id;
-        --        RETURN NEW;
-        --    END;$$
-        --    LANGUAGE 'plpgsql' VOLATILE COST 100;
-        --CREATE TRIGGER share_init_share_id_trigger
-        --    BEFORE INSERT ON shares FOR EACH ROW
-        --    EXECUTE PROCEDURE share_init_share_id();
-        
-        --CREATE OR REPLACE FUNCTION gfid(
-        --        IN text, IN filetype)
-        --    RETURNS void AS $$
-        --    DECLARE id INTEGER;
-        --    BEGIN
-        --        SELECT INTO id filename_id FROM filenames WHERE name = $1;
-        --        IF NOT FOUND THEN
-        --            INSERT INTO filenames (name, type)
-        --            VALUES ($1, $2);
-        --        END IF;
-        --    END;
-        --    $$ LANGUAGE 'plpgsql' VOLATILE;
 	""")
 
 
@@ -299,10 +281,10 @@ def grant_access(db, db_user, ReadOnly):
             ON TABLE shares, trees, paths, files
             TO %(u)s;
             GRANT USAGE
-            ON SEQUENCE shares_share_id_seq, trees_tree_id_seq -- , filenames_filename_id_seq
+            ON SEQUENCE shares_share_id_seq, trees_tree_id_seq
             TO %(u)s;
             GRANT EXECUTE
-            ON FUNCTION share_state_change() -- , gfid(IN text, IN filetype)
+            ON FUNCTION share_state_change()
             TO %(u)s;
             """ % {'u': db_user})
 
