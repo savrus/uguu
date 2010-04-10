@@ -201,13 +201,14 @@ def scan_share(db, share_id, proto, host, port, oldtree_id, oldhash, command):
                 """, {'s':share_id, 't':tree_id, 'sz': qcache.totalsize})
             db.commit()
             log("Scanning %s succeded. Added new tree (scan time %s, update time %s).", (hoststr, scan_time, datetime.datetime.now() - start))
-        try:
-            # this will whether delete all the associated columns from paths and files, or throw restrict_violation
-            cursor.execute("DELETE FROM trees WHERE tree_id = %(t)s", {'t':oldtree_id})
-            log("Old tree removed.")
-            db.commit()
-        except:
-            db.rollback()
+        if oldtree_id is not None:
+            try:
+                # this will whether delete all the associated columns from paths and files, or throw restrict_violation
+                cursor.execute("DELETE FROM trees WHERE tree_id = %(t)s", {'t':oldtree_id})
+                log("Old tree removed.")
+                db.commit()
+            except:
+                db.rollback()
 
 
 if __name__ == "__main__":
