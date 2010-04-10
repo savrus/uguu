@@ -203,19 +203,16 @@ static int dt_recursive_link(struct dt_dentry *d)
         dps = dp;
         m = 0;
         
-        while ((dps != NULL)
-               && (m < DT_RECURSION_THRESHOLD)
-               && (!umd5_cmpval(ds->hash, dps->hash))) {
+        while ((dps != NULL) && (!umd5_cmpval(ds->hash, dps->hash))) {
             m += ds->items;
+            if (m >= DT_RECURSION_THRESHOLD) {
+                LOG_ERR("Recursion detected at directory '%s' (id %u). "
+                        "Assuming link '%s' (id %u) -> '%s' (id %u)\n",
+                    d->name, d->id, ds->name, ds->id, dps->name, dps->id);
+                return 1;
+            }
             ds = ds->parent;
             dps = dps->parent;
-        }
-
-        if (m >= DT_RECURSION_THRESHOLD) {
-            LOG_ERR("Recursion detected at directory '%s' (id %u). "
-                    "Assuming link target '%s' (id %u)\n",
-                d->name, d->id, dp->name, dp->id);
-            return 1;
         }
     }
     return 0;
