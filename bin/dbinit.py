@@ -109,6 +109,7 @@ def ddl(db):
             last_scan timestamp,
             next_scan timestamp,
             last_lookup timestamp DEFAULT now(),
+            hash varchar(64) UNIQUE,
             UNIQUE (protocol, hostname, port)
         );
         CREATE TABLE paths (
@@ -298,7 +299,7 @@ def grant_access(db, db_user, ReadOnly):
             ON TABLE shares, trees, paths, files
             TO %(u)s;
             GRANT USAGE
-            ON SEQUENCE shares_id_seq, trees_tree_id_seq -- , filenames_filename_id_seq
+            ON SEQUENCE shares_share_id_seq, trees_tree_id_seq -- , filenames_filename_id_seq
             TO %(u)s;
             GRANT EXECUTE
             ON FUNCTION share_state_change() -- , gfid(IN text, IN filetype)
