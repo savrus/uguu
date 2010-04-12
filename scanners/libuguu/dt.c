@@ -187,15 +187,15 @@ static int dt_recursive_link(struct dt_dentry *d)
     struct umd5_ctx ctx;
     unsigned int m = 0;
     
-    umd5_init(&ctx);
-    dt_list_call1(&(d->child), dt_umd5_update, (void *) &ctx);
-    dt_list_call1(&(d->file_child), dt_umd5_update, (void *) &ctx);
-    umd5_finish(&ctx);
-    
     if ((d->hash = (char*)malloc(UMD5_VALUE_SIZE*sizeof(char))) == NULL) {
         LOG_ERR("malloc() returned NULL\n");
         return 0;
     }
+    
+    umd5_init(&ctx);
+    dt_list_call1(&(d->child), dt_umd5_update, (void *) &ctx);
+    dt_list_call1(&(d->file_child), dt_umd5_update, (void *) &ctx);
+    umd5_finish(&ctx);
     umd5_value(&ctx, d->hash);
 
     for (dp = d->parent; dp != NULL; dp = dp->parent) {
