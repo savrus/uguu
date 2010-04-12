@@ -79,8 +79,7 @@ class QueryParser:
             'exact': self.parse_option_match_exact,
         }
         if arg in matches.keys():
-            #self.sqltsquery = qopt_match[arg]
-            self.options['tsquery'] = arg
+            self.filecond = qopt_match[arg]
             matches[arg]()
         else:
             self.error += "Unsupported match argument: '%s'.\n" % arg
@@ -96,16 +95,16 @@ class QueryParser:
             sqlcommon = "files.type IN %%(%s)s" % option
             conds.append(sqlcommon)
             self.options[option] = tuple(common)
-        self.sqlcond.append("(" + string.join(conds, " OR ") + ")")
+        self.conditions.append("(" + string.join(conds, " OR ") + ")")
     def parse_option_forsize(self, option, arg, direction):
-        self.sqlcond.append("files.size %s %%(%s)s" % (direction, option))
+        self.conditions.append("files.size %s %%(%s)s" % (direction, option))
         self.options[option] = self.size2byte(arg)
     def parse_option_min(self, option, arg):
         self.parse_option_forsize(option, arg, ">=")
     def parse_option_max(self, option, arg):
         self.parse_option_forsize(option, arg, "<=")
     def parse_option_forshare(self, option, args, column):
-        self.sqlcond.append("shares.%s IN %%(%s)s" % (column, option))
+        self.conditions.append("shares.%s IN %%(%s)s" % (column, option))
         self.options[option] = tuple(args)
         self.sqlcount_joinshares = True
     def parse_option_forshare_check(self, option, arg, column, known, optstr):
@@ -157,13 +156,11 @@ class QueryParser:
         self.error += "Query option '%s' appears more than once.\n" % option
     def __init__(self, query):
         self.options = dict()
-        self.options['tsquery'] = 'name'
         self.options['output'] = 'html'
         self.order = "shares.state, files.size DESC"
         self.error = ""
-        self.userquery = query
-        self.sqlcond = []
-        self.sqlcount_joinpath = False
+        self.conditions = []
+        self.filecond = qopt_match['name']
         self.sqlcount_joinshares = False
         self.sql_full_search_prefix = False
         qext = {
@@ -179,7 +176,6 @@ class QueryParser:
             'order': self.parse_option_order,
             'out':   self.parse_option_out,
         }
-        qext_executed = dict()
         words = []
         for w in re.findall(r'(?u)(\w+)(:(?:\w|\.|\,|\-)*)?', query, re.UNICODE):
             if w[1] == "":
@@ -194,21 +190,14 @@ class QueryParser:
                     self.error += "No arguments for query option '%s'.\n" % w[0]
             else:
                 self.error += "Unknown query option: '%s'.\n" % w[0]
-        self.sqltsquery = qopt_match[self.options['tsquery']]
         if self.sql_full_search_prefix:
             ## prefix search in postgres 8.4, for postgres 8.3 just remove
             words = [x + ":*" for x in words]
         self.options['query'] = string.join(words, " & ")
         equery = re.search(r'(?u)(?P<equery>[^:]*) \w+:', query, re.UNICODE)
         self.options['equery'] = equery.group('equery') if equery else "NULL"
-        ## if you want to allow empty queries...
-        #if len(words) > 0:
-        #    self.sqlcond.append(self.sqltsquery)
-        self.sqlcond.append(self.sqltsquery)
-        if len(self.sqlcond) > 0:
-            self.sqlquery = "WHERE " + string.join(self.sqlcond, " AND ")
-        else:
-            self.sqlquery = ""
+        self.conditions.append(self.filecond)
+        self.sqlquery = "WHERE " + string.join(self.conditions, " AND ")
     def setoption(self, opt, val):
         if self.options.get(opt, None) == None:
             self.options[opt] = val
