@@ -61,7 +61,7 @@ ru_qoptions = (
      'desc': u"Минимальный размер файла." + ru_sizedesc
     },
     {'option': "type",
-     'args': strargs(tuple(known_filetypes) + ("dir",)),
+     'args': strargs(known_filetypes),
      'desc': u"Искать только среди файлов данного типа." + ru_multiarg
     },
     {'option': "proto",
