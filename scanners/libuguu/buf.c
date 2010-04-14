@@ -57,7 +57,6 @@ void buf_clear(struct buf_str *bs)
 static int buf_grow(struct buf_str *bs, size_t len)
 {
     char *c;
-
     LOG_ASSERT(bs != NULL, "Bad arguments\n");
 
     if (bs->length + len >= bs->size) {
@@ -75,7 +74,10 @@ static int buf_grow(struct buf_str *bs, size_t len)
 
 size_t buf_append(struct buf_str *bs, const char *s)
 {
-    size_t n = strlen(s);
+    size_t n;
+    LOG_ASSERT((bs != NULL) && (s != NULL), "Bad arguments\n");
+    
+    n = strlen(s);
 
     if (buf_grow(bs, n) == 0)
         return 0;
@@ -87,6 +89,7 @@ size_t buf_append(struct buf_str *bs, const char *s)
 size_t buf_appendn(struct buf_str *bs, const char *s, size_t n)
 {
     size_t m;
+    LOG_ASSERT((bs != NULL) && (s != NULL), "Bad arguments\n");
 
     m = strlen(s);
     n = (m < n) ? m : n;
@@ -103,6 +106,7 @@ size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap)
 {
     int ret;
     va_list aq;
+    LOG_ASSERT((bs != NULL) && (fmt != NULL), "Bad arguments\n");
 
     va_copy(aq, ap);
     ret = vsnprintf(bs->s + bs->length, bs->size - bs->length, fmt, aq);
@@ -124,6 +128,7 @@ size_t buf_appendf(struct buf_str *bs, const char *fmt, ...)
 {
     size_t ret;
     va_list ap;
+    LOG_ASSERT((bs != NULL) && (fmt != NULL), "Bad arguments\n");
 
     va_start(ap, fmt);
     ret = buf_vappendf(bs, fmt, ap);
@@ -134,16 +139,20 @@ size_t buf_appendf(struct buf_str *bs, const char *fmt, ...)
 
 const char* buf_string(struct buf_str *bs)
 {
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
     return bs->s;
 }
 
 char buf_error(struct buf_str *bs)
 {
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
     return bs->error;
 }
 
 void buf_free(struct buf_str *bs)
 {
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
+    
     free(bs->s);
     free(bs);
 }
