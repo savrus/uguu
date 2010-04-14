@@ -35,28 +35,50 @@ struct buf_str *buf_alloc()
     return bs;
 }
 
-void buf_clear(struct buf_str *bs)
+void buf_chop(struct buf_str *bs, size_t len)
 {
-    /* FIXME: maybe reduce bs->s to default size here? */
-
-    bs->length = 0;
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
+    
+    if (len < bs->length) {
+        bs->s[len] = 0;
+        bs->length = len;
+    }
 }
 
-size_t buf_append(struct buf_str *bs, const char *s)
+void buf_clear(struct buf_str *bs)
 {
-    size_t n = strlen(s);
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
+    
+    /* FIXME: maybe reduce bs->s to default size here? */
+
+    buf_chop(bs, 0);
+}
+
+static int buf_grow(struct buf_str *bs, size_t len)
+{
     char *c;
 
-    if (bs->length + n >= bs->size) {
-        c = realloc(bs->s, (bs->size + n) * sizeof(char));
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
+
+    if (bs->length + len >= bs->size) {
+        c = (char *) realloc(bs->s, (bs->size + len) * sizeof(char));
         if (c == NULL) {
             LOG_ERR("realloc() returned NULL\n");
             bs->error = 1;
             return 0;
         }
         bs->s = c;
-        bs->size += n;
+        bs->size += len;
     }
+    return 1;
+}
+
+size_t buf_append(struct buf_str *bs, const char *s)
+{
+    size_t n = strlen(s);
+
+    if (buf_grow(bs, n) == 0)
+        return 0;
     strcpy(bs->s + bs->length, s);
     bs->length += n;
     return n;
@@ -65,21 +87,12 @@ size_t buf_append(struct buf_str *bs, const char *s)
 size_t buf_appendn(struct buf_str *bs, const char *s, size_t n)
 {
     size_t m;
-    char *c;
 
     m = strlen(s);
     n = (m < n) ? m : n;
 
-    if (bs->length + n >= bs->size) {
-        c = realloc(bs->s, (bs->size + n) * sizeof(char));
-        if (c == NULL) {
-            LOG_ERR("realloc() returned NULL\n");
-            bs->error = 1;
-            return 0;
-        }
-        bs->s = c;
-        bs->size += n;
-    }
+    if (buf_grow(bs, n) == 0)
+        return 0;
     strncpy(bs->s + bs->length, s, n);
     bs->length += n;
     bs->s[bs->length] = 0;
@@ -89,7 +102,6 @@ size_t buf_appendn(struct buf_str *bs, const char *s, size_t n)
 size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap)
 {
     int ret;
-    char *c;
     va_list aq;
 
     va_copy(aq, ap);
@@ -97,14 +109,8 @@ size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap)
     va_end(aq);
     while ((ret < 0) || ((size_t) ret >= bs->size - bs->length)) {
         size_t uret = (ret < 0) ? BUF_SIZE_STEP : (size_t) ret;
-        c = (char *) realloc(bs->s, (bs->size + uret) * sizeof(char));
-        if (c == NULL) {
-            LOG_ERR("realloc() returned NULL\n");
-            bs->error = 1;
+        if (buf_grow(bs, uret) == 0)
             return 0;
-        }
-        bs->s = c;
-        bs->size += uret;
         va_copy(aq, ap);
         ret = vsnprintf(bs->s + bs->length, bs->size - bs->length, fmt, aq);
         va_end(aq);
