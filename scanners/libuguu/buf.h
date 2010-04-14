@@ -52,6 +52,9 @@ size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap);
 /* get a string */
 const char* buf_string(struct buf_str *bs);
 
+/* return string lenth */
+size_t buf_strlen(struct buf_str *bs);
+
 /* check if error occured while working with buffer */
 char buf_error(struct buf_str *bs);
 

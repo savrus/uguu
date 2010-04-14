@@ -143,6 +143,12 @@ const char* buf_string(struct buf_str *bs)
     return bs->s;
 }
 
+size_t buf_strlen(struct buf_str *bs)
+{
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
+    return bs->length;
+}
+
 char buf_error(struct buf_str *bs)
 {
     LOG_ASSERT(bs != NULL, "Bad arguments\n");
