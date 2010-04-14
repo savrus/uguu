@@ -17,42 +17,52 @@
 #include "estat.h"
 #include "smbwk.h"
 #include "log.h"
+#include "stack.h"
+#include "buf.h"
 
-
-/* appends to null-terminated url string new file/dir
- * return 0 if name is too long, 1 otherwise */
-static int smbwk_url_append(char *url, size_t len, char *name)
+static struct smbwk_urlpath * smbwk_urlpath_alloc()
 {
-    size_t n, nn;
+    struct smbwk_urlpath *up;
 
-    n = strlen(url);
-    nn = strlen(name);
-    if (n + nn + 2 > len)
+    up = (struct smbwk_urlpath *) malloc(sizeof(struct smbwk_urlpath));
+    if (up == NULL)
+        LOG_ERR("malloc() returned NULL\n");
+    return up;
+}
+
+static void smbwk_urlpath_free(struct stack *s)
+{
+    struct smbwk_urlpath *up;
+
+    up = stack_data(s, struct smbwk_urlpath, parent);
+    free(up);
+}
+
+/* appends new file/dir to url
+ * return 0 if failed, 1 otherwise */
+static int smbwk_url_append(struct smbwk_dir *c, char *name)
+{
+    struct smbwk_urlpath *up;
+
+    if ((up = smbwk_urlpath_alloc()) == NULL)
         return 0;
-    url[n++] = '/';
-    strcpy(&url[n], name);
+    up->urlpos = buf_strlen(c->url);
+    stack_push(&c->paths, &up->parent);
+    
+    buf_appendf(c->url, "/%s", name);
+    if (buf_error(c->url))
+        return 0;
     return 1;
 }
 
-/* suspends the last file/dir from nll-terminated url string */
-static void smbwk_url_suspend(char *url)
+/* suspends the last file/dir from url string */
+static void smbwk_url_suspend(struct smbwk_dir *c)
 {
-    char *c;
-    if ((c = strrchr(url, '/')) != NULL)
-        *c = 0;
-}
-
-/* reallocate null-terminated url string to have length new_len. new_len must exceed strlen(url) */
-/* returns 0 if failed, 1 otherwise */
-static int smbwk_url_realloc(char **url, size_t new_len)
-{
-    char *p = (char *) realloc(*url, new_len * sizeof(char));
-    if (p == NULL) {
-        LOG_ERR("realloc() returned NULL\n");
-        return 0;
-    }
-    *url = p;
-    return 1;
+    struct smbwk_urlpath *up;
+    
+    up = stack_data(stack_pop(&c->paths), struct smbwk_urlpath , parent);
+    buf_chop(c->url, up->urlpos);
+    free(up);
 }
 
 void smbwk_auth(const char *srv, 
@@ -65,40 +75,35 @@ void smbwk_auth(const char *srv,
 
 int smbwk_open(struct smbwk_dir *c, char *host, int skip_bucks)
 {
-    if (strlen(host) > SMBWK_PATH_MAX_LEN - 10) {
-        LOG_ERR("bad argument. host is too long\n");
+    if ((c->url = buf_alloc()) == NULL)
         return -1;
-    }
-    c->url = (char *) malloc((SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN)
-                             * sizeof(char));
-    if(c->url == NULL) {
-        LOG_ERR("malloc() reutrned NULL\n");
+
+    buf_appendf(c->url, "smb://%s", host);
+
+    if (buf_error(c->url))
         return -1;
-    }
-    c->url_len = SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN;
-    sprintf(c->url, "smb://%s", host);
-    
+
     c->ctx = smbc_new_context();
     smbc_option_set(c->ctx, "user", "guest");
     //smbc_setOptionUrlEncodeReaddirEntries(c->ctx, 1);
 
     if (smbc_init_context(c->ctx) != c->ctx) {
         LOG_ERR("smbc_init_context() failed\n");
-        free(c->url);
+        buf_free(c->url);
         return -1;
     }
 
     if (smbc_init(smbwk_auth, 0) != 0) {
         LOG_ERR("smbc_init() failed\n");
-        free(c->url);
+        buf_free(c->url);
         smbc_free_context(c->ctx, 1);
         return -1;
     }
 
-    if ((c->fd = smbc_opendir(c->url)) < 0) {
+    if ((c->fd = smbc_opendir(buf_string(c->url))) < 0) {
         LOG_ERR("smbc_opendir() failed\n");
         c->fd_real = 0;
-        free(c->url);
+        buf_free(c->url);
         smbc_free_context(c->ctx, 1);
         return -1;
     }
@@ -115,7 +120,8 @@ int smbwk_close(struct smbwk_dir *c)
     
     if (c->fd_real == 1)
         if (smbc_closedir(c->fd) < 0)
-            LOG_ERR("smbc_closedir() returned error. url: %s\n", c->url);
+            LOG_ERR("smbc_closedir() returned error. url: %s\n",
+                buf_string(c->url));
     c->fd_real = 0;
 
     if (smbc_free_context(c->ctx, 1) == 1) {
@@ -123,7 +129,8 @@ int smbwk_close(struct smbwk_dir *c)
         ret = -1;
     }
 
-    free(c->url);
+    buf_free(c->url);
+    stack_free(&c->paths, smbwk_urlpath_free);
     
     return ret;
 }
@@ -150,7 +157,6 @@ struct dt_dentry * smbwk_readdir(void *curdir)
     struct smbc_dirent *de;
     struct dt_dentry *d;
     struct stat s;
-    int skip = 0;
     
     while ((de = smbc_readdir(c->fd)) != NULL) {
         if (!strcmp(de->name,".") || !strcmp(de->name,".."))
@@ -179,18 +185,10 @@ struct dt_dentry * smbwk_readdir(void *curdir)
             break;
         case SMBC_FILE:
             d->type = DT_FILE;
-            while (smbwk_url_append(c->url, c->url_len, de->name) == 0) {
-                if (smbwk_url_realloc(&(c->url), c->url_len + SMBWK_FILENAME_LEN) == 1)
-                    c->url_len += SMBWK_FILENAME_LEN;
-                else {
-                    skip = 1;
-                    break;
-                }
-            }
-            if (skip == 0) {
-                if (smbc_stat(c->url, &s) == 0)
+            if (smbwk_url_append(c, de->name) != 0) {
+                if (smbc_stat(buf_string(c->url), &s) == 0)
                     d->size = s.st_size;
-                smbwk_url_suspend(c->url);
+                smbwk_url_suspend(c);
             }
             break;
     }
@@ -206,13 +204,13 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
 
     switch (type) {
         case DT_GO_PARENT:
-            smbwk_url_suspend(c->url);
+            smbwk_url_suspend(c);
             fd_real = 0;
             break;
         case DT_GO_CHILD:
-            if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
+            if (smbwk_url_append(c, name) == 0){
                 LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
-                        c->url, name, type);
+                        buf_string(c->url), name, type);
                 return -1;
             }
 
@@ -220,23 +218,26 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
              * so we don't have to call smbc_opendir() in such a case.
              * We track if fd points to an opened directory in fd_read
              * field of smbwk_dir structure */
-            if ((fd = smbc_opendir(c->url)) < 0) {
-                LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n", c->url, type);
+            if ((fd = smbc_opendir(buf_string(c->url))) < 0) {
+                LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n",
+                    buf_string(c->url), type);
                 if (errno == ETIMEDOUT)
                     exit(ESTAT_FAILURE);
-                smbwk_url_suspend(c->url);
+                smbwk_url_suspend(c);
                 return -1;
             }
             fd_real = 1;
             break;
         default:
-            LOG_ERR("unknown smbwk_go_type %d, url: %s\n", type, c->url);
+            LOG_ERR("unknown smbwk_go_type %d, url: %s\n",
+                type, buf_string(c->url));
             return -1;
     }
    
     if (c->fd_real == 1)
         if (smbc_closedir(c->fd) < 0)
-            LOG_ERR("smbc_closedir() returned error. url: %s, go_type: %d\n", c->url, type);
+            LOG_ERR("smbc_closedir() returned error. url: %s, go_type: %d\n",
+                buf_string(c->url), type);
     
     c->fd = fd;
     c->fd_real = fd_real;

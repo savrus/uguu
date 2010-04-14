@@ -9,11 +9,8 @@
 
 #include <libsmbclient.h>
 #include "dt.h"
-
-/* we omit paths which length exceeds this. */
-#define SMBWK_PATH_MAX_LEN 4096
-/* assume most filenames don't exceed this. */
-#define SMBWK_FILENAME_LEN 256
+#include "stack.h"
+#include "buf.h"
 
 enum {
     SKIP_BUCKS_NONE,
@@ -23,11 +20,16 @@ enum {
 
 struct smbwk_dir {
     SMBCCTX *ctx;
-    char *url;
-    size_t url_len;
+    struct buf_str *url;
+    struct stack *paths;
     int fd;
     int fd_real;
     int skip_bucks;
+};
+
+struct smbwk_urlpath {
+    size_t urlpos;
+    struct stack parent;
 };
 
 /* initialise the walker */
