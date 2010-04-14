@@ -106,15 +106,19 @@ size_t buf_vappendf(struct buf_str *bs, const char *fmt, va_list ap)
 {
     int ret;
     va_list aq;
+    size_t oldlen;
     LOG_ASSERT((bs != NULL) && (fmt != NULL), "Bad arguments\n");
-
+    
+    oldlen = bs->length;
     va_copy(aq, ap);
     ret = vsnprintf(bs->s + bs->length, bs->size - bs->length, fmt, aq);
     va_end(aq);
     while ((ret < 0) || ((size_t) ret >= bs->size - bs->length)) {
         size_t uret = (ret < 0) ? BUF_SIZE_STEP : (size_t) ret;
-        if (buf_grow(bs, uret) == 0)
+        if (buf_grow(bs, uret) == 0) {
+            bs->s[oldlen] = 0;
             return 0;
+        }
         va_copy(aq, ap);
         ret = vsnprintf(bs->s + bs->length, bs->size - bs->length, fmt, aq);
         va_end(aq);
