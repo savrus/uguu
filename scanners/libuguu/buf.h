@@ -27,6 +27,9 @@ struct buf_str {
  * returns NULL on failure */
 struct buf_str *buf_alloc();
 
+/* chop string by writing '\0' to position len if it is smaller than length */
+void buf_chop(struct buf_str *bs, size_t len);
+
 /* clear buf_str */
 void buf_clear(struct buf_str *bs);
 
