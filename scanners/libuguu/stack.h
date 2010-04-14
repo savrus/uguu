@@ -15,7 +15,7 @@ struct stack {
 };
 
 #define stack_data(stack_ptr, data_struct, data_stack) \
-    ((data_struct) ((char*)(stack_ptr) - offsetof((data_struct), (data_stack))))
+    ((data_struct *) ((unsigned long)(stack_ptr) - offsetof(data_struct, data_stack)))
 
 /* push new element into stack */
 void stack_push(struct stack **top, struct stack *new);
