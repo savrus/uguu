@@ -4,7 +4,6 @@
  * Read the COPYING file in the root of the source tree.
  */
 
-
 #ifndef STACK_H
 #define STACK_H
 
@@ -14,6 +13,9 @@ struct stack {
     struct stack *p;
 };
 
+/* Return data of type data_struct associated with a stack object pointed
+ * by stack_ptr. data_struct must have a field of type struct stack with a
+ * name referenced by data_stack */
 #define stack_data(stack_ptr, data_struct, data_stack) \
     ((data_struct *) ((unsigned long)(stack_ptr) - offsetof(data_struct, data_stack)))
 

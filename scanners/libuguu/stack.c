@@ -22,7 +22,7 @@ struct stack * stack_pop(struct stack **top)
     LOG_ASSERT(*top != NULL, "Stack underflow\n");
 
     s = *top;
-    *top = (*top)->p;
+    *top = s->p;
     return s;
 }
 
