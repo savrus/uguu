@@ -11,6 +11,32 @@
 #include "buf.h"
 #include "log.h"
 
+/* realloc buffer. returns 0 if failed, 1 if succeeded */
+static int buf_realloc(struct buf_str *bs, size_t size)
+{
+    char *c;
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
+    
+    c = (char *) realloc(bs->s, size * sizeof(char));
+    if (c == NULL) {
+        LOG_ERR("realloc() returned NULL\n");
+        bs->error = 1;
+        return 0;
+    }
+    bs->s = c;
+    bs->size = size;
+    return 1;
+}
+
+static int buf_grow(struct buf_str *bs, size_t len)
+{
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
+    
+    if (bs->length + len >= bs->size)
+        return buf_realloc(bs, (bs->size + len));
+    return 1;
+}
+
 struct buf_str *buf_alloc()
 {
     struct buf_str *bs;
@@ -39,6 +65,9 @@ void buf_chop(struct buf_str *bs, size_t len)
 {
     LOG_ASSERT(bs != NULL, "Bad arguments\n");
     
+    if (len + BUF_SIZE_STEP < bs->size)
+        buf_realloc(bs, len + BUF_SIZE_STEP);
+
     if (len < bs->length) {
         bs->s[len] = 0;
         bs->length = len;
@@ -48,28 +77,7 @@ void buf_chop(struct buf_str *bs, size_t len)
 void buf_clear(struct buf_str *bs)
 {
     LOG_ASSERT(bs != NULL, "Bad arguments\n");
-    
-    /* FIXME: maybe reduce bs->s to default size here? */
-
     buf_chop(bs, 0);
-}
-
-static int buf_grow(struct buf_str *bs, size_t len)
-{
-    char *c;
-    LOG_ASSERT(bs != NULL, "Bad arguments\n");
-
-    if (bs->length + len >= bs->size) {
-        c = (char *) realloc(bs->s, (bs->size + len) * sizeof(char));
-        if (c == NULL) {
-            LOG_ERR("realloc() returned NULL\n");
-            bs->error = 1;
-            return 0;
-        }
-        bs->s = c;
-        bs->size += len;
-    }
-    return 1;
 }
 
 size_t buf_append(struct buf_str *bs, const char *s)
@@ -162,7 +170,6 @@ char buf_error(struct buf_str *bs)
 void buf_free(struct buf_str *bs)
 {
     LOG_ASSERT(bs != NULL, "Bad arguments\n");
-    
     free(bs->s);
     free(bs);
 }
