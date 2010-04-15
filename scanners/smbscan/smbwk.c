@@ -47,7 +47,7 @@ static int smbwk_url_append(struct smbwk_dir *c, char *name)
     if ((up = smbwk_urlpath_alloc()) == NULL)
         return 0;
     up->urlpos = buf_strlen(c->url);
-    stack_push(&c->paths, &up->parent);
+    stack_push(&c->ancestors, &up->parent);
     
     buf_appendf(c->url, "/%s", name);
     if (buf_error(c->url))
@@ -60,7 +60,7 @@ static void smbwk_url_suspend(struct smbwk_dir *c)
 {
     struct smbwk_urlpath *up;
     
-    up = stack_data(stack_pop(&c->paths), struct smbwk_urlpath , parent);
+    up = stack_data(stack_pop(&c->ancestors), struct smbwk_urlpath, parent);
     buf_chop(c->url, up->urlpos);
     free(up);
 }
@@ -130,7 +130,7 @@ int smbwk_close(struct smbwk_dir *c)
     }
 
     buf_free(c->url);
-    stack_free(&c->paths, smbwk_urlpath_free);
+    stack_free(&c->ancestors, smbwk_urlpath_free);
     
     return ret;
 }
