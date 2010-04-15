@@ -222,7 +222,7 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
                 LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n",
                     buf_string(c->url), type);
                 if (errno == ETIMEDOUT)
-                    exit(ESTAT_FAILURE);
+                    exit(ESTAT_NOCONNECT);
                 smbwk_url_suspend(c);
                 return -1;
             }

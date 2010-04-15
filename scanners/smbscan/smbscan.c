@@ -67,7 +67,7 @@ int main(int argc, char **argv)
     host = argv[i];
 
     if (smbwk_open(&curdir, host, skip_bucks) < 0)
-        exit(ESTAT_FAILURE);
+        exit(ESTAT_NOCONNECT);
 
     if (lookup) {
         probe = smbwk_walker.readdir(&curdir);
