@@ -12,21 +12,24 @@
 #include "stack.h"
 #include "buf.h"
 
+/* specify how to deal with hidden/admin smb root directories */
 enum {
     SKIP_BUCKS_NONE,
     SKIP_BUCKS_ADMIN,
     SKIP_BUCKS_ALL
 };
 
+/* walker context. */
 struct smbwk_dir {
     SMBCCTX *ctx;
     struct buf_str *url;
-    struct stack *paths;
+    struct stack *ancestors;
     int fd;
     int fd_real;
     int skip_bucks;
 };
 
+/* type for element of the ancestors stack */
 struct smbwk_urlpath {
     size_t urlpos;
     struct stack parent;
