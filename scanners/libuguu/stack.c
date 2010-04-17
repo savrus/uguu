@@ -7,6 +7,11 @@
 #include "stack.h"
 #include "log.h"
 
+void stack_init(struct stack **top)
+{
+    *top = NULL;
+}
+
 void stack_push(struct stack **top, struct stack *new)
 {
     LOG_ASSERT(top != NULL, "Bad arguments\n");
@@ -36,7 +41,7 @@ void stack_pop_free(struct stack **top, void (*fr) (struct stack *s))
     fr(s);
 }
 
-void stack_free(struct stack **top, void (*fr) (struct stack *s))
+void stack_rfree(struct stack **top, void (*fr) (struct stack *s))
 {
     LOG_ASSERT(top != NULL, "Bad arguments\n");
     
