@@ -19,6 +19,9 @@ struct stack {
 #define stack_data(stack_ptr, data_struct, data_stack) \
     ((data_struct *) ((unsigned long)(stack_ptr) - offsetof(data_struct, data_stack)))
 
+/* initialize stack */
+void stack_init(struct stack **top);
+
 /* push new element into stack */
 void stack_push(struct stack **top, struct stack *new);
 
@@ -29,7 +32,7 @@ struct stack * stack_pop(struct stack **top);
 void stack_pop_free(struct stack **top, void (*fr) (struct stack *s));
 
 /* free entire stack, each element is freed using fr() */
-void stack_free(struct stack **top, void (*fr) (struct stack *s));
+void stack_rfree(struct stack **top, void (*fr) (struct stack *s));
 
 #endif /* STACK_H */
 
