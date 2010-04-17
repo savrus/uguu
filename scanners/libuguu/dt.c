@@ -24,8 +24,7 @@ struct dt_dentry * dt_alloc()
 void dt_free(struct dt_dentry *d)
 {
     free(d->name);
-    if (d->hash != NULL)
-        free(d->hash);
+    free(d->hash);
     free(d);
 }
 
