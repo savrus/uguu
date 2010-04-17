@@ -111,6 +111,8 @@ int smbwk_open(struct smbwk_dir *c, char *host, int skip_bucks)
 
     c->skip_bucks = skip_bucks;
 
+    stack_init(&c->ancestors);
+
     return 1;
 }
 
@@ -130,7 +132,7 @@ int smbwk_close(struct smbwk_dir *c)
     }
 
     buf_free(c->url);
-    stack_free(&c->ancestors, smbwk_urlpath_free);
+    stack_rfree(&c->ancestors, smbwk_urlpath_free);
     
     return ret;
 }
