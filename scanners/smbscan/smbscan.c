@@ -19,6 +19,7 @@ static void usage(char *binname, int err)
     fprintf(stderr, "  -a\tskip 'admin shares' in root directory\n");
     fprintf(stderr, "  -d\tskip files ended with bucks in root directory\n");
     fprintf(stderr, "  -f\tprint full paths (debug output)\n");
+    fprintf(stderr, "  -u\tdiff against an old tree\n");
     exit(err);
 }
 
@@ -32,6 +33,7 @@ int main(int argc, char **argv)
     int skip_bucks = SKIP_BUCKS_NONE;
     char *host;
     int i;
+    char *oldtree = NULL;
 
     for (i = 1; i < argc; i++) {
         if (argv[i][0] != '-')
@@ -53,6 +55,12 @@ int main(int argc, char **argv)
                     usage(argv[0], ESTAT_FAILURE);
                 skip_bucks = (argv[i][1] == 'a') ? SKIP_BUCKS_ADMIN
                                                  : SKIP_BUCKS_ALL;
+                break;
+            case 'u':
+                i++;
+                if (i >= argc)
+                    usage(argv[0], ESTAT_FAILURE);
+                oldtree = argv[i];
                 break;
             case 'h':
                 usage(argv[0], ESTAT_SUCCESS);
@@ -82,7 +90,9 @@ int main(int argc, char **argv)
 
     if (full)
         dt_full(&smbwk_walker, &d, &curdir);
-    else
+    else if (oldtree)
+        dt_diff(oldtree, &smbwk_walker, &d, &curdir);
+    else 
         dt_reverse(&smbwk_walker, &d, &curdir);
 
     smbwk_close(&curdir);
