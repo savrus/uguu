@@ -15,6 +15,7 @@
 #include "log.h"
 #include "estat.h"
 #include "umd5.h"
+#include "dtread.h"
 
 struct dt_dentry * dt_alloc()
 {
@@ -392,7 +393,7 @@ void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     dt_init_root(root, &id);
     dt_printdir_reverse(root);
 
-    for (d = root, enter = 1; d != NULL;) {
+    for (d = root, enter = 1; d != root->parent;) {
         if (enter) {
             dt_readdir(wk, d, curdir, &id);
             dt_list_call(&(d->child), dt_printdir_reverse);
@@ -407,5 +408,223 @@ void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     }
 
     dt_printfile_reverse(root);
+}
+
+void dt_reverse_p(struct dt_dentry *root)
+{
+    struct dt_dentry *d, *dc;
+    int enter;
+
+    if (root == NULL) {
+        LOG_ERR("Bad arguments\n");
+        return;
+    }
+
+    dt_printdir_reverse(root);
+
+    for (d = root, enter = 1; d != root->parent;) {
+        if (enter) {
+            dt_list_call(&(d->child), dt_printdir_reverse);
+            dt_list_call_free(&(d->file_child), dt_printfile_reverse);
+            if ((dc = d->child) != NULL) {
+                d = dc;
+                continue;
+            }
+        }
+        dt_list_call_free(&(d->child), dt_printfile_reverse);
+        d = dt_next_sibling_or_parent(d, &enter);
+    }
+
+    dt_printfile_reverse(root);
+}
+
+void dt_rfree(struct dt_dentry *root)
+{
+    struct dt_dentry *d, *dc;
+    int enter;
+
+    if (root == NULL) {
+        return;
+    }
+
+    for (d = root, enter = 1; d != root->parent;) {
+        if (enter) {
+            dt_list_free(&(d->file_child));
+            if ((dc = d->child) != NULL) {
+                d = dc;
+                continue;
+            }
+        }
+        dt_list_free(&(d->child));
+        d = dt_next_sibling_or_parent(d, &enter);
+    }
+
+    dt_free(root);
+}
+
+static void dt_list_diff(struct dt_dentry **o, struct dt_dentry **n)
+{
+    struct dt_dentry *odp = *o;
+    struct dt_dentry *dp = *n;
+    int cmp;
+
+    LOG_ASSERT((o != NULL) && (n != NULL), "Bad arguments\n");
+    while ((odp != NULL) && (dp != NULL)) {
+        if ((cmp = strcmp(odp->name, dp->name)) == 0) {
+            dp = dp->sibling;
+            odp = odp->sibling;
+        } else if (cmp < 0) {
+            printf("- ");
+            dt_printfile_reverse(odp);
+            odp = odp->sibling;
+        } else {
+            printf("+ ");
+            dt_printfile_reverse(dp);
+            dp = dp->sibling;
+        }
+    }
+    while (odp != NULL) {
+        printf("- ");
+        dt_printfile_reverse(odp);
+        odp = odp->sibling;
+    }
+    while (dp != NULL) {
+        printf("+ ");
+        dt_printfile_reverse(dp);
+        dp = dp->sibling;
+    }
+}
+
+static void dt_printdir_delete(struct dt_dentry *d)
+{
+    printf("- 0 %u ", d->id);
+    dt_printpath(d);
+    printf("\n");
+
+}
+
+static void dt_diff_delete_tree(struct dt_dentry *root)
+{
+    struct dt_dentry *d, *dc;
+    int enter;
+    LOG_ASSERT(root != NULL, "Bad arguments\n");
+    for (d = root, enter = 1; d != root->parent;) {
+        if (enter) {
+            dt_list_free(&(d->file_child));
+            if ((dc = d->child) != NULL) {
+                d = dc;
+                continue;
+            }
+        }
+        dt_list_call_free(&(d->child), dt_printdir_delete);
+        d = dt_next_sibling_or_parent(d, &enter);
+    }
+    dt_printdir_delete(root);
+    dt_free(root);
+}
+
+static void dt_diff_add_tree(struct dt_dentry *parent, struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+{
+    if (wk->go(DT_GO_CHILD, root->name, curdir) >= 0) {
+        dt_reverse(wk, root, curdir);
+        wk->go(DT_GO_PARENT, NULL, curdir);
+    }
+    if (parent != NULL)
+        parent->size += root->size;
+    dt_free(root);
+}
+
+/* diff childs lists. Prints whiole trees for unique childs.
+ * Reconstruct lists to be identical */
+static void dt_list_diff_childs_sum(struct dt_dentry *d, struct dt_walker *wk, struct dt_dentry **o, struct dt_dentry **n, void *curdir)
+{
+    struct dt_dentry *odp = *o, *odn = NULL, *ods = NULL;
+    struct dt_dentry *dp = *n, *dn = NULL, *ds = NULL;
+    struct dt_dentry *tmp;
+    int cmp;
+
+    LOG_ASSERT((o != NULL) && (n != NULL), "Bad arguments\n");
+    while ((odp != NULL) && (dp != NULL)) {
+        if ((cmp = strcmp(odp->name, dp->name)) == 0) {
+            if (ds == NULL) {
+                ds = dp;
+                ods = odp;
+            } else {
+                dn->sibling = dp;
+                odn->sibling = odp;
+            }
+            dn = dp;
+            odn = odp;
+            dp = dp->sibling;
+            odp = odp->sibling;
+        } else if (cmp < 0) {
+            tmp = odp->sibling;
+            dt_diff_delete_tree(odp);
+            odp = tmp;
+        } else {
+            tmp = dp->sibling;
+            dt_diff_add_tree(d, wk, dp, curdir);
+            dp = tmp;
+        }
+    }
+    while (odp != NULL) {
+        tmp = odp->sibling;
+        dt_diff_delete_tree(odp);
+        odp = tmp;
+    }
+    while (dp != NULL) {
+        tmp = dp->sibling;
+        dt_diff_add_tree(d, wk, dp, curdir);
+        dp = tmp;
+    }
+    if (dn != NULL)
+        dn->sibling = NULL;
+    if (odn != NULL)
+        odn->sibling = NULL;
+    *n = ds;
+    *o = ods;
+}
+
+
+void dt_diff(const char *filename, struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+{
+    struct dt_dentry *d, *dc, *oldroot, *od;
+    unsigned int id = 1;
+    int enter;
+
+    if ((filename == NULL) || (root == NULL) || (wk == NULL)) {
+        LOG_ERR("Bad arguments\n");
+        return;
+    }
+
+    if ((oldroot = dtread_readfile(filename)) == NULL)
+        return dt_reverse(wk, root, curdir);
+    od = oldroot;
+
+    dt_init_root(root, &id);
+
+    for (d = root, enter = 1; d != root->parent;) {
+        if (enter) {
+            dt_readdir(wk, d, curdir, &id);
+            //TODO: fix ids.
+            dt_list_diff_childs_sum(d, wk, &od->child, &d->child, curdir);
+            dt_list_diff(&od->file_child, &d->file_child);
+            dt_list_free(&d->file_child);
+            if ((dc = dt_go_child(wk, d, curdir)) != NULL) {
+                d = dc;
+                od = od->child;
+                continue;
+            }
+        }
+        dt_list_sum(d, &(d->child));
+        dt_list_free(&(d->child));
+        d = dt_go_sibling_or_parent(wk, d, curdir, &enter);
+        if (enter)
+            od = od->sibling;
+        else
+            od = od->parent;
+    }
+
+    dt_rfree(oldroot);
 }
 
