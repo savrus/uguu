@@ -8,12 +8,7 @@
 #define UMD5_H
 
 #include <stddef.h>
-#ifdef _MSC_VER
-typedef unsigned __int64 uint64_t;
-typedef unsigned __int32 uint32_t;
-#else
 #include <stdint.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {

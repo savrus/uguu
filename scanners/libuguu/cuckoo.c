@@ -41,8 +41,13 @@ struct cuckoo_ctx * cuckoo_alloc(unsigned int log)
     }
     
     /* assume RAND_MAX be 2^31 -1 */
-    cu->hash1 = (random() << 1) | 1;
-    cu->hash2 = (random() << 1) | 1;
+#if RAND_MAX != 2<<31 - 1
+#define __STR(x) #x
+#define _STR(x) __STR(x)
+#pragma message(__FILE__ "(" _STR(__LINE__) "): Warning: RAND_MAX < 2^31 -1, cuckoo will not work")
+#endif
+    cu->hash1 = (rand() << 1) | 1;
+    cu->hash2 = (rand() << 1) | 1;
     cu->size = size; 
     cu->log = log;
     return cu;
@@ -194,7 +199,7 @@ int cuckoo_delete(struct cuckoo_ctx *cu, uint32_t key)
         cu->table2[ind].key = 0;
     }
     
-    if (cu->items < (1 << (cu->log - 1)))
+    if (cu->items < (1U << (cu->log - 1)))
         return cuckoo_rehash(cu, cu->log - 1);
     return 1;
 }
