@@ -1,0 +1,12 @@
+{% if orderbar.nontrivial %}
+<div class="margintop" id="gobar">
+    <table class="gobar"><tr>
+        <td></td>
+        <td>Order:</td>
+{% for order in orderbar.orders %}
+        <td>{% if order.s %}{{order.n}}{% else %}<a class="gobar" href="{{orderbar.order}}&amp;order={{order.n}}">{{order.n}}</a>{% endif %}</td>
+{% endfor %}
+    </tr></table>
+</div>
+{% endif %}
+

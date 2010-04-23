@@ -1,0 +1,26 @@
+syntax: glob
+*.pyc
+*.pyo
+*~
+*.orig
+*.o
+*.obj
+*.pdb
+*.ncb
+*.ilk
+*.sln.cache
+*.suo
+*.vcproj.*.user
+./scanners/*/Debug
+./scanners/*/Release
+./scanners/*/Install
+./scanners/ftpscan/ftpscan
+./scanners/smbscan/smbscan
+./scanners/sqlscan/sqlscan
+./scanners/libuguu/libuguu.a
+./scanners/libuguu/libuguu.lib
+*.exe
+./bin/smbscan
+./bin/ftpscan
+./bin/sqlscan
+./logs
