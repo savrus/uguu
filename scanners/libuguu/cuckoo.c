@@ -41,7 +41,7 @@ struct cuckoo_ctx * cuckoo_alloc(unsigned int log)
     }
     
     /* assume RAND_MAX be 2^31 -1 */
-#if RAND_MAX != 2<<31 - 1
+#if RAND_MAX < 2147483647
 #define __STR(x) #x
 #define _STR(x) __STR(x)
 #pragma message(__FILE__ "(" _STR(__LINE__) "): Warning: RAND_MAX < 2^31 -1, cuckoo will not work")
