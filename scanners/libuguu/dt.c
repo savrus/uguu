@@ -29,6 +29,30 @@ void dt_free(struct dt_dentry *d)
     free(d);
 }
 
+/*
+static struct dt_ctx * dt_ctx_alloc()
+{
+    struct dt_ctx *dc;
+
+    dc = (struct dt_ctx *) calloc(1, sizeof(struct dt_ctx));
+    if (dc == NULL)
+        LOG_ERR("calloc() returned NULL\n");
+    return dc;
+}
+
+static void dt_ctx_free(struct dt_ctx *dc)
+{
+    free(dc);
+}
+
+static void dt_ctx_rfree(struct dt_ctx *dc)
+{
+    dt_rfree(dc->d);
+    free(dc->d);
+    free(dc);
+}
+*/
+
 static void dt_init_root(struct dt_dentry *root, unsigned int *id)
 {
     root->parent = NULL;
@@ -76,16 +100,27 @@ static struct dt_dentry * dt_list_sort(struct dt_dentry *d, size_t nmemb, unsign
  * d - parent
  * c - pointer to child list pointer in d structure
  */
-static void dt_list_call_sum_free(struct dt_dentry *d, struct dt_dentry **c, void (*callie) (struct dt_dentry *))
+static void dt_list_call_sum_free(struct dt_wctx *wc, struct dt_dentry *d, struct dt_dentry **c, void (*callie) (struct dt_wctx *wc, struct dt_dentry *))
 {
     struct dt_dentry *dp = *c, *dn;
-    LOG_ASSERT((d != NULL) && (c != NULL), "Bad arguments\n");
+    LOG_ASSERT((d != NULL) && (c != NULL), "bad arguments\n");
     *c = NULL;
     for (; dp != NULL; dp = dn) {
         dn = dp->sibling;
-        callie(dp);
+        callie(wc, dp);
         d->size += dp->size;
         dt_free(dp);
+    }
+}
+
+static void dt_list_call_sum(struct dt_wctx *wc, struct dt_dentry *d, struct dt_dentry **c, void (*callie) (struct dt_wctx *wc, struct dt_dentry *))
+{
+    struct dt_dentry *dp = *c, *dn;
+    LOG_ASSERT((d != NULL) && (c != NULL), "bad arguments\n");
+    for (; dp != NULL; dp = dn) {
+        dn = dp->sibling;
+        callie(wc, dp);
+        d->size += dp->size;
     }
 }
 
@@ -99,25 +134,25 @@ static void dt_list_sum(struct dt_dentry *d, struct dt_dentry **c)
     }
 }
 
-static void dt_list_call_free(struct dt_dentry **c, void (*callie) (struct dt_dentry *))
+static void dt_list_call_free(struct dt_wctx *wc, struct dt_dentry **c, void (*callie) (struct dt_wctx *wc, struct dt_dentry *))
 {
     struct dt_dentry *dp = *c, *dn;
     LOG_ASSERT(c != NULL, "Bad arguments\n");
     *c = NULL;
     for (; dp != NULL; dp = dn) {
         dn = dp->sibling;
-        callie(dp);
+        callie(wc, dp);
         dt_free(dp);
     }
 }
 
-static void dt_list_call(struct dt_dentry **c, void (*callie) (struct dt_dentry *))
+static void dt_list_call(struct dt_wctx *wc, struct dt_dentry **c, void (*callie) (struct dt_wctx *wc, struct dt_dentry *))
 {
     struct dt_dentry *dp = *c, *dn;
     LOG_ASSERT(c != NULL, "Bad arguments\n");
     for (; dp != NULL; dp = dn) {
         dn = dp->sibling;
-        callie(dp);
+        callie(wc, dp);
     }
 }
 
@@ -224,11 +259,14 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
     struct dt_dentry *ddc = NULL, *dfc = NULL, *dn;
     unsigned int dirs = 0;
     unsigned int files = 0;
-    unsigned int oldid = *id;
+    unsigned int oldid = 0;
     LOG_ASSERT((wk != NULL) && (d != NULL), "Bad arguments\n");
 
     if (dt_exceed_macro(d->id, DT_MAX_DIRS, d))
         return;
+
+    if (id != NULL)
+        oldid = *id;
 
     while ((dn = wk->readdir(curdir)) != NULL) {
         if (dt_exceed_macro(files + dirs + 1, DT_MAX_ITEMS_IN_DIR, d)) {
@@ -256,7 +294,8 @@ static void dt_readdir(struct dt_walker *wk, struct dt_dentry *d, void *curdir, 
     d->items = files + dirs;
 
     if (dt_recursive_link(d)) {
-        *id = oldid;
+        if (id != NULL)
+            *id = oldid;
         d->items = 0;
         dt_list_free(&(d->child));
         dt_list_free(&(d->file_child));
@@ -313,156 +352,276 @@ static void dt_printpath(struct dt_dentry *d)
     printf("%s",d->name);
 }
 
-static void dt_printfile_full(struct dt_dentry *d)
+static void dt_printfile_full(struct dt_wctx *wc, struct dt_dentry *d)
 {
     dt_printpath(d);
-    printf("%s %llu\n", (d->type == DT_DIR) ? "/" : "", d->size);
+    printf("%s%s %llu\n", wc->prefix,
+        ((d->type & DT_TYPE_MASK) == DT_DIR) ? "/" : "", d->size);
 }
 
-void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+
+static void dt_printdir_reverse(struct dt_wctx *wc, struct dt_dentry *d)
 {
-    struct dt_dentry *d, *dc;
-    unsigned int id = 1;
-    int enter;
-
-    if ((root == NULL) || (wk == NULL)) {
-        LOG_ERR("Bad arguments\n");
-        return;
-    }
-
-    dt_init_root(root, &id);
-
-    for (d = root, enter = 1; d != NULL;) {
-        if (enter) {
-            dt_readdir(wk, d, curdir, &id);
-            if ((dc = dt_go_child(wk, d, curdir)) != NULL) {
-                d = dc;
-                continue;
-            }
-        }
-        dt_list_sum(d, &(d->file_child));
-        dt_list_sum(d, &(d->child));
-        d = dt_go_sibling_or_parent(wk, d, curdir, &enter);
-    }
-
-    dt_printfile_full(root);
-    for (d = root, enter = 1; d != NULL;) {
-        if (enter) {
-            dt_list_call(&(d->child), dt_printfile_full);
-            dt_list_call_free(&(d->file_child), dt_printfile_full);
-            if ((dc = d->child) != NULL) {
-                d = dc;
-                continue;
-            }
-        } 
-        dt_list_free(&(d->child));
-        d = dt_next_sibling_or_parent(d, &enter);
-    }
-}
-
-static void dt_printdir_reverse(struct dt_dentry *d)
-{
-    printf("0 %u ", d->id);
+    printf("%s0 %u ", wc->prefix, d->id);
     dt_printpath(d);
     printf("\n");
 }
 
-static void dt_printfile_reverse(struct dt_dentry *d)
+static void dt_printfile_reverse(struct dt_wctx *wc, struct dt_dentry *d)
 {
-    printf("1 %u %u %llu %u %u ",
+    printf("%s1 %u %u %llu %u %u ",
+            wc->prefix,
             (d->parent != NULL) ? d->parent->id : 0,
             d->fid, d->size,
-            (d->type == DT_DIR) ? d->id : 0,
-            (d->type == DT_DIR) ? d->items : 0
+            ((d->type & DT_TYPE_MASK) == DT_DIR) ? d->id : 0,
+            ((d->type & DT_TYPE_MASK) == DT_DIR) ? d->items : 0
             );
     printf("%s", d->name);
     printf("\n");
 }
 
-void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+void dt_walk(struct dt_wctx *wc)
 {
-    struct dt_dentry *d, *dc;
-    unsigned int id = 1;
+    struct dt_dentry *root;
     int enter;
+
+    LOG_ASSERT((wc != NULL) && (wc->d != NULL), "Bad arguments\n");
+
+    root = wc->d;
+    wc->on_enter_root(wc);
+
+    for (enter = 1; wc->d != NULL;) {
+        if (enter) {
+            wc->on_enter(wc);
+            if (wc->go_child(wc) != 0)
+                continue;
+        }
+        wc->on_leave(wc);
+        if (wc->d == root)
+            break;
+        enter = wc->go_sibling_or_parent(wc);
+    }
+
+    wc->d = root;
+    wc->on_leave_root(wc);
+}
+
+static void dt_wctx_plug(struct dt_wctx *wc)
+{
+}
+
+static void dt_on_er_init(struct dt_wctx *wc)
+{
+    dt_init_root(wc->d, &wc->id);
+}
+static void dt_on_er_print(struct dt_wctx *wc)
+{
+    wc->call_dir(wc, wc->d);
+}
+static void dt_on_er_init_print(struct dt_wctx *wc)
+{
+    dt_on_er_init(wc);
+    dt_on_er_print(wc);
+}
+
+static void dt_on_e_read(struct dt_wctx *wc)
+{
+    dt_readdir(wc->wk, wc->d, wc->curdir, &wc->id);
+}
+static void dt_on_e_print(struct dt_wctx *wc)
+{
+    dt_list_call(wc, &(wc->d->child), wc->call_dir);
+    dt_list_call_sum(wc, wc->d, &(wc->d->file_child), wc->call_file);
+}
+static void dt_on_e_print_free(struct dt_wctx *wc)
+{
+    dt_list_call(wc, &wc->d->child, wc->call_dir);
+    dt_list_call_free(wc, &wc->d->file_child, wc->call_file);
+}
+static void dt_on_e_read_print(struct dt_wctx *wc)
+{
+    dt_on_e_read(wc);
+    dt_on_e_print(wc);
+}
+static void dt_on_e_read_print_sum_free(struct dt_wctx *wc)
+{
+    dt_on_e_read(wc);
+    dt_list_call(wc, &(wc->d->child), wc->call_dir);
+    dt_list_call_sum_free(wc, wc->d, &(wc->d->file_child), wc->call_file);
+}
+static void dt_on_e_dprint_free(struct dt_wctx *wc)
+{
+    dt_list_call(wc, &(wc->d->child), wc->call_dir);
+    dt_list_free(&wc->d->file_child);
+}
+static void dt_on_e_free(struct dt_wctx *wc)
+{
+    dt_list_free(&wc->d->file_child);
+}
+
+static void dt_on_lr_print(struct dt_wctx *wc)
+{
+    wc->call_file(wc, wc->d);
+}
+
+static void dt_on_l_print_sum_free(struct dt_wctx *wc)
+{
+    dt_list_call_sum_free(wc, wc->d, &(wc->d->child), wc->call_file);
+}
+static void dt_on_l_print_free(struct dt_wctx *wc)
+{
+    dt_list_call_free(wc, &wc->d->child, wc->call_file);
+}
+static void dt_on_l_print(struct dt_wctx *wc)
+{
+    dt_list_call_sum(wc, wc->d, &(wc->d->child), wc->call_file);
+}
+static void dt_on_l_free (struct dt_wctx *wc)
+{
+    dt_list_free(&wc->d->child);
+}
+static void dt_on_l_sum(struct dt_wctx *wc)
+{
+    dt_list_sum(wc->d, &wc->d->child);
+    dt_list_sum(wc->d, &wc->d->file_child);
+}
+
+static int dt_go_c_walker(struct dt_wctx *wc)
+{
+    struct dt_dentry *d;
+    if ((d = dt_go_child(wc->wk, wc->d, wc->curdir)) != NULL) {
+        wc->d = d;
+        return 1;
+    }
+    return 0;
+}
+static int dt_go_c_ds(struct dt_wctx *wc)
+{
+    struct dt_dentry *d;
+    if ((d = wc->d->child) != NULL) {
+        wc->d = d;
+        return 1;
+    }
+    return 0;
+}
+
+static int dt_go_sop_walker(struct dt_wctx *wc)
+{
+    int ret = 0;
+    wc->d = dt_go_sibling_or_parent(wc->wk, wc->d, wc->curdir, &ret);
+    return ret;
+}
+static int dt_go_sop_ds(struct dt_wctx *wc)
+{
+    int ret;
+    wc->d = dt_next_sibling_or_parent(wc->d, &ret);
+    return ret;
+}
+
+void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+{
+    struct dt_wctx wc = {
+        .d                      = root,
+        .wk                     = wk,
+        .curdir                 = curdir,
+        .on_enter_root          = dt_on_er_init,
+        .on_leave_root          = dt_wctx_plug,
+        .on_enter               = dt_on_e_read,
+        .on_leave               = dt_on_l_sum,
+        .go_child               = dt_go_c_walker,
+        .go_sibling_or_parent   = dt_go_sop_walker,
+        .call_dir               = dt_printfile_full,
+        .call_file              = dt_printfile_full,
+        .prefix                 = "",
+        .id                     = 1,
+    };
 
     if ((root == NULL) || (wk == NULL)) {
         LOG_ERR("Bad arguments\n");
         return;
     }
 
-    dt_init_root(root, &id);
-    dt_printdir_reverse(root);
+    dt_walk(&wc);
 
-    for (d = root, enter = 1; d != root->parent;) {
-        if (enter) {
-            dt_readdir(wk, d, curdir, &id);
-            dt_list_call(&(d->child), dt_printdir_reverse);
-            dt_list_call_sum_free(d, &(d->file_child), dt_printfile_reverse);
-            if ((dc = dt_go_child(wk, d, curdir)) != NULL) {
-                d = dc;
-                continue;
-            }
-        }
-        dt_list_call_sum_free(d, &(d->child), dt_printfile_reverse);
-        d = dt_go_sibling_or_parent(wk, d, curdir, &enter);
+    wc.on_enter_root    = dt_on_er_print;
+    wc.on_enter         = dt_on_e_print_free;
+    wc.on_leave         = dt_on_l_free;
+    wc.go_child               = dt_go_c_ds,
+    wc.go_sibling_or_parent   = dt_go_sop_ds,
+
+    dt_walk(&wc);
+}
+
+
+void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+{
+    struct dt_wctx wc = {
+        .d                      = root,
+        .wk                     = wk,
+        .curdir                 = curdir,
+        .on_enter_root          = dt_on_er_init_print,
+        .on_leave_root          = dt_on_lr_print,
+        .on_enter               = dt_on_e_read_print_sum_free,
+        .on_leave               = dt_on_l_print_sum_free,
+        .go_child               = dt_go_c_walker,
+        .go_sibling_or_parent   = dt_go_sop_walker,
+        .call_dir               = dt_printdir_reverse,
+        .call_file              = dt_printfile_reverse,
+        .prefix                 = "",
+        .id                     = 1,
+    };
+
+    if ((root == NULL) || (wk == NULL)) {
+        LOG_ERR("Bad arguments\n");
+        return;
     }
 
-    dt_printfile_reverse(root);
+    dt_walk(&wc);
 }
 
 void dt_reverse_p(struct dt_dentry *root)
 {
-    struct dt_dentry *d, *dc;
-    int enter;
+    struct dt_wctx wc = {
+        .d                      = root,
+        .on_enter_root          = dt_on_er_print,
+        .on_leave_root          = dt_on_lr_print,
+        .on_enter               = dt_on_e_print_free,
+        .on_leave               = dt_on_l_print_free,
+        .go_child               = dt_go_c_ds,
+        .go_sibling_or_parent   = dt_go_sop_ds,
+        .call_dir               = dt_printdir_reverse,
+        .call_file              = dt_printfile_reverse,
+        .prefix                 = "",
+    };
 
     if (root == NULL) {
         LOG_ERR("Bad arguments\n");
         return;
     }
 
-    dt_printdir_reverse(root);
-
-    for (d = root, enter = 1; d != root->parent;) {
-        if (enter) {
-            dt_list_call(&(d->child), dt_printdir_reverse);
-            dt_list_call_free(&(d->file_child), dt_printfile_reverse);
-            if ((dc = d->child) != NULL) {
-                d = dc;
-                continue;
-            }
-        }
-        dt_list_call_free(&(d->child), dt_printfile_reverse);
-        d = dt_next_sibling_or_parent(d, &enter);
-    }
-
-    dt_printfile_reverse(root);
+    dt_walk(&wc);
 }
 
 void dt_rfree(struct dt_dentry *root)
 {
-    struct dt_dentry *d, *dc;
-    int enter;
+    struct dt_wctx wc = {
+        .d                      = root,
+        .on_enter_root          = dt_wctx_plug,
+        .on_leave_root          = dt_wctx_plug,
+        .on_enter               = dt_on_e_free,
+        .on_leave               = dt_on_l_free,
+        .go_child               = dt_go_c_ds,
+        .go_sibling_or_parent   = dt_go_sop_ds,
+    };
 
-    if (root == NULL) {
+    if (root == NULL)
         return;
-    }
 
-    for (d = root, enter = 1; d != root->parent;) {
-        if (enter) {
-            dt_list_free(&(d->file_child));
-            if ((dc = d->child) != NULL) {
-                d = dc;
-                continue;
-            }
-        }
-        dt_list_free(&(d->child));
-        d = dt_next_sibling_or_parent(d, &enter);
-    }
-
+    dt_walk(&wc);
     dt_free(root);
 }
 
-static void dt_list_diff(struct dt_dentry **o, struct dt_dentry **n)
+static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_dentry **n)
 {
     struct dt_dentry *odp = *o;
     struct dt_dentry *dp = *n;
@@ -471,90 +630,103 @@ static void dt_list_diff(struct dt_dentry **o, struct dt_dentry **n)
     LOG_ASSERT((o != NULL) && (n != NULL), "Bad arguments\n");
     while ((odp != NULL) && (dp != NULL)) {
         if ((cmp = strcmp(odp->name, dp->name)) == 0) {
+            if (odp->size != dp->size) {
+                wc->prefix = "* ";
+                wc->call_file(wc, dp);
+            }
             dp = dp->sibling;
             odp = odp->sibling;
         } else if (cmp < 0) {
-            printf("- ");
-            dt_printfile_reverse(odp);
+            wc->prefix = "- ";
+            wc->call_file(wc, odp);
             odp = odp->sibling;
         } else {
-            printf("+ ");
-            dt_printfile_reverse(dp);
+            wc->prefix = "+ ";
+            wc->call_file(wc, dp);
             dp = dp->sibling;
         }
     }
     while (odp != NULL) {
-        printf("- ");
-        dt_printfile_reverse(odp);
+        wc->prefix = "- ";
+        wc->call_file(wc, odp);
         odp = odp->sibling;
     }
     while (dp != NULL) {
-        printf("+ ");
-        dt_printfile_reverse(dp);
+        wc->prefix = "+ ";
+        wc->call_file(wc, dp);
         dp = dp->sibling;
     }
 }
 
-static void dt_printdir_delete(struct dt_dentry *d)
-{
-    printf("- 0 %u ", d->id);
-    dt_printpath(d);
-    printf("\n");
-
-}
-
 static void dt_diff_delete_tree(struct dt_dentry *root)
 {
-    struct dt_dentry *d, *dc;
-    int enter;
+    struct dt_wctx wc = {
+        .d                      = root,
+        .wk                     = NULL,
+        .curdir                 = NULL,
+        .on_enter_root          = dt_on_er_print,
+        .on_enter               = dt_on_e_dprint_free,
+        .on_leave_root          = dt_wctx_plug,
+        .on_leave               = dt_on_l_free,
+        .go_child               = dt_go_c_ds,
+        .go_sibling_or_parent   = dt_go_sop_ds,
+        .call_dir               = dt_printdir_reverse,
+        .call_file              = dt_printfile_reverse,
+        .prefix                 = "- ",
+        .id                     = 1,
+    };
     LOG_ASSERT(root != NULL, "Bad arguments\n");
-    for (d = root, enter = 1; d != root->parent;) {
-        if (enter) {
-            dt_list_free(&(d->file_child));
-            if ((dc = d->child) != NULL) {
-                d = dc;
-                continue;
-            }
-        }
-        dt_list_call_free(&(d->child), dt_printdir_delete);
-        d = dt_next_sibling_or_parent(d, &enter);
-    }
-    dt_printdir_delete(root);
+    
+    dt_walk(&wc);
     dt_free(root);
 }
 
-static void dt_diff_add_tree(struct dt_dentry *parent, struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+static void dt_diff_add_tree(struct dt_wctx *pwc, struct dt_dentry *root)
 {
-    if (wk->go(DT_GO_CHILD, root->name, curdir) >= 0) {
-        dt_reverse(wk, root, curdir);
-        wk->go(DT_GO_PARENT, NULL, curdir);
+    struct dt_wctx wc = {
+        .d                      = root,
+        .wk                     = pwc->wk,
+        .curdir                 = pwc->curdir,
+        .on_enter_root          = dt_on_er_print,
+        .on_enter               = dt_on_e_read_print,
+        .on_leave_root          = dt_on_lr_print,
+        .on_leave               = dt_on_l_print,
+        .go_child               = dt_go_c_walker,
+        .go_sibling_or_parent   = dt_go_sop_walker,
+        .call_dir               = dt_printdir_reverse,
+        .call_file              = dt_printfile_reverse,
+        .prefix                 = "+ ",
+        .id                     = pwc->id,
+    };
+
+    root->id = wc.id++;
+
+    if (wc.wk->go(DT_GO_CHILD, root->name, wc.curdir) >= 0) {
+        dt_walk(&wc);
+        wc.wk->go(DT_GO_PARENT, NULL, wc.curdir);
     }
-    if (parent != NULL)
-        parent->size += root->size;
-    dt_free(root);
+
+    pwc->id = wc.id;
 }
 
 /* diff childs lists. Prints whiole trees for unique childs.
- * Reconstruct lists to be identical */
-static void dt_list_diff_childs_sum(struct dt_dentry *d, struct dt_walker *wk, struct dt_dentry **o, struct dt_dentry **n, void *curdir)
+ * Reconstruct old list to be identical */
+static void dt_list_diff_childs(struct dt_wctx *wc, struct dt_dentry *d, struct dt_walker *wk, struct dt_dentry **o, struct dt_dentry **n, void *curdir)
 {
     struct dt_dentry *odp = *o, *odn = NULL, *ods = NULL;
-    struct dt_dentry *dp = *n, *dn = NULL, *ds = NULL;
+    struct dt_dentry *dp = *n;
     struct dt_dentry *tmp;
     int cmp;
 
     LOG_ASSERT((o != NULL) && (n != NULL), "Bad arguments\n");
     while ((odp != NULL) && (dp != NULL)) {
         if ((cmp = strcmp(odp->name, dp->name)) == 0) {
-            if (ds == NULL) {
-                ds = dp;
+            if (ods == NULL)
                 ods = odp;
-            } else {
-                dn->sibling = dp;
+            else
                 odn->sibling = odp;
-            }
-            dn = dp;
             odn = odp;
+            dp->id = odp->id;
             dp = dp->sibling;
             odp = odp->sibling;
         } else if (cmp < 0) {
@@ -562,9 +734,9 @@ static void dt_list_diff_childs_sum(struct dt_dentry *d, struct dt_walker *wk, s
             dt_diff_delete_tree(odp);
             odp = tmp;
         } else {
-            tmp = dp->sibling;
-            dt_diff_add_tree(d, wk, dp, curdir);
-            dp = tmp;
+            dp->type |= DT_TYPE_NEW;
+            dt_diff_add_tree(wc, dp);
+            dp = dp->sibling;
         }
     }
     while (odp != NULL) {
@@ -573,58 +745,118 @@ static void dt_list_diff_childs_sum(struct dt_dentry *d, struct dt_walker *wk, s
         odp = tmp;
     }
     while (dp != NULL) {
-        tmp = dp->sibling;
-        dt_diff_add_tree(d, wk, dp, curdir);
-        dp = tmp;
+        dp->type |= DT_TYPE_NEW;
+        dt_diff_add_tree(wc, dp);
+        dp = dp->sibling;
     }
-    if (dn != NULL)
-        dn->sibling = NULL;
     if (odn != NULL)
         odn->sibling = NULL;
-    *n = ds;
     *o = ods;
 }
 
+static void dt_on_er_diff(struct dt_wctx *wc)
+{
+    wc->d->parent = NULL;
+    wc->d->sibling = NULL;
+    wc->d->child = NULL;
+    wc->d->file_child = NULL;
+    wc->d->hash = NULL;
+    wc->d->id = wc->od->id;
+}
+
+static void dt_on_e_diff(struct dt_wctx *wc)
+{
+    dt_readdir(wc->wk, wc->d, wc->curdir, NULL);
+    dt_list_diff(wc, &wc->od->file_child, &wc->d->file_child);
+    dt_list_sum(wc->d, &wc->d->file_child);
+    dt_list_diff_childs(wc, wc->d, wc->wk, &wc->od->child, &wc->d->child, wc->curdir);
+}
+static void dt_on_l_diff(struct dt_wctx *wc)
+{
+    dt_list_sum(wc->d, &wc->d->child);
+    if(wc->d->size != wc->od->size) {
+        wc->prefix = "* ";
+        wc->call_file(wc, wc->d);
+    }
+}
+static int dt_go_c_diff(struct dt_wctx *wc)
+{
+    struct dt_dentry *d;
+    if ((d = dt_go_child(wc->wk, wc->d, wc->curdir)) != NULL) {
+        wc->d = d;
+        wc->od = wc->od->child;
+        return 1;
+    }
+    return 0;
+}
+static int dt_go_sop_diff(struct dt_wctx *wc)
+{
+    int ret;
+    struct dt_dentry *dn = wc->d;
+    struct dt_dentry *od;
+    LOG_ASSERT((wc != NULL) && (wc->wk != NULL) && (wc->d != NULL), "Bad arguments\n");
+
+    wc->d = wc->d->parent;
+    if (wc->d == NULL)
+        return 0;
+
+    if (wc->wk->go(DT_GO_PARENT, NULL, wc->curdir) < 0) {
+        LOG_ERR("Unable to return to parent directory.\n"); 
+        exit(ESTAT_FAILURE);
+    }
+
+    while ((dn = dn->sibling) != NULL) {
+        if (dn->type & DT_TYPE_NEW)
+            continue;
+        wc->od = wc->od->sibling;
+        if (wc->wk->go(DT_GO_CHILD, dn->name, wc->curdir) < 0) {
+            for (od = wc->od->child; od != NULL; od = od->sibling)
+                dt_diff_delete_tree(od);
+            continue;
+        }
+        wc->d = dn;
+        break;
+    }
+
+    ret = (dn != NULL);
+    if (!ret)
+        wc->od = wc->od->parent;
+    return ret;
+
+}
 
 void dt_diff(const char *filename, struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 {
-    struct dt_dentry *d, *dc, *oldroot, *od;
-    unsigned int id = 1;
-    int enter;
-
+    struct dt_wctx wc = {
+        .d                      = root,
+        .wk                     = wk,
+        .curdir                 = curdir,
+        .on_enter_root          = dt_on_er_diff,
+        .on_enter               = dt_on_e_diff,
+        .on_leave_root          = dt_wctx_plug,
+        .on_leave               = dt_on_l_diff,
+        .go_child               = dt_go_c_diff,
+        .go_sibling_or_parent   = dt_go_sop_diff,
+        .call_dir               = dt_printdir_reverse,
+        .call_file              = dt_printfile_reverse,
+        .id                     = 0,
+    };
+    struct dt_dentry *oldroot;
+    
     if ((filename == NULL) || (root == NULL) || (wk == NULL)) {
         LOG_ERR("Bad arguments\n");
         return;
     }
 
-    if ((oldroot = dtread_readfile(filename)) == NULL)
+    if ((oldroot = dtread_readfile(filename, &wc.id)) == NULL)
         return dt_reverse(wk, root, curdir);
-    od = oldroot;
-
-    dt_init_root(root, &id);
-
-    for (d = root, enter = 1; d != root->parent;) {
-        if (enter) {
-            dt_readdir(wk, d, curdir, &id);
-            //TODO: fix ids.
-            dt_list_diff_childs_sum(d, wk, &od->child, &d->child, curdir);
-            dt_list_diff(&od->file_child, &d->file_child);
-            dt_list_free(&d->file_child);
-            if ((dc = dt_go_child(wk, d, curdir)) != NULL) {
-                d = dc;
-                od = od->child;
-                continue;
-            }
-        }
-        dt_list_sum(d, &(d->child));
-        dt_list_free(&(d->child));
-        d = dt_go_sibling_or_parent(wk, d, curdir, &enter);
-        if (enter)
-            od = od->sibling;
-        else
-            od = od->parent;
-    }
+    
+    wc.od = oldroot;
+    wc.id++;
+    
+    dt_walk(&wc);
 
     dt_rfree(oldroot);
+    dt_reverse_p(root);
 }
 

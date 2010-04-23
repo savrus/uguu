@@ -24,7 +24,7 @@ struct dtread_data {
 #endif
 
 /* reconstruct tree from file. Returns NULL on failure */
-struct dt_dentry * dtread_readfile(const char *filename);
+struct dt_dentry * dtread_readfile(const char *filename, unsigned int *maxid);
 
 #endif /* DTREAD_H */
 

@@ -41,7 +41,7 @@ static void dtread_data_free(void *ptr)
     free(dr);
 }
 
-static int dtread_readline(const char *line, struct cuckoo_ctx *cu)
+static int dtread_readline(const char *line, struct cuckoo_ctx *cu, unsigned int *maxid)
 {
     struct dtread_data *dr, *drp;
     struct dt_dentry *d;
@@ -63,6 +63,8 @@ static int dtread_readline(const char *line, struct cuckoo_ctx *cu)
                 dtread_data_free(dr);
                 return 0;
             }
+            if (dr->de->id > *maxid)
+                *maxid = dr->de->id;
             break;
         case '1':
             
@@ -156,6 +158,10 @@ static int dtread_readline(const char *line, struct cuckoo_ctx *cu)
             }
 
             break;
+        case '+':
+        case '-':
+        case '*':
+            return 1;
         default:
             LOG_ERR("Unknown line format: %s\n", line);
             return 0;
@@ -163,7 +169,7 @@ static int dtread_readline(const char *line, struct cuckoo_ctx *cu)
     return 1;
 }
 
-struct dt_dentry * dtread_readfile(const char *filename)
+struct dt_dentry * dtread_readfile(const char *filename, unsigned int *maxid)
 {
     FILE *file;
     int c;
@@ -190,7 +196,7 @@ struct dt_dentry * dtread_readfile(const char *filename)
         if (c == '\n') {
             if (buf_error(bs))
                 goto clear_cu;
-            if (!dtread_readline(buf_string(bs), cu))
+            if (!dtread_readline(buf_string(bs), cu, maxid))
                 goto clear_cu;
             buf_clear(bs);
         } else {
