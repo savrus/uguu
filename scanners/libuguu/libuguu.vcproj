@@ -41,6 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)win&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -104,6 +105,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)win&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -153,7 +155,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\cuckoo.c"
+				>
+			</File>
+			<File
 				RelativePath=".\dt.c"
+				>
+			</File>
+			<File
+				RelativePath=".\dtread.c"
 				>
 			</File>
 			<File
@@ -161,7 +171,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\stack.c"
+				>
+			</File>
+			<File
 				RelativePath=".\umd5.c"
+				>
+			</File>
+			<File
+				RelativePath=".\wbuf.c"
 				>
 			</File>
 		</Filter>
@@ -175,7 +193,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\cuckoo.h"
+				>
+			</File>
+			<File
 				RelativePath=".\dt.h"
+				>
+			</File>
+			<File
+				RelativePath=".\dtread.h"
 				>
 			</File>
 			<File
@@ -191,7 +217,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\stack.h"
+				>
+			</File>
+			<File
 				RelativePath=".\umd5.h"
+				>
+			</File>
+			<File
+				RelativePath=".\wbuf.h"
 				>
 			</File>
 		</Filter>

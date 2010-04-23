@@ -520,26 +520,26 @@ static int dt_go_sop_ds(struct dt_wctx *wc)
 
 void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 {
-    struct dt_wctx wc = {
-        .d                      = root,
-        .wk                     = wk,
-        .curdir                 = curdir,
-        .on_enter_root          = dt_on_er_init,
-        .on_leave_root          = dt_wctx_plug,
-        .on_enter               = dt_on_e_read,
-        .on_leave               = dt_on_l_sum,
-        .go_child               = dt_go_c_walker,
-        .go_sibling_or_parent   = dt_go_sop_walker,
-        .call_dir               = dt_printfile_full,
-        .call_file              = dt_printfile_full,
-        .prefix                 = "",
-        .id                     = 1,
-    };
+    struct dt_wctx wc;
 
     if ((root == NULL) || (wk == NULL)) {
         LOG_ERR("Bad arguments\n");
         return;
     }
+
+    wc.d                      = root;
+    wc.wk                     = wk;
+    wc.curdir                 = curdir;
+    wc.on_enter_root          = dt_on_er_init;
+    wc.on_leave_root          = dt_wctx_plug;
+    wc.on_enter               = dt_on_e_read;
+    wc.on_leave               = dt_on_l_sum;
+    wc.go_child               = dt_go_c_walker;
+    wc.go_sibling_or_parent   = dt_go_sop_walker;
+    wc.call_dir               = dt_printfile_full;
+    wc.call_file              = dt_printfile_full;
+    wc.prefix                 = "";
+    wc.id                     = 1;
 
     dt_walk(&wc);
 
@@ -555,67 +555,67 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 
 void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 {
-    struct dt_wctx wc = {
-        .d                      = root,
-        .wk                     = wk,
-        .curdir                 = curdir,
-        .on_enter_root          = dt_on_er_init_print,
-        .on_leave_root          = dt_on_lr_print,
-        .on_enter               = dt_on_e_read_print_sum_free,
-        .on_leave               = dt_on_l_print_sum_free,
-        .go_child               = dt_go_c_walker,
-        .go_sibling_or_parent   = dt_go_sop_walker,
-        .call_dir               = dt_printdir_reverse,
-        .call_file              = dt_printfile_reverse,
-        .prefix                 = "",
-        .id                     = 1,
-    };
+    struct dt_wctx wc;
 
     if ((root == NULL) || (wk == NULL)) {
         LOG_ERR("Bad arguments\n");
         return;
     }
 
+    wc.d                      = root;
+    wc.wk                     = wk;
+    wc.curdir                 = curdir;
+    wc.on_enter_root          = dt_on_er_init_print;
+    wc.on_leave_root          = dt_on_lr_print;
+    wc.on_enter               = dt_on_e_read_print_sum_free;
+    wc.on_leave               = dt_on_l_print_sum_free;
+    wc.go_child               = dt_go_c_walker;
+    wc.go_sibling_or_parent   = dt_go_sop_walker;
+    wc.call_dir               = dt_printdir_reverse;
+    wc.call_file              = dt_printfile_reverse;
+    wc.prefix                 = "";
+    wc.id                     = 1;
+
     dt_walk(&wc);
 }
 
 void dt_reverse_p(struct dt_dentry *root)
 {
-    struct dt_wctx wc = {
-        .d                      = root,
-        .on_enter_root          = dt_on_er_print,
-        .on_leave_root          = dt_on_lr_print,
-        .on_enter               = dt_on_e_print_free,
-        .on_leave               = dt_on_l_print_free,
-        .go_child               = dt_go_c_ds,
-        .go_sibling_or_parent   = dt_go_sop_ds,
-        .call_dir               = dt_printdir_reverse,
-        .call_file              = dt_printfile_reverse,
-        .prefix                 = "",
-    };
+    struct dt_wctx wc;
 
     if (root == NULL) {
         LOG_ERR("Bad arguments\n");
         return;
     }
 
+    wc.d                      = root;
+    wc.on_enter_root          = dt_on_er_print;
+    wc.on_leave_root          = dt_on_lr_print;
+    wc.on_enter               = dt_on_e_print_free;
+    wc.on_leave               = dt_on_l_print_free;
+    wc.go_child               = dt_go_c_ds;
+    wc.go_sibling_or_parent   = dt_go_sop_ds;
+    wc.call_dir               = dt_printdir_reverse;
+    wc.call_file              = dt_printfile_reverse;
+    wc.prefix                 = "";
+
     dt_walk(&wc);
 }
 
 void dt_rfree(struct dt_dentry *root)
 {
-    struct dt_wctx wc = {
-        .d                      = root,
-        .on_enter_root          = dt_wctx_plug,
-        .on_leave_root          = dt_wctx_plug,
-        .on_enter               = dt_on_e_free,
-        .on_leave               = dt_on_l_free,
-        .go_child               = dt_go_c_ds,
-        .go_sibling_or_parent   = dt_go_sop_ds,
-    };
+    struct dt_wctx wc;
 
     if (root == NULL)
         return;
+
+    wc.d                      = root;
+    wc.on_enter_root          = dt_wctx_plug;
+    wc.on_leave_root          = dt_wctx_plug;
+    wc.on_enter               = dt_on_e_free;
+    wc.on_leave               = dt_on_l_free;
+    wc.go_child               = dt_go_c_ds;
+    wc.go_sibling_or_parent   = dt_go_sop_ds;
 
     dt_walk(&wc);
     dt_free(root);
@@ -660,22 +660,21 @@ static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_den
 
 static void dt_diff_delete_tree(struct dt_dentry *root)
 {
-    struct dt_wctx wc = {
-        .d                      = root,
-        .wk                     = NULL,
-        .curdir                 = NULL,
-        .on_enter_root          = dt_on_er_print,
-        .on_enter               = dt_on_e_dprint_free,
-        .on_leave_root          = dt_wctx_plug,
-        .on_leave               = dt_on_l_free,
-        .go_child               = dt_go_c_ds,
-        .go_sibling_or_parent   = dt_go_sop_ds,
-        .call_dir               = dt_printdir_reverse,
-        .call_file              = dt_printfile_reverse,
-        .prefix                 = "- ",
-        .id                     = 1,
-    };
+    struct dt_wctx wc;
     LOG_ASSERT(root != NULL, "Bad arguments\n");
+    wc.d                      = root;
+    wc.wk                     = NULL;
+    wc.curdir                 = NULL;
+    wc.on_enter_root          = dt_on_er_print;
+    wc.on_enter               = dt_on_e_dprint_free;
+    wc.on_leave_root          = dt_wctx_plug;
+    wc.on_leave               = dt_on_l_free;
+    wc.go_child               = dt_go_c_ds;
+    wc.go_sibling_or_parent   = dt_go_sop_ds;
+    wc.call_dir               = dt_printdir_reverse;
+    wc.call_file              = dt_printfile_reverse;
+    wc.prefix                 = "- ";
+    wc.id                     = 1;
     
     dt_walk(&wc);
     dt_free(root);
@@ -683,21 +682,20 @@ static void dt_diff_delete_tree(struct dt_dentry *root)
 
 static void dt_diff_add_tree(struct dt_wctx *pwc, struct dt_dentry *root)
 {
-    struct dt_wctx wc = {
-        .d                      = root,
-        .wk                     = pwc->wk,
-        .curdir                 = pwc->curdir,
-        .on_enter_root          = dt_on_er_print,
-        .on_enter               = dt_on_e_read_print,
-        .on_leave_root          = dt_on_lr_print,
-        .on_leave               = dt_on_l_print,
-        .go_child               = dt_go_c_walker,
-        .go_sibling_or_parent   = dt_go_sop_walker,
-        .call_dir               = dt_printdir_reverse,
-        .call_file              = dt_printfile_reverse,
-        .prefix                 = "+ ",
-        .id                     = pwc->id,
-    };
+    struct dt_wctx wc;
+    wc.d                      = root;
+    wc.wk                     = pwc->wk;
+    wc.curdir                 = pwc->curdir;
+    wc.on_enter_root          = dt_on_er_print;
+    wc.on_enter               = dt_on_e_read_print;
+    wc.on_leave_root          = dt_on_lr_print;
+    wc.on_leave               = dt_on_l_print;
+    wc.go_child               = dt_go_c_walker;
+    wc.go_sibling_or_parent   = dt_go_sop_walker;
+    wc.call_dir               = dt_printdir_reverse;
+    wc.call_file              = dt_printfile_reverse;
+    wc.prefix                 = "+ ";
+    wc.id                     = pwc->id;
 
     root->id = wc.id++;
 
@@ -827,30 +825,31 @@ static int dt_go_sop_diff(struct dt_wctx *wc)
 
 void dt_diff(const char *filename, struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 {
-    struct dt_wctx wc = {
-        .d                      = root,
-        .wk                     = wk,
-        .curdir                 = curdir,
-        .on_enter_root          = dt_on_er_diff,
-        .on_enter               = dt_on_e_diff,
-        .on_leave_root          = dt_wctx_plug,
-        .on_leave               = dt_on_l_diff,
-        .go_child               = dt_go_c_diff,
-        .go_sibling_or_parent   = dt_go_sop_diff,
-        .call_dir               = dt_printdir_reverse,
-        .call_file              = dt_printfile_reverse,
-        .id                     = 0,
-    };
+    struct dt_wctx wc;
     struct dt_dentry *oldroot;
+    wc.d                      = root;
+    wc.wk                     = wk;
+    wc.curdir                 = curdir;
+    wc.on_enter_root          = dt_on_er_diff;
+    wc.on_enter               = dt_on_e_diff;
+    wc.on_leave_root          = dt_wctx_plug;
+    wc.on_leave               = dt_on_l_diff;
+    wc.go_child               = dt_go_c_diff;
+    wc.go_sibling_or_parent   = dt_go_sop_diff;
+    wc.call_dir               = dt_printdir_reverse;
+    wc.call_file              = dt_printfile_reverse;
+    wc.id                     = 0;
     
     if ((filename == NULL) || (root == NULL) || (wk == NULL)) {
         LOG_ERR("Bad arguments\n");
         return;
     }
 
-    if ((oldroot = dtread_readfile(filename, &wc.id)) == NULL)
-        return dt_reverse(wk, root, curdir);
-    
+    if ((oldroot = dtread_readfile(filename, &wc.id)) == NULL) {
+        dt_reverse(wk, root, curdir);
+        return;
+    }
+
     wc.od = oldroot;
     wc.id++;
     

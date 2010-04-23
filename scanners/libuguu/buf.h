@@ -20,7 +20,7 @@ struct buf_str {
     char *s;
     size_t length;
     size_t size;
-    char error;
+    int error;
 };
 
 /* allocate a new buf_str

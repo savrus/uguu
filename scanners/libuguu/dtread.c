@@ -12,6 +12,10 @@
 #include "buf.h"
 #include "cuckoo.h"
 
+#ifdef _MSC_VER
+#define strdup _strdup
+#endif
+
 struct dtread_data {
     struct dt_dentry *de;
     struct dt_dentry *child;
