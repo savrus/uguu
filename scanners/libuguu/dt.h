@@ -26,6 +26,9 @@ typedef enum {
     DT_FILE,
 } dt_type;
 
+#define DT_TYPE_MASK 0xff
+#define DT_TYPE_NEW 0x100
+
 struct dt_dentry {
     dt_type type;
     char *name;
@@ -82,6 +85,25 @@ struct dt_walker {
     /* go is used to navigate the fs 
      * go must return negative value on failure */
     dt_go_fn go;
+};
+
+struct dt_wctx {
+    struct dt_dentry *d;
+    struct dt_dentry *od;
+    struct dt_walker *wk;
+    void *curdir;
+    void (*on_enter_root) (struct dt_wctx *wc);
+    void (*on_enter) (struct dt_wctx *wc);
+    void (*on_leave_root) (struct dt_wctx *wc);
+    void (*on_leave) (struct dt_wctx *wc);
+    /* return 1 if went to child, 0 if remained in the same dir */
+    int (*go_child) (struct dt_wctx *wc);
+    /* return 1 if went to sibling, 0 if to parent */
+    int (*go_sibling_or_parent) (struct dt_wctx *wc);
+    void (*call_dir) (struct dt_wctx *wc, struct dt_dentry *d);
+    void (*call_file) (struct dt_wctx *wc, struct dt_dentry *d);
+    char *prefix;
+    unsigned int id;
 };
 
 /* root must have it's type, name and size set */
