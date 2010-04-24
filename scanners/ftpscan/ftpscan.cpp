@@ -387,6 +387,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'u':
 				oldtree = argv[++i];
+				break;
 			case 'c':
 				CFtpControl::DefaultAnsiCP = argv[++i];
 				break;
