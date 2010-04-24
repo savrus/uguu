@@ -11,6 +11,14 @@
 #include "cuckoo.h"
 #include "log.h"
 
+static uint32_t cuckoo_random()
+{
+    static uint32_t seed = 0x9a319039U;
+    uint32_t ret = seed;
+    seed = (seed * 1103515245L + 12345L) & 0x7fffffff;
+    return ret;
+}
+
 static uint32_t cuckoo_index(uint32_t x, uint32_t b, unsigned int log)
 {
     return ((b * x) >> (32 - log)) * (log != 0);
@@ -40,14 +48,8 @@ struct cuckoo_ctx * cuckoo_alloc(unsigned int log)
         return NULL;
     }
     
-    /* assume RAND_MAX be 2^31 -1 */
-#if RAND_MAX < 2147483647
-#define __STR(x) #x
-#define _STR(x) __STR(x)
-#pragma message(__FILE__ "(" _STR(__LINE__) "): Warning: RAND_MAX < 2^31 -1, cuckoo will not work")
-#endif
-    cu->hash1 = (rand() << 1) | 1;
-    cu->hash2 = (rand() << 1) | 1;
+    cu->hash1 = (cuckoo_random() << 1) | 1;
+    cu->hash2 = (cuckoo_random() << 1) | 1;
     cu->size = size; 
     cu->log = log;
     return cu;
@@ -176,7 +178,7 @@ int cuckoo_insert(struct cuckoo_ctx *cu, uint32_t key, void *data)
     }
 
 #if 0
-    printf("insert failed: rehash!\n");
+    LOG_ERR("insert failed: rehash!\n");
 #endif
     if (!cuckoo_rehash(cu, cu->log))
         return 0;
