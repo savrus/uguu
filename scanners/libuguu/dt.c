@@ -772,7 +772,7 @@ static void dt_on_e_diff(struct dt_wctx *wc)
 static void dt_on_l_diff(struct dt_wctx *wc)
 {
     dt_list_sum(wc->d, &wc->d->child);
-    if(wc->d->size != wc->od->size) {
+    if((wc->d->size != wc->od->size) || (wc->d->items != wc->od->items)) {
         wc->prefix = "* ";
         wc->call_file(wc, wc->d);
     }
