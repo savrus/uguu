@@ -311,6 +311,21 @@ static struct dt_walker walker = {
     (dt_go_fn) &ftp_go_somewhere,
 };
 
+class PtrFILE
+{
+	FILE *f;
+public:
+	PtrFILE() : f(NULL) {}
+	~PtrFILE() {if (f) fclose(f);}
+	bool fopen(char *name, char *mode) {
+		if (fopen_s(&f, name, mode) == 0)
+			return true;
+		LOG_ERRNO("Can't open file %s\n", name);
+		return false;
+	}
+	FILE* operator&() {return f;}
+};
+
 //////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
@@ -325,9 +340,10 @@ static void usage(char *binname, int err)
 {
     char *bin = strrchr(binname, _DIR_SLASH);
     if (bin) binname = bin + 1;
-	fprintf(stderr, "Usage: %s [-l] [-f] [(-c|-C) cp] [-P##] [-t###] [(-R|-M)#] [-U username] [-p] [-h] host_ip\n", binname);
+    fprintf(stderr, "Usage: %s [-l] [-f|-u ot] [(-c|-C) cp] [-P##] [-t###] [(-R|-M)#] [-U username] [-p] [-h] host_ip\n", binname);
     fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
     fprintf(stderr, "  -f\tprint full paths (debug output)\n");
+    fprintf(stderr, "  -u ot\tdiff against an old tree\n");
     fprintf(stderr, "  -c cp\tset codepage for non-utf8 servers (default is " DEFAULT_ANSI_CODEPAGE ")\n");
     fprintf(stderr, "  -C cp\tforce server codepage (without detecting utf8)\n");
     fprintf(stderr, "  -p##\tuse non-default port ## for ftp control connection\n");
@@ -351,7 +367,8 @@ int main(int argc, char *argv[])
     struct dt_dentry d = {DT_DIR, const_cast<char*>(""), 0, NULL, NULL, NULL, 0};
     CFtpControlEx curdir;
     bool full = false, lookup = false;
-    char *host, passw[MAX_PASSWORD_LEN+2];
+    char *host, passw[MAX_PASSWORD_LEN+2], *oldtree = NULL;
+    PtrFILE oldfile;
 
     CFtpControl::DefaultAnsiCP = DEFAULT_ANSI_CODEPAGE;
 
@@ -368,6 +385,8 @@ int main(int argc, char *argv[])
 			case 'f':
 				full = true;
 				break;
+			case 'u':
+				oldtree = argv[++i];
 			case 'c':
 				CFtpControl::DefaultAnsiCP = argv[++i];
 				break;
@@ -403,7 +422,7 @@ int main(int argc, char *argv[])
 				usage(argv[0], ESTAT_FAILURE);
 		}
 	}
-	if (i+1 != argc)
+	if (i+1 != argc || (full && oldtree))
 		usage(argv[0], ESTAT_FAILURE);
 	host = argv[i];
 
@@ -436,7 +455,11 @@ int main(int argc, char *argv[])
 		}
 		if (full)
 			dt_full(&walker, &d, &curdir);
-		else
+		else if (oldtree) {
+			if (!oldfile.fopen(oldtree, "rt"))
+				usage(argv[0], ESTAT_FAILURE);
+			dt_diff(&oldfile, &walker, &d, &curdir);
+		} else
 			dt_reverse(&walker, &d, &curdir);
 	} catch(const CFtpControl::NetDataError) {
 		return ESTAT_FAILURE;

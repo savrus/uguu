@@ -24,13 +24,8 @@ do { \
     fprintf(stderr, __VA_ARGS__); \
     perr_call; \
 } while (0)
-#ifdef WIN32
-#define LOG_ERR(...) LOG_ERR_(,__VA_ARGS__)
-#define LOG_ERRNO LOG_ERR
-#else
 #define LOG_ERR(...) LOG_ERR_(, __VA_ARGS__)
 #define LOG_ERRNO(...) LOG_ERR_(perror(" errno"), __VA_ARGS__)
-#endif
 
 #define LOG_ASSERT_(expr, exit_call, ...) \
 do { \
