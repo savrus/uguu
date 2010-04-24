@@ -11,6 +11,7 @@
 #include "dt.h"
 #include "smbwk.h"
 #include "estat.h"
+#include "log.h"
 
 static void usage(char *binname, int err)
 {
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
     char *host;
     int i;
     char *oldtree = NULL;
+    FILE *oldfile;
 
     for (i = 1; i < argc; i++) {
         if (argv[i][0] != '-')
@@ -90,9 +92,14 @@ int main(int argc, char **argv)
 
     if (full)
         dt_full(&smbwk_walker, &d, &curdir);
-    else if (oldtree)
-        dt_diff(oldtree, &smbwk_walker, &d, &curdir);
-    else 
+    else if (oldtree) {
+        if ((oldfile = fopen(oldtree, "r")) == NULL) {
+            LOG_ERR("Can't open file %s\n", oldtree);
+            return ESTAT_FAILURE;
+        }
+        dt_diff(oldfile, &smbwk_walker, &d, &curdir);
+        fclose(oldfile);
+    } else
         dt_reverse(&smbwk_walker, &d, &curdir);
 
     smbwk_close(&curdir);
