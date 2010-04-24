@@ -7,6 +7,8 @@
 #ifndef DTREAD_H
 #define DTREAD_H
 
+#include <stdio.h>
+
 #include "dt.h"
 
 #ifdef __cplusplus
@@ -24,7 +26,7 @@ struct dtread_data {
 #endif
 
 /* reconstruct tree from file. Returns NULL on failure */
-struct dt_dentry * dtread_readfile(const char *filename, unsigned int *maxid);
+struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid);
 
 #endif /* DTREAD_H */
 

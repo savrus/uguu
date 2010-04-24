@@ -823,7 +823,7 @@ static int dt_go_sop_diff(struct dt_wctx *wc)
 
 }
 
-void dt_diff(const char *filename, struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+void dt_diff(FILE *file, struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 {
     struct dt_wctx wc;
     struct dt_dentry *oldroot;
@@ -840,12 +840,12 @@ void dt_diff(const char *filename, struct dt_walker *wk, struct dt_dentry *root,
     wc.call_file              = dt_printfile_reverse;
     wc.id                     = 0;
     
-    if ((filename == NULL) || (root == NULL) || (wk == NULL)) {
+    if ((file == NULL) || (root == NULL) || (wk == NULL)) {
         LOG_ERR("Bad arguments\n");
         return;
     }
 
-    if ((oldroot = dtread_readfile(filename, &wc.id)) == NULL) {
+    if ((oldroot = dtread_readfile(file, &wc.id)) == NULL) {
         dt_reverse(wk, root, curdir);
         return;
     }
