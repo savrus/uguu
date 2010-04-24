@@ -85,6 +85,16 @@ static inline errno_t memmove_s(void * _Dst, size_t _DstSize, const void * _Src,
 	return 0;
 }
 
+static inline errno_t fopen_s(FILE **_pFile, const char *filename, const char *mode)
+{
+	CheckArg(_pFile && filename && mode,);
+	if( ((*_pFile) = fopen(filename, mode)) != NULL ) {
+		return 0;
+	} else {
+		return errno ? errno : EIO;
+	}
+}
+
 #ifdef  __cplusplus
 } // extern "C"
 
