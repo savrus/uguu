@@ -359,12 +359,20 @@ static void dt_printfile_full(struct dt_wctx *wc, struct dt_dentry *d)
         ((d->type & DT_TYPE_MASK) == DT_DIR) ? "/" : "", d->size);
 }
 
-
 static void dt_printdir_reverse(struct dt_wctx *wc, struct dt_dentry *d)
 {
     printf("%s0 %u ", wc->prefix, d->id);
     dt_printpath(d);
     printf("\n");
+}
+
+static void dt_printdir_once(struct dt_wctx *wc)
+{
+    if (!(wc->d->type & DT_TYPE_ONCE)) {
+        wc->d->type |= DT_TYPE_ONCE;
+        wc->prefix = "* ";
+        wc->call_dir(wc, wc->d);
+    }
 }
 
 static void dt_printfile_reverse(struct dt_wctx *wc, struct dt_dentry *d)
@@ -631,6 +639,7 @@ static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_den
     while ((odp != NULL) && (dp != NULL)) {
         if ((cmp = strcmp(odp->name, dp->name)) == 0) {
             if (odp->size != dp->size) {
+                dt_printdir_once(wc);
                 wc->prefix = "* ";
                 wc->call_file(wc, dp);
             }
@@ -641,6 +650,7 @@ static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_den
             wc->call_file(wc, odp);
             odp = odp->sibling;
         } else {
+            dt_printdir_once(wc);
             wc->prefix = "+ ";
             wc->call_file(wc, dp);
             dp = dp->sibling;
@@ -652,6 +662,7 @@ static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_den
         odp = odp->sibling;
     }
     while (dp != NULL) {
+        dt_printdir_once(wc);
         wc->prefix = "+ ";
         wc->call_file(wc, dp);
         dp = dp->sibling;
@@ -732,6 +743,7 @@ static void dt_list_diff_childs(struct dt_wctx *wc, struct dt_dentry *d, struct 
             dt_diff_delete_tree(wc, odp);
             odp = tmp;
         } else {
+            dt_printdir_once(wc);
             dp->type |= DT_TYPE_NEW;
             dt_diff_add_tree(wc, dp);
             dp = dp->sibling;
@@ -743,6 +755,7 @@ static void dt_list_diff_childs(struct dt_wctx *wc, struct dt_dentry *d, struct 
         odp = tmp;
     }
     while (dp != NULL) {
+        dt_printdir_once(wc);
         dp->type |= DT_TYPE_NEW;
         dt_diff_add_tree(wc, dp);
         dp = dp->sibling;
