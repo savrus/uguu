@@ -778,9 +778,9 @@ static void dt_on_er_diff(struct dt_wctx *wc)
 static void dt_on_e_diff(struct dt_wctx *wc)
 {
     dt_readdir(wc->wk, wc->d, wc->curdir, NULL);
-    dt_list_diff(wc, &wc->od->file_child, &wc->d->file_child);
     dt_list_sum(wc->d, &wc->d->file_child);
     dt_list_diff_childs(wc, wc->d, wc->wk, &wc->od->child, &wc->d->child, wc->curdir);
+    dt_list_diff(wc, &wc->od->file_child, &wc->d->file_child);
 }
 static void dt_on_l_diff(struct dt_wctx *wc)
 {
