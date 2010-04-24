@@ -27,8 +27,9 @@ typedef enum {
     DT_FILE,
 } dt_type;
 
-#define DT_TYPE_MASK 0xff
-#define DT_TYPE_NEW 0x100
+#define DT_TYPE_MASK    0xff
+#define DT_TYPE_NEW     0x100
+#define DT_TYPE_ONCE    0x200
 
 struct dt_dentry {
     dt_type type;
