@@ -24,7 +24,7 @@ static void usage(wchar_t *binname, int err)
 {
     wchar_t *bin = wcsrchr(binname, L'\\');
     if (bin) binname = bin + 1;
-	fprintf(stderr, "Usage: %S [-l] [-f] [-u username] [-p] [-a|-d] [-h] host_ip\n", binname);
+	fprintf(stderr, "Usage: %S [-l] [-f] [-U username] [-P] [-a|-d] [-h] host_ip\n", binname);
 	fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
 	fprintf(stderr, "  -f\tprint full paths (debug output)\n");
 	fprintf(stderr, "  -a\tskip admin shares\n");
@@ -65,7 +65,7 @@ int wmain(int argc, wchar_t **argv)
             case L'l':
                 lookup = 1;
                 break;
-            case L'u':
+            case L'U':
                 user = argv[++i];
                 break;
             case L'P': {
