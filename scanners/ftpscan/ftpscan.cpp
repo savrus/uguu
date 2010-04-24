@@ -315,8 +315,6 @@ static struct dt_walker walker = {
 // main
 //////////////////////////////////////////////////////////////////////////
 
-#define __TOSTRING(x) #x
-#define _TOSTRING(x) __TOSTRING(x)
 #ifdef _WIN32
 #define _DIR_SLASH '\\'
 #else
@@ -327,16 +325,16 @@ static void usage(char *binname, int err)
 {
     char *bin = strrchr(binname, _DIR_SLASH);
     if (bin) binname = bin + 1;
-	fprintf(stderr, "Usage: %s [-l] [-f] [(-c|-C) cp] [-P##] [-t###] [(-R|-M)#] [-u username] [-p] [-h] host_ip\n", binname);
+	fprintf(stderr, "Usage: %s [-l] [-f] [(-c|-C) cp] [-P##] [-t###] [(-R|-M)#] [-U username] [-p] [-h] host_ip\n", binname);
     fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
     fprintf(stderr, "  -f\tprint full paths (debug output)\n");
     fprintf(stderr, "  -c cp\tset codepage for non-utf8 servers (default is " DEFAULT_ANSI_CODEPAGE ")\n");
     fprintf(stderr, "  -C cp\tforce server codepage (without detecting utf8)\n");
-    fprintf(stderr, "  -P##\tuse non-default port ## for ftp control connection\n");
-    fprintf(stderr, "  -t###\tconnection timeout ### in seconds (default is " _TOSTRING(DEF_TIMEOUT) ")\n");
+    fprintf(stderr, "  -p##\tuse non-default port ## for ftp control connection\n");
+    fprintf(stderr, "  -t###\tconnection timeout ### in seconds (default is %d)\n", DEF_TIMEOUT);
 	fprintf(stderr, "  -R#\tscan with LIST -R command, # = a|p for active or passive mode\n");
 	fprintf(stderr, "  -M#\tdisable quick scan, # = a|p for active or passive mode\n");
-	fprintf(stderr, "  -p\tfirst line (ends with newline char) in stdin is password");
+	fprintf(stderr, "  -P\tfirst line (ends with newline char) in stdin is password");
     fprintf(stderr, "  -h\tprint this help\n");
     exit(err);
 }
@@ -376,16 +374,16 @@ int main(int argc, char *argv[])
 			case 'C':
 				curdir.SetConnCP(argv[++i]);
 				break;
-			case 'P':
+			case 'p':
 				curdir.ServerPORT = atoi(argv[i]+2);
 				break;
 			case 't':
 				curdir.timeout_sec = atoi(argv[i]+2);
 				break;
-			case 'u':
+			case 'U':
 				curdir.login = argv[++i];
 				break;
-			case 'p':
+			case 'P':
 				if (gp_readline(passw, MAX_PASSWORD_LEN+2) == 0) {
 					LOG_ERR("Empty, not completed, too long password or input error\n");
 					usage(argv[0], ESTAT_FAILURE);

@@ -29,7 +29,7 @@ static void usage(wchar_t *binname, int err)
 	fprintf(stderr, "  -f\tprint full paths (debug output)\n");
 	fprintf(stderr, "  -a\tskip admin shares\n");
 	fprintf(stderr, "  -d\tskip shares with trailing dollar (hidden)\n");
-	fprintf(stderr, "  -p\tfirst line (ends with newline char) in stdin is utf8-encoded password");
+	fprintf(stderr, "  -P\tfirst line (ends with newline char) in stdin is utf8-encoded password");
 	fprintf(stderr, "  -h\tprint this help\n");
 	exit(err);
 }
@@ -68,7 +68,7 @@ int wmain(int argc, wchar_t **argv)
             case L'u':
                 user = argv[++i];
                 break;
-            case L'p': {
+            case L'P': {
                     char pass[MAX_PASSWORD_LEN+2];
                     size_t passlen;
                     if ((passlen = gp_readline(pass, MAX_PASSWORD_LEN+2)) == 0) {
