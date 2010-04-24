@@ -13,7 +13,8 @@ extern "C" {
 
 /* gp_readline: echoless read line
  * parameters: buffer, buffer size (max input string length + 2)
- * return value: line length or 0 if buffer too small or input error
+ * return value: line length (with terminating character included)
+ * or 0 if buffer too small or input error
  */
 unsigned int gp_readline(char *buf, unsigned int size);
 
