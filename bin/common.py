@@ -49,7 +49,7 @@ def run_scanner(cmd, ip, proto, port, ext = ""):
     if port == 0:
         cmdline = "%s %s %s" % (cmd, ext, ip)
     else:
-        cmdline = "%s -P%s %s %s" % (cmd, str(port), ext, ip)
+        cmdline = "%s -p%s %s %s" % (cmd, str(port), ext, ip)
     _stderr = None
     if not scanners_logging:
         _stderr = subprocess.PIPE
