@@ -37,6 +37,19 @@ def log(logstr, logparams = ()):
 def sharestr(proto, host, port=0):
     return "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
 
+def share_save_str(proto, host, port=0):
+    return "%s_%s_%s" % (proto, host, str(port))
+
+shares_save_dir = '/home/savrus/devel/uguu/bin/save'
+
+def share_save_path(proto, host, port=0):
+    return shares_save_dir + "/" + share_save_str(proto, host, port)
+
+import string
+def quote_for_shell(str):
+    return '"%s"' % string.join(str.split('"'), '\\"')
+
+
 #locale for scanners output
 scanners_locale = "utf-8"
 #path where scanners are, with trailing slash
@@ -63,7 +76,7 @@ def run_scanner(cmd, ip, proto, port, ext = ""):
 # Fill types, protocols before calling dbinit.py 
 # copy known_filetypes and knows_protocols to webuguu/common.py
 # required by dbinit.py
-known_protocols = ('smb', 'ftp')
+known_protocols = ('smb', 'ftp', 'http')
 known_filetypes = ('dir', 'video', 'audio', 'archive', 'cdimage', 'exe', 'lib',
                    'script', 'image', 'document')
 #types of files recognizable by the spider
@@ -96,7 +109,7 @@ filetypes = {
 
 #default protocols' ports, keep in conformance with known_protocols
 #required by pinger.py, lookup.py
-default_ports = dict(zip(known_protocols, (445, 21,)))
+default_ports = dict(zip(known_protocols, (445, 21, 80,)))
 
 # Time period to wait until next scan
 # required by spider.py
