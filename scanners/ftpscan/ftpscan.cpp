@@ -317,7 +317,7 @@ class PtrFILE
 public:
 	PtrFILE() : f(NULL) {}
 	~PtrFILE() {if (f) fclose(f);}
-	bool fopen(char *name, char *mode) {
+	bool fopen(const char *name, const char *mode) {
 		if (fopen_s(&f, name, mode) == 0)
 			return true;
 		LOG_ERRNO("Can't open file %s\n", name);
