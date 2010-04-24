@@ -24,9 +24,10 @@ static void usage(wchar_t *binname, int err)
 {
     wchar_t *bin = wcsrchr(binname, L'\\');
     if (bin) binname = bin + 1;
-	fprintf(stderr, "Usage: %S [-l] [-f] [-U username] [-P] [-a|-d] [-h] host_ip\n", binname);
+	fprintf(stderr, "Usage: %S [-l] [-f|-u ot] [-U username] [-P] [-a|-d] [-h] host_ip\n", binname);
 	fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
 	fprintf(stderr, "  -f\tprint full paths (debug output)\n");
+	fprintf(stderr, "  -u ot\tdiff against an old tree\n");
 	fprintf(stderr, "  -a\tskip admin shares\n");
 	fprintf(stderr, "  -d\tskip shares with trailing dollar (hidden)\n");
 	fprintf(stderr, "  -P\tfirst line (ends with newline char) in stdin is utf8-encoded password");
@@ -39,7 +40,8 @@ int wmain(int argc, wchar_t **argv)
     struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0}, *probe;
     struct smbwk_dir curdir;
     int full = 0, lookup = 0;
-    wchar_t *host, *user = L"Guest", wpass[MAX_PASSWORD_LEN+1] = L"";
+    wchar_t *host, *user = L"Guest", wpass[MAX_PASSWORD_LEN+1] = L"", *oldtree = NULL;
+    FILE *oldfile;
     enum_type etype = ENUM_ALL;
     int i;
 
@@ -64,6 +66,9 @@ int wmain(int argc, wchar_t **argv)
                 break;
             case L'l':
                 lookup = 1;
+                break;
+            case L'u':
+                oldtree = argv[++i];
                 break;
             case L'U':
                 user = argv[++i];
@@ -94,9 +99,8 @@ int wmain(int argc, wchar_t **argv)
         }
     }
 
-    if (i+1 != argc)
+    if (i+1 != argc || (full && oldtree))
         usage(argv[0], ESTAT_FAILURE);
-    
     host = argv[i];
 
     if ((i = smbwk_open(&curdir, host, user, wpass, etype)) != ESTAT_SUCCESS)
@@ -111,7 +115,14 @@ int wmain(int argc, wchar_t **argv)
     
     if (full)
         dt_full(&smbwk_walker, &d, &curdir);
-    else
+    else if (oldtree) {
+        if (_wfopen_s(&oldfile, oldtree, L"rt") != 0) {
+            LOG_ERRNO("Can't open file %S\n", oldtree);
+            usage(argv[0], ESTAT_FAILURE);
+        }
+        dt_diff(oldfile, &smbwk_walker, &d, &curdir);
+        fclose(oldfile);
+    } else
         dt_reverse(&smbwk_walker, &d, &curdir);
 
     smbwk_close(&curdir);
