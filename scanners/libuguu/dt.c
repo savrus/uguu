@@ -861,7 +861,10 @@ void dt_diff(FILE *file, struct dt_walker *wk, struct dt_dentry *root, void *cur
     }
 
     if ((oldroot = dtread_readfile(file, &wc.id)) == NULL) {
-        dt_reverse(wk, root, curdir);
+        /* currently external program cannot distinguish empty patch
+         * from failed tree restore, so we have to abort here */
+        LOG_ASSERT(0, "Tree reconstruction failed");
+        //dt_reverse(wk, root, curdir);
         return;
     }
 
