@@ -173,9 +173,8 @@ static int dtread_readline(const char *line, struct cuckoo_ctx *cu, unsigned int
     return 1;
 }
 
-struct dt_dentry * dtread_readfile(const char *filename, unsigned int *maxid)
+struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid)
 {
-    FILE *file;
     int c;
     char ch;
     struct buf_str *bs;
@@ -183,15 +182,10 @@ struct dt_dentry * dtread_readfile(const char *filename, unsigned int *maxid)
     struct dtread_data *dr;
     struct dt_dentry *root = NULL;
 
-    LOG_ASSERT(filename != NULL, "Bad arguments\n");
-
-    if ((file = fopen(filename, "r")) == NULL) {
-        LOG_ERR("Can't open file %s\n", filename);
-        return NULL;
-    }
+    LOG_ASSERT(file != NULL, "Bad arguments\n");
 
     if ((bs = buf_alloc()) == NULL)
-        goto clear_file;
+        return NULL;
     
     if ((cu = cuckoo_alloc(0)) == NULL)
         goto clear_bs;
@@ -228,9 +222,6 @@ clear_cu:
 
 clear_bs:
     buf_free(bs);
-
-clear_file:
-    fclose(file);
 
     return root;
 }
