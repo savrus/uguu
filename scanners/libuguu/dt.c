@@ -658,7 +658,7 @@ static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_den
     }
 }
 
-static void dt_diff_delete_tree(struct dt_dentry *root)
+static void dt_diff_delete_tree(struct dt_wctx *pwc, struct dt_dentry *root)
 {
     struct dt_wctx wc;
     LOG_ASSERT(root != NULL, "Bad arguments\n");
@@ -667,7 +667,7 @@ static void dt_diff_delete_tree(struct dt_dentry *root)
     wc.curdir                 = NULL;
     wc.on_enter_root          = dt_on_er_print;
     wc.on_enter               = dt_on_e_dprint_free;
-    wc.on_leave_root          = dt_wctx_plug;
+    wc.on_leave_root          = dt_on_lr_print;
     wc.on_leave               = dt_on_l_free;
     wc.go_child               = dt_go_c_ds;
     wc.go_sibling_or_parent   = dt_go_sop_ds;
@@ -729,7 +729,7 @@ static void dt_list_diff_childs(struct dt_wctx *wc, struct dt_dentry *d, struct 
             odp = odp->sibling;
         } else if (cmp < 0) {
             tmp = odp->sibling;
-            dt_diff_delete_tree(odp);
+            dt_diff_delete_tree(wc, odp);
             odp = tmp;
         } else {
             dp->type |= DT_TYPE_NEW;
@@ -739,7 +739,7 @@ static void dt_list_diff_childs(struct dt_wctx *wc, struct dt_dentry *d, struct 
     }
     while (odp != NULL) {
         tmp = odp->sibling;
-        dt_diff_delete_tree(odp);
+        dt_diff_delete_tree(wc, odp);
         odp = tmp;
     }
     while (dp != NULL) {
@@ -791,7 +791,6 @@ static int dt_go_sop_diff(struct dt_wctx *wc)
 {
     int ret;
     struct dt_dentry *dn = wc->d;
-    struct dt_dentry *od;
     LOG_ASSERT((wc != NULL) && (wc->wk != NULL) && (wc->d != NULL), "Bad arguments\n");
 
     wc->d = wc->d->parent;
@@ -808,8 +807,7 @@ static int dt_go_sop_diff(struct dt_wctx *wc)
             continue;
         wc->od = wc->od->sibling;
         if (wc->wk->go(DT_GO_CHILD, dn->name, wc->curdir) < 0) {
-            for (od = wc->od->child; od != NULL; od = od->sibling)
-                dt_diff_delete_tree(od);
+            dt_list_call_free(wc, &wc->od->child, dt_diff_delete_tree);
             continue;
         }
         wc->d = dn;
