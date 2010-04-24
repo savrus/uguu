@@ -88,8 +88,7 @@ def ddl(db):
         );
         CREATE TABLE trees (
             tree_id SERIAL PRIMARY KEY,
-            hash varchar(64) UNIQUE,
-            size bigint NOT NULL DEFAULT 0
+            filename text 
         );
         ALTER SEQUENCE trees_tree_id_seq
             MINVALUE -2147483648 MAXVALUE 2147483647
@@ -123,6 +122,7 @@ def ddl(db):
             PRIMARY KEY (tree_id, treepath_id)
         );
         CREATE TABLE files (
+            file_id SERIAL PRIMARY KEY,
             tree_id integer,
             treepath_id integer,
             pathfile_id integer,
@@ -133,8 +133,7 @@ def ddl(db):
             tsname tsvector,
             tspath tsvector,
             FOREIGN KEY (tree_id, treepath_id) REFERENCES paths
-                ON DELETE CASCADE,
-            PRIMARY KEY (tree_id, treepath_id, pathfile_id)
+                ON DELETE CASCADE
         );
         """)
 
@@ -164,6 +163,7 @@ def ddl_index(db):
     cursor = db.cursor()
     cursor.execute("""
         CREATE INDEX paths_path ON paths USING hash(path);
+        CREATE INDEX files_id ON files (tree_id, treepath_id, pathfile_id);
         CREATE INDEX files_name ON files USING hash(lower(name));
         CREATE INDEX files_tsname ON files USING gin(tsname);
         CREATE INDEX files_type ON files (type);
@@ -173,7 +173,6 @@ def ddl_index(db):
         CREATE INDEX shares_network ON shares USING hash(network);
         CREATE INDEX shares_state ON shares USING hash(state);
         CREATE INDEX shares_tree_id ON shares (tree_id);
-        CREATE INDEX trees_hash ON trees USING hash(hash);
         """)
 
 
