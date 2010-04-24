@@ -646,6 +646,7 @@ static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_den
             dp = dp->sibling;
             odp = odp->sibling;
         } else if (cmp < 0) {
+            dt_printdir_once(wc);
             wc->prefix = "- ";
             wc->call_file(wc, odp);
             odp = odp->sibling;
@@ -657,6 +658,7 @@ static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_den
         }
     }
     while (odp != NULL) {
+        dt_printdir_once(wc);
         wc->prefix = "- ";
         wc->call_file(wc, odp);
         odp = odp->sibling;
@@ -739,6 +741,7 @@ static void dt_list_diff_childs(struct dt_wctx *wc, struct dt_dentry *d, struct 
             dp = dp->sibling;
             odp = odp->sibling;
         } else if (cmp < 0) {
+            dt_printdir_once(wc);
             tmp = odp->sibling;
             dt_diff_delete_tree(wc, odp);
             odp = tmp;
@@ -750,6 +753,7 @@ static void dt_list_diff_childs(struct dt_wctx *wc, struct dt_dentry *d, struct 
         }
     }
     while (odp != NULL) {
+        dt_printdir_once(wc);
         tmp = odp->sibling;
         dt_diff_delete_tree(wc, odp);
         odp = tmp;
