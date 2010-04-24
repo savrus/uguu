@@ -75,6 +75,7 @@ static void gp_echo_restore(gp_save *gp)
 
 #endif /* _WIN32 */
 
+/* returns 0 if failed, size of string with '0' character counted otherwise */
 unsigned int gp_readline(char *buf, unsigned int size)
 {
     gp_save gp;
@@ -85,7 +86,7 @@ unsigned int gp_readline(char *buf, unsigned int size)
     gp_echo_restore(&gp);
     if (buf && (size = strlen(buf)) > 0 && buf[size - 1] == '\n') {
         buf[size - 1] = 0;
-        return size - 1;
+        return size;
     } else
         return 0;
 }
