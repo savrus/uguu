@@ -31,13 +31,13 @@ total items: {{ items }}, total size: <span class="filesize">{{ size|filesizefor
 <div class="margintop" id="sharestatus">
     <a class="share" href="{{urlproto}}{{urladdr}}">{{protocol}}://{{urlhost}}</a>
     is <span class="state" id="{{state}}">{{state}}</span>
-    for {{changetime|timesince}}
+    for {{changetime|timesince:now}}
     since {{changetime|date:"D d M Y G:i"}}.
     <br>
-    Last scanned {{scantime|timesince}} ago
+    Last scanned {{scantime|timesince:now}} ago
     on {{scantime|date:"D d M Y G:i"}}.
     <br>
-    Next scan won't happen for {{nextscantime|timeuntil}}
+    Next scan won't happen for {{nextscantime|timeuntil:now}}
     until {{nextscantime|date:"D d M Y G:i"}}
 </div>
 {% endblock %}
