@@ -86,16 +86,9 @@ def ddl(db):
             protocol proto NOT NULL,
             priority smallint NOT NULL DEFAULT -1
         );
-        CREATE TABLE trees (
-            tree_id SERIAL PRIMARY KEY,
-            filename text 
-        );
-        ALTER SEQUENCE trees_tree_id_seq
-            MINVALUE -2147483648 MAXVALUE 2147483647
-            CYCLE;
         CREATE TABLE shares (
             share_id SERIAL PRIMARY KEY,
-            tree_id int REFERENCES trees ON DELETE RESTRICT DEFAULT NULL,
+            tree_id int DEFAULT NULL,
             scantype_id integer REFERENCES scantypes ON DELETE RESTRICT NOT NULL,
             network varchar(32) REFERENCES networks ON DELETE CASCADE NOT NULL,
             protocol proto NOT NULL,
@@ -110,6 +103,15 @@ def ddl(db):
             last_lookup timestamp DEFAULT now(),
             UNIQUE (protocol, hostname, port)
         );
+        CREATE TABLE trees (
+            tree_id SERIAL PRIMARY KEY,
+            share_id integer UNIQUE REFERENCES shares ON DELETE CASCADE
+        );
+        ALTER SEQUENCE trees_tree_id_seq
+            MINVALUE -2147483648 MAXVALUE 2147483647
+            CYCLE;
+        ALTER TABLE shares ADD CONSTRAINT tree_fk FOREIGN KEY (tree_id)
+            REFERENCES trees (tree_id) ON DELETE RESTRICT;
         CREATE TABLE paths (
             tree_id integer REFERENCES trees ON DELETE CASCADE,
             treepath_id integer,
