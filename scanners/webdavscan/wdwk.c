@@ -121,6 +121,20 @@ static int wdwk_startelm(void *userdata, int parent, const char *nspace, const c
     return id;
 }
 
+/* workaround for old libneon */
+int wdwk_path_compare(const char *e1, const char *e2)
+{
+    char *u1, *u2;
+    int ret;
+
+    u1 = ne_path_unescape(e1);
+    u2 = ne_path_unescape(e2);
+    ret = ne_path_compare(u1, u2);
+    ne_free(u1);
+    ne_free(u2);
+    return ret;
+}
+
 static void wdwk_result(void *userdata, const ne_uri *uri, const ne_prop_result_set *results)
 {
     struct wdwk_dir *c = (struct wdwk_dir *) userdata;
@@ -129,7 +143,7 @@ static void wdwk_result(void *userdata, const ne_uri *uri, const ne_prop_result_
     char *p, *name;
 
     //LOG_ERR("%s %s\n", buf_string(c->url), uri->path);
-    if (!ne_path_compare(buf_string(c->url), uri->path)) {
+    if (!wdwk_path_compare(buf_string(c->url), uri->path)) {
         ne_free(r);
         return;
     }
