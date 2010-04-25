@@ -31,7 +31,7 @@ def db_is_empty(db):
            check('routine', ['share_state_change']) and \
            check('trigger', ['share_stage_change_trigger']) and \
            check('sequence', ['scantypes_scantype_id_seq', 'shares_id_seq', \
-                              'trees_tree_id_seq']) and \
+                              'trees_tree_id_seq', 'files_file_id_seq']) and \
            check_q("""
             SELECT typname FROM pg_type
             JOIN pg_namespace ON pg_type.typnamespace=pg_namespace.oid
@@ -86,9 +86,13 @@ def ddl(db):
             protocol proto NOT NULL,
             priority smallint NOT NULL DEFAULT -1
         );
+        CREATE TABLE trees (
+            tree_id SERIAL PRIMARY KEY,
+            share_id integer UNIQUE
+        );
         CREATE TABLE shares (
             share_id SERIAL PRIMARY KEY,
-            tree_id int DEFAULT NULL,
+            tree_id int REFERENCES trees ON DELETE RESTRICT DEFAULT NULL,
             scantype_id integer REFERENCES scantypes ON DELETE RESTRICT NOT NULL,
             network varchar(32) REFERENCES networks ON DELETE CASCADE NOT NULL,
             protocol proto NOT NULL,
@@ -103,15 +107,8 @@ def ddl(db):
             last_lookup timestamp DEFAULT now(),
             UNIQUE (protocol, hostname, port)
         );
-        CREATE TABLE trees (
-            tree_id SERIAL PRIMARY KEY,
-            share_id integer UNIQUE REFERENCES shares ON DELETE CASCADE
-        );
-        ALTER SEQUENCE trees_tree_id_seq
-            MINVALUE -2147483648 MAXVALUE 2147483647
-            CYCLE;
-        ALTER TABLE shares ADD CONSTRAINT tree_fk FOREIGN KEY (tree_id)
-            REFERENCES trees (tree_id) ON DELETE RESTRICT;
+        ALTER TABLE trees ADD CONSTRAINT trees_share_id_fkey FOREIGN KEY (share_id)
+            REFERENCES shares (share_id) ON DELETE CASCADE;
         CREATE TABLE paths (
             tree_id integer REFERENCES trees ON DELETE CASCADE,
             treepath_id integer,
@@ -124,7 +121,7 @@ def ddl(db):
             PRIMARY KEY (tree_id, treepath_id)
         );
         CREATE TABLE files (
-            file_id SERIAL PRIMARY KEY,
+            file_id BIGSERIAL PRIMARY KEY,
             tree_id integer,
             treepath_id integer,
             pathfile_id integer,
