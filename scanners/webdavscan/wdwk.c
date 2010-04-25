@@ -122,7 +122,7 @@ static int wdwk_startelm(void *userdata, int parent, const char *nspace, const c
 }
 
 /* workaround for old libneon */
-int wdwk_path_compare(const char *e1, const char *e2)
+static int wdwk_path_compare(const char *e1, const char *e2)
 {
     char *u1, *u2;
     int ret;
