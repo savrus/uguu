@@ -241,8 +241,11 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
         data = run_scanner(command, address, proto, port)
     save = tempfile.TemporaryFile(bufsize=-1)
     line_count = 0
+    line_count_patch = 0
     for line in data.stdout:
         line_count += 1
+        if line[0] in ('+', '-', '*'):
+            line_count_patch += 1
         if line_count > max_lines_from_scanner:
             kill_process(data)
             data.stdout.close()
@@ -259,6 +262,9 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         log("Scanning %s failed (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
         return
+    if patchmode and (line_count_patch > (line_count - line_count_patch) / 2):
+        log("Patch is too long for %s. Fallback to non-patching mode", hoststr)
+        patchmode = False
     db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
     scan_time = datetime.datetime.now() - start
     start = datetime.datetime.now()
