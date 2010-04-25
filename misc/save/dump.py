@@ -17,7 +17,7 @@ def dump_share(share):
            'port': str(share['port']),
            'host': share['hostname']}
     cmd = os.path.join(scanners_path, "sqlscan")
-    sp = subprocess.Popen("%(cmd)s -s %(proto)s -p %(port)s -dP %(dh)s %(du)s %(dd)s %(host)s > save/%(proto)s_%(host)s_%(port)s"
+    sp = subprocess.Popen("%(cmd)s -s %(proto)s -p %(port)s -dP %(dh)s %(du)s %(dd)s %(host)s > dump/%(proto)s_%(host)s_%(port)s"
         % {'cmd': cmd,
            'proto': share['protocol'],
            'port': str(share['port']),
