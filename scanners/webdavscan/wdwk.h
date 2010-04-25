@@ -1,6 +1,6 @@
 /* wdwk - definitions and interfaces of webdav walker
  *
- * Copyright 2009, 2010, savrus
+ * Copyright 2010, savrus
  * Read the COPYING file in the root of the source tree.
  */
 
@@ -18,13 +18,9 @@ struct wdwk_dir {
     ne_session *sess;
     char *host;
     int port;
-
     struct buf_str *url;
     struct stack *ancestors;
     struct stack *resources;
-    int fd;
-    int fd_real;
-    int skip_bucks;
 };
 
 /* type for element of the ancestors stack */
@@ -45,7 +41,7 @@ int wdwk_open(struct wdwk_dir *c, char *host, int port);
 /* close the walker */
 int wdwk_close(struct wdwk_dir *c);
 
-/* wd walker for 'dir tree' engine */
+/* webdav walker for 'dir tree' engine */
 extern struct dt_walker wdwk_walker;
 
 #endif /* WDWK_H */
