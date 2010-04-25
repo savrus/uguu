@@ -10,6 +10,7 @@ from django.shortcuts import render_to_response
 from django.core.urlresolvers import reverse
 import string
 import time
+import datetime
 from webuguu.common import connectdb, vfs_items_per_page, offset_prepare, protocol_prepare, known_protocols
 
 
@@ -277,5 +278,6 @@ def share(request, proto, hostname, port, path=""):
          'scantime': scantime,
          'nextscantime': nexttime,
          'gentime': time.time() - generation_started,
+         'now': datetime.datetime.now(),
          })
 
