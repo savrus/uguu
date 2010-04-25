@@ -366,13 +366,18 @@ static void dt_printdir_reverse(struct dt_wctx *wc, struct dt_dentry *d)
     printf("\n");
 }
 
+static void dt_printdir_once_custom(struct dt_wctx *wc, struct dt_dentry *d)
+{
+    if (!(d->type & DT_TYPE_ONCE)) {
+        d->type |= DT_TYPE_ONCE;
+        wc->prefix = "* ";
+        wc->call_dir(wc, d);
+    }
+}
+
 static void dt_printdir_once(struct dt_wctx *wc)
 {
-    if (!(wc->d->type & DT_TYPE_ONCE)) {
-        wc->d->type |= DT_TYPE_ONCE;
-        wc->prefix = "* ";
-        wc->call_dir(wc, wc->d);
-    }
+    dt_printdir_once_custom(wc, wc->d);
 }
 
 static void dt_printfile_reverse(struct dt_wctx *wc, struct dt_dentry *d)
@@ -724,12 +729,14 @@ static void dt_diff_add_tree(struct dt_wctx *pwc, struct dt_dentry *root)
  * Reconstruct old list to be identical */
 static void dt_list_diff_childs(struct dt_wctx *wc, struct dt_dentry *d, struct dt_walker *wk, struct dt_dentry **o, struct dt_dentry **n, void *curdir)
 {
-    struct dt_dentry *odp = *o, *odn = NULL, *ods = NULL;
-    struct dt_dentry *dp = *n;
+    struct dt_dentry *odp, *odn = NULL, *ods = NULL;
+    struct dt_dentry *dp;
     struct dt_dentry *tmp;
     int cmp;
-
     LOG_ASSERT((o != NULL) && (n != NULL), "Bad arguments\n");
+
+    odp = *o;
+    dp = *n;
     while ((odp != NULL) && (dp != NULL)) {
         if ((cmp = strcmp(odp->name, dp->name)) == 0) {
             if (ods == NULL)
@@ -790,27 +797,61 @@ static void dt_on_l_diff(struct dt_wctx *wc)
 {
     dt_list_sum(wc->d, &wc->d->child);
     if((wc->d->size != wc->od->size) || (wc->d->items != wc->od->items)) {
+        /* FIXME: this is not needed because action '*' on file doesn't requere
+         * it's path */
+        //if (wc->d->parent)
+        //    dt_printdir_once_custom(wc, wc->d->parent);
         wc->prefix = "* ";
         wc->call_file(wc, wc->d);
     }
 }
 static int dt_go_c_diff(struct dt_wctx *wc)
 {
-    struct dt_dentry *d;
-    if ((d = dt_go_child(wc->wk, wc->d, wc->curdir)) != NULL) {
-        wc->d = d;
-        wc->od = wc->od->child;
-        return 1;
+    struct dt_dentry *d, *od, *dc;
+    LOG_ASSERT(wc != NULL, "Bad arguments\n");
+    
+    if ((dc = wc->d->child) == NULL)
+        return 0;
+    
+    d = wc->d;
+    od = wc->od;
+    wc->d = wc->d->child;
+    wc->od = wc->od->child;
+
+    while (dc != NULL) {
+        if (dc->type & DT_TYPE_NEW) {
+            dc = dc->sibling;
+            wc->d = dc;
+            continue;
+        }
+        if (wc->wk->go(DT_GO_CHILD, dc->name, wc->curdir) < 0) {
+            dt_list_diff_childs(wc, wc->d, wc->wk, &wc->od->child, &wc->d->child, wc->curdir);
+            dt_list_diff(wc, &wc->od->file_child, &wc->d->file_child);
+            dt_on_l_diff(wc);
+            dc = dc->sibling;
+            wc->d = dc;
+            wc->od = wc->od->sibling;
+            continue;
+        }
+        break;
     }
-    return 0;
+    
+    if (dc == NULL) {
+        wc->d = d;
+        wc->od = od;
+    }
+    return (dc != NULL);
 }
+
 static int dt_go_sop_diff(struct dt_wctx *wc)
 {
     int ret;
-    struct dt_dentry *dn = wc->d;
+    struct dt_dentry *dn, *parent;
     LOG_ASSERT((wc != NULL) && (wc->wk != NULL) && (wc->d != NULL), "Bad arguments\n");
 
+    dn = wc->d;
     wc->d = wc->d->parent;
+    parent = wc->d;
     if (wc->d == NULL)
         return 0;
 
@@ -823,17 +864,31 @@ static int dt_go_sop_diff(struct dt_wctx *wc)
         if (dn->type & DT_TYPE_NEW)
             continue;
         wc->od = wc->od->sibling;
+        wc->d = dn;
         if (wc->wk->go(DT_GO_CHILD, dn->name, wc->curdir) < 0) {
-            dt_list_call_free(wc, &wc->od->child, dt_diff_delete_tree);
+#if 0
+            dt_printdir_once(wc);
+            dt_printdir_once_custom(wc, dn);
+            dt_list_call(wc, &wc->od->child, dt_diff_delete_tree);
+            wc->prefix = "- ";
+            dt_list_call_free(wc, &wc->od->file_child, wc->call_file);
+            wc->prefix = "* ";
+            wc->call_file(wc, dn);
+#else       
+            dt_list_diff_childs(wc, wc->d, wc->wk, &wc->od->child, &wc->d->child, wc->curdir);
+            dt_list_diff(wc, &wc->od->file_child, &wc->d->file_child);
+            dt_on_l_diff(wc);
+#endif
             continue;
         }
-        wc->d = dn;
         break;
     }
 
     ret = (dn != NULL);
-    if (!ret)
+    if (!ret) {
+        wc->d = parent;
         wc->od = wc->od->parent;
+    }
     return ret;
 
 }
