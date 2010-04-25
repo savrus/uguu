@@ -220,13 +220,6 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s
                     """,  {'t': tree, 'p': path, 'f': file, 'sz': size})
 
-
-def get_tree_id(cursor, share_id):
-    cursor.execute("SELECT tree_id FROM trees WHERE share_id = %(s)s", {'s':share_id})
-    if cursor.rowcount == 0:
-        cursor.execute("INSERT INTO trees (share_id) VALUES (%(s)s) RETURNING tree_id", {'s':share_id})
-    return cursor.fetchone()['tree_id']
-
 def scan_share(db, share_id, proto, host, port, tree_id, command):
     cursor = db.cursor()
     hoststr = sharestr(proto, host, port)
@@ -268,7 +261,9 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
     db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
     scan_time = datetime.datetime.now() - start
     start = datetime.datetime.now()
-    tree_id = get_tree_id(cursor, share_id)
+    if tree_id is None:
+        cursor.execute("INSERT INTO trees (share_id) VALUES (%(s)s) RETURNING tree_id", {'s':share_id})
+        tree_id = cursor.fetchone()['tree_id']
     qcache = PsycoCache(cursor)
     paths_buffer = dict()
     save.seek(0)

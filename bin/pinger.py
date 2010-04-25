@@ -50,7 +50,7 @@ def update_shares_state(db, selwhere, port):
     cursor.execute("SELECT share_id, hostname FROM shares WHERE %s" % selwhere)
     itemdict = dict((row['hostname'], [row['share_id'],  nscache(row['hostname'])]) for row in cursor.fetchall())
     if len(itemdict) == 0:
-        return
+        return 0, 0
     online, offline = check_online_shares(itemdict.keys(), port)
     set_shares_state(cursor, [itemdict[host] for host in online], True)
     set_shares_state(cursor, [itemdict[host] for host in offline], False)

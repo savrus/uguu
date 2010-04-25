@@ -523,10 +523,10 @@ if __name__ == "__main__":
     cursor = db.cursor()
     cursor.execute("DELETE FROM shares WHERE last_lookup + interval %s < now() RETURNING tree_id",
                         (wait_until_delete_share,))
-    for tree in cursor.fetchall():
-        try:
-            cursor.execute("DELETE FROM trees WHERE tree_id = %s", (tree[0],))
-        except:
-            pass
+#    for tree in cursor.fetchall():
+#        try:
+#            cursor.execute("DELETE FROM trees WHERE tree_id = %s", (tree[0],))
+#        except:
+#            pass
     log("All network lookups finished (running time %s)", datetime.datetime.now() - start)
 
