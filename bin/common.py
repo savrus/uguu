@@ -38,29 +38,29 @@ def sharestr(proto, host, port=0):
     return "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
 
 def share_save_str(proto, host, port=0):
-    return "%s_%s_%s" % (proto, host, str(port))
+    return "%s_%s_%s" % (proto, host, port)
 
+import os.path
 # Directory where shares contents will be placed to allow patching-mode
 # scanning. 
 # The only allowed action is to delete files from this directory - 
 # in this case next scanning will be done in non-patching mode.
 # Modification of files here is strictly prohibited (even replacing by
 # sqlscan output) due to possible database consistency breaking.
-shares_save_dir = '/home/savrus/devel/uguu/bin/save'
+shares_save_dir = 'save'
+shares_save_dir = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), shares_save_dir)
 
 def share_save_path(proto, host, port=0):
-    return shares_save_dir + "/" + share_save_str(proto, host, port)
+    return os.path.join(shares_save_dir, share_save_str(proto, host, port))
 
 import string
 def quote_for_shell(str):
     return '"%s"' % string.join(str.split('"'), '\\"')
 
-
 #locale for scanners output
 scanners_locale = "utf-8"
 #path where scanners are, with trailing slash
 import subprocess
-import os.path
 scanners_path = os.path.dirname(os.path.abspath(sys.argv[0]))
 def run_scanner(cmd, ip, proto, port, ext = ""):
     """ executes scanner, returns subprocess.Popen object """
@@ -68,7 +68,7 @@ def run_scanner(cmd, ip, proto, port, ext = ""):
     if port == 0:
         cmdline = "%s %s %s" % (cmd, ext, ip)
     else:
-        cmdline = "%s -p%s %s %s" % (cmd, str(port), ext, ip)
+        cmdline = "%s -p%s %s %s" % (cmd, port, ext, ip)
     _stderr = None
     if not scanners_logging:
         _stderr = subprocess.PIPE
