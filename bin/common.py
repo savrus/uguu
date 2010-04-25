@@ -40,6 +40,12 @@ def sharestr(proto, host, port=0):
 def share_save_str(proto, host, port=0):
     return "%s_%s_%s" % (proto, host, str(port))
 
+# Directory where shares contents will be placed to allow patching-mode
+# scanning. 
+# The only allowed action is to delete files from this directory - 
+# in this case next scanning will be done in non-patching mode.
+# Modification of files here is strictly prohibited (even replacing by
+# sqlscan output) due to possible database consistency breaking.
 shares_save_dir = '/home/savrus/devel/uguu/bin/save'
 
 def share_save_path(proto, host, port=0):
