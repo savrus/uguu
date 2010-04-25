@@ -1,15 +1,15 @@
 diff -r 0cbab3d7640d bin/spider.py
 --- a/bin/spider.py	Sun Apr 25 09:34:12 2010 +0400
 +++ b/bin/spider.py	Sun Apr 25 10:01:11 2010 +0400
-@@ -8,6 +8,7 @@
- 
- import psycopg2
+@@ -14,6 +14,7 @@
+ import tempfile
+ import os
  import sys
 +import subprocess
- import string
- import re
- import socket
-@@ -232,13 +233,12 @@
+ import traceback
+ import shutil
+ import datetime
+@@ -225,13 +226,12 @@
      hoststr = sharestr(proto, host, port)
      savepath = share_save_path(proto, host, port)
      patchmode = tree_id != None and os.path.isfile(savepath)
@@ -26,4 +26,13 @@ diff -r 0cbab3d7640d bin/spider.py
 +        shell = True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
      save = tempfile.TemporaryFile(bufsize=-1)
      line_count = 0
-     for line in data.stdout:
+     line_count_patch = 0
+@@ -288,7 +288,7 @@
+         log("Failed to save contents of %s to file %s.", (hoststr, savepath))
+     save.close()
+     cursor.execute("""
+-        UPDATE shares SET tree_id = %(t)s, last_scan = now()  WHERE share_id = %(s)s;
++        UPDATE shares SET tree_id = %(t)s WHERE share_id = %(s)s;
+         """, {'s': share_id, 't': tree_id})
+     if qcache.totalsize >= 0:
+         cursor.execute("""
