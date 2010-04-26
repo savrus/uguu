@@ -19,7 +19,7 @@ Then dump filelists for all shares from your database by typing
 Restoring
 
 Restoring can be done by a slightly modified version of the spider. Patch can
-be applied by typing command 'patch -p1 < ../misc/save/spider.py.patch'
+be applied by typing command 'patch -p2 < ../misc/save/spider.py.patch'
 in the 'bin' directory. For Windows, use spider.py.win32.patch instead.
 Then database shares table should be prepared for total rescan: execute
 SQL command "UPDATE shares SET state='online', next_scan=now();"
