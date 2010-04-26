@@ -68,7 +68,7 @@ static int wdwk_url_append(struct wdwk_dir *c, char *name)
 static void wdwk_url_suspend(struct wdwk_dir *c)
 {
     struct wdwk_urlpath *up;
-    
+
     up = stack_data(stack_pop(&c->ancestors), struct wdwk_urlpath, parent);
     buf_chop(c->url, up->urlpos);
     free(up);
@@ -152,7 +152,7 @@ static void wdwk_result(void *userdata, const ne_uri *uri, const ne_prop_result_
 
     if (size == NULL) {
         LOG_ERR("size element is NULL for %s\n", uri->path);
-        ne_free(r);
+        size = "0";
     }
 
     p = ne_strdup(uri->path);
