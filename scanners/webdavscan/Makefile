@@ -1,4 +1,4 @@
-CFLAGS += -Wall -O0 -g -I../libuguu `neon-config --cflags`
+CFLAGS += -Wall -O3 -I../libuguu `neon-config --cflags`
 LDFLAGS += `neon-config --libs`
 
 LIBUGUU = ../libuguu/libuguu.a
