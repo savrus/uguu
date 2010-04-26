@@ -1,6 +1,6 @@
-diff -r c3d1f1bfd05a bin/spider.py
---- a/bin/spider.py	Mon Apr 26 03:58:31 2010 +0400
-+++ b/bin/spider.py	Mon Apr 26 04:31:29 2010 +0400
+diff -r 6951ed20952d bin/spider.py
+--- a/bin/spider.py     Mon Apr 26 12:22:34 2010 +0400
++++ b/bin/spider.py     Mon Apr 26 23:17:46 2010 +0400
 @@ -13,7 +13,9 @@
  import socket
  import tempfile
@@ -11,12 +11,9 @@ diff -r c3d1f1bfd05a bin/spider.py
  import traceback
  import shutil
  import datetime
-@@ -223,15 +225,14 @@
- def scan_share(db, share_id, proto, host, port, tree_id, command):
-     cursor = db.cursor()
+@@ -225,13 +227,12 @@
      hoststr = sharestr(proto, host, port)
--    savepath = share_save_path(proto, host, port)
-+    savepath = os.path.join('dump', share_save_str(proto, host, port))
+     savepath = share_save_path(proto, host, port)
      patchmode = tree_id != None and os.path.isfile(savepath)
 -    address = socket.gethostbyname(host)
 +    address = host
@@ -27,7 +24,7 @@ diff -r c3d1f1bfd05a bin/spider.py
 -    else:
 -        data = run_scanner(command, address, proto, port)
 +    patchmode = False
-+    data = subprocess.Popen("type %(s)s" % {'s': quote_for_shell(savepath)},
++    data = subprocess.Popen("type %(s)s" % {'s': os.path.join('dump', share_save_str(proto, host, port))},
 +        shell = True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
      save = tempfile.TemporaryFile(bufsize=-1)
      line_count = 0
