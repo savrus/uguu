@@ -266,7 +266,7 @@ def grant_access(db, db_user, ReadOnly):
             ON TABLE shares, trees, paths, files
             TO %(u)s;
             GRANT USAGE
-            ON SEQUENCE shares_share_id_seq, trees_tree_id_seq
+            ON SEQUENCE shares_share_id_seq, trees_tree_id_seq, files_file_id_seq
             TO %(u)s;
             GRANT EXECUTE
             ON FUNCTION share_state_change()
