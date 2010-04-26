@@ -23,6 +23,7 @@ syntax: glob
 ./bin/smbscan
 ./bin/ftpscan
 ./bin/sqlscan
+./bin/webdavscan
 ./bin/save
 ./bin/dump
 ./logs
