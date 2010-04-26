@@ -11,6 +11,7 @@ import sys
 import socket
 import string
 import re
+import os
 import collections
 import traceback
 import datetime
@@ -156,6 +157,10 @@ returns permissions to add shares
                     VALUES (%(st)s, %(net)s, %(proto)s, %(host)s, inet %(addr)s, %(port)s, 'online')
                     """, {'st': share.scantype, 'net': self.__network, 'proto': share.proto,
                           'host': share.host, 'addr': share.Addr(),'port': share.port})
+                try:
+                    os.unlink(share_save_path(share.proto, share.host, share.port))
+                except:
+                    pass
         def UpdateHosts(_sharedict):
             sts = collections.defaultdict(list)
             for (host, share) in _sharedict.iteritems():
