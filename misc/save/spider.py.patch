@@ -16,7 +16,7 @@ diff -r c3d1f1bfd05a bin/spider.py
      cursor = db.cursor()
      hoststr = sharestr(proto, host, port)
 -    savepath = share_save_path(proto, host, port)
-+    savepath = os.path.join('dump', share_save_path(proto, host, port))
++    savepath = os.path.join('dump', share_save_str(proto, host, port))
      patchmode = tree_id != None and os.path.isfile(savepath)
 -    address = socket.gethostbyname(host)
 +    address = host
