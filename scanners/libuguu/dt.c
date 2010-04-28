@@ -19,7 +19,11 @@
 
 struct dt_dentry * dt_alloc()
 {
-    return (struct dt_dentry *) calloc(1, sizeof(struct dt_dentry));
+    struct dt_dentry *d;
+    d = (struct dt_dentry *) calloc(1, sizeof(struct dt_dentry));
+    if (d == NULL)
+        LOG_ERRNO("calloc() returned NULL\n");
+    return d;
 }
 
 void dt_free(struct dt_dentry *d)
@@ -28,30 +32,6 @@ void dt_free(struct dt_dentry *d)
     free(d->hash);
     free(d);
 }
-
-/*
-static struct dt_ctx * dt_ctx_alloc()
-{
-    struct dt_ctx *dc;
-
-    dc = (struct dt_ctx *) calloc(1, sizeof(struct dt_ctx));
-    if (dc == NULL)
-        LOG_ERR("calloc() returned NULL\n");
-    return dc;
-}
-
-static void dt_ctx_free(struct dt_ctx *dc)
-{
-    free(dc);
-}
-
-static void dt_ctx_rfree(struct dt_ctx *dc)
-{
-    dt_rfree(dc->d);
-    free(dc->d);
-    free(dc);
-}
-*/
 
 static void dt_init_root(struct dt_dentry *root, unsigned int *id)
 {
@@ -680,6 +660,7 @@ static void dt_diff_delete_tree(struct dt_wctx *pwc, struct dt_dentry *root)
 {
     struct dt_wctx wc;
     LOG_ASSERT(root != NULL, "Bad arguments\n");
+
     wc.d                      = root;
     wc.wk                     = NULL;
     wc.curdir                 = NULL;
@@ -701,6 +682,7 @@ static void dt_diff_delete_tree(struct dt_wctx *pwc, struct dt_dentry *root)
 static void dt_diff_add_tree(struct dt_wctx *pwc, struct dt_dentry *root)
 {
     struct dt_wctx wc;
+
     wc.d                      = root;
     wc.wk                     = pwc->wk;
     wc.curdir                 = pwc->curdir;
@@ -797,10 +779,6 @@ static void dt_on_l_diff(struct dt_wctx *wc)
 {
     dt_list_sum(wc->d, &wc->d->child);
     if((wc->d->size != wc->od->size) || (wc->d->items != wc->od->items)) {
-        /* FIXME: this is not needed because action '*' on file doesn't requere
-         * it's path */
-        //if (wc->d->parent)
-        //    dt_printdir_once_custom(wc, wc->d->parent);
         wc->prefix = "* ";
         wc->call_file(wc, wc->d);
     }
@@ -866,19 +844,9 @@ static int dt_go_sop_diff(struct dt_wctx *wc)
         wc->od = wc->od->sibling;
         wc->d = dn;
         if (wc->wk->go(DT_GO_CHILD, dn->name, wc->curdir) < 0) {
-#if 0
-            dt_printdir_once(wc);
-            dt_printdir_once_custom(wc, dn);
-            dt_list_call(wc, &wc->od->child, dt_diff_delete_tree);
-            wc->prefix = "- ";
-            dt_list_call_free(wc, &wc->od->file_child, wc->call_file);
-            wc->prefix = "* ";
-            wc->call_file(wc, dn);
-#else       
             dt_list_diff_childs(wc, wc->d, wc->wk, &wc->od->child, &wc->d->child, wc->curdir);
             dt_list_diff(wc, &wc->od->file_child, &wc->d->file_child);
             dt_on_l_diff(wc);
-#endif
             continue;
         }
         break;
