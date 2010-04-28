@@ -13,7 +13,7 @@ from django.template import Context, Template
 import string
 import re
 import time
-from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host, rss_items, rss_feed_add_item
+from webuguu.common import connectdb, offset_prepare, protocol_prepare, vfs_items_per_page, search_items_per_page, usertypes, known_filetypes, known_protocols, debug_virtual_host, rss_items, rss_feed_add_item, hostname_prepare
 
 # for ordering query option 
 qopt_order = {
@@ -279,7 +279,8 @@ def do_search(request, index, searchform):
         utffile = unicode(row['filename'], "utf-8")
         urlpath = "/" + utfpath if utfpath != "" else ""
         host = row['hostname']
-        urlhost = row['hostaddr'] if row['hostaddr'] else row['hostname']
+        urlhost = hostname_prepare(request, row['protocol'],
+            row['hostname'], row['hostaddr'])
         host += ":" + str(row['port']) if row['port'] != 0 else ""
         urlhost += ":" + str(row['port']) if row['port'] != 0 else ""
         urlproto = protocol_prepare(request, row['protocol'])

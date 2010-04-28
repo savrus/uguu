@@ -106,7 +106,13 @@ def protocol_prepare(request, protocol):
                 string.lower(request.META['HTTP_USER_AGENT']), re.UNICODE):
             return "file://///"
     return protocol + "://"
-             
+
+def hostname_prepare(request, protocol, hostname, hostaddr):
+    if hostaddr == None:
+        return hostname
+    if protocol == "smb":
+        return hostaddr
+    return hostname
 
 # Some additional debug info
 def debug_virtual_host(request):
