@@ -21,6 +21,7 @@ struct cuckoo_tbl {
 struct cuckoo_ctx {
     struct cuckoo_tbl *table1;
     struct cuckoo_tbl *table2;
+    uint32_t seed;
     uint32_t hash1;
     uint32_t hash2;
     size_t size;
