@@ -175,10 +175,8 @@ struct dt_dentry * smbwk_readdir(void *curdir)
         return NULL;
 
     d = dt_alloc();
-    if (d == NULL) {
-        LOG_ERR("dt_alloc() returned NULL\n");
+    if (d == NULL)
         return NULL;
-    }
     d->name = strdup(de->name);
     switch (de->smbc_type) {
         case SMBC_FILE_SHARE:
