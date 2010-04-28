@@ -277,6 +277,7 @@ struct dt_dentry * wdwk_readdir(void *curdir)
 
     if ((d = dt_alloc()) == NULL) {
         LOG_ERR("dt_alloc() returned NULL\n");
+        free(r);
         return NULL;
     }
     d->size = r->size;
