@@ -228,10 +228,8 @@ struct dt_dentry * sqlwk_readdir(void *curdir)
     }
     
     d = dt_alloc();
-    if (d == NULL) {
-        LOG_ERR("dt_alloc() returned NULL\n");
+    if (d == NULL)
         return NULL;
-    }
     d->name = strdup(PQgetvalue(c->res, row, 2));
     if (treedir_id > 0)
         d->type = DT_DIR;
