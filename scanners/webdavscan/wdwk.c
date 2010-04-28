@@ -142,7 +142,6 @@ static void wdwk_result(void *userdata, const ne_uri *uri, const ne_prop_result_
     const char *size;
     char *p, *name;
 
-    //LOG_ERR("%s %s\n", buf_string(c->url), uri->path);
     if (!wdwk_path_compare(buf_string(c->url), uri->path)) {
         ne_free(r);
         return;
@@ -174,8 +173,6 @@ static void wdwk_result(void *userdata, const ne_uri *uri, const ne_prop_result_
     }
 
     stack_push(&c->resources, &r->stack_res);
-
-    //printf("%s %s %d\n", r->name, size, r->type);
 }
 
 /* returns NE_* */
@@ -191,8 +188,6 @@ static int wdwk_fetch(struct wdwk_dir *c)
     ne_propfind_set_private(h, wdwk_res_alloc, NULL, NULL);
     ret = ne_propfind_named(h, wdwk_props, wdwk_result, c);
     ne_propfind_destroy(h);
-
-    //LOG_ERR("ret %d\n", ret);
 
     return ret;
 }
@@ -276,7 +271,6 @@ struct dt_dentry * wdwk_readdir(void *curdir)
     r = stack_data(stack_pop(&c->resources), struct wdwk_res, stack_res);
 
     if ((d = dt_alloc()) == NULL) {
-        LOG_ERR("dt_alloc() returned NULL\n");
         free(r);
         return NULL;
     }
