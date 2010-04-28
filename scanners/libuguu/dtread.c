@@ -31,7 +31,6 @@ static struct dtread_data * dtread_data_alloc()
         return NULL;
     }
     if ((dr->de = dt_alloc()) == NULL){
-        LOG_ERR("dt_alloc() returned NULL\n");
         free(dr);
         return NULL;
     }
@@ -112,11 +111,6 @@ static int dtread_readline(const char *line, struct cuckoo_ctx *cu, unsigned int
                 LOG_ERR("Parsing name failed for line %s\n", line);
                 return 0;
             }
-
-#if 0
-            printf("Parsed line %s\n pid=%u fid=%u size=%llu id=%u items=%u\n",
-                line, pid, fid, size, id, items);
-#endif
 
             if (id == 0) {
                 /* file */
@@ -225,22 +219,4 @@ clear_bs:
 
     return root;
 }
-
-#if 0
-extern void dt_reverse_p(struct dt_dentry *root);
-
-int main(int ac, char **av)
-{
-    struct dt_dentry *root;
-
-    root = dtread_readfile(av[1]);
-    if (root != NULL) {
-        dt_reverse_p(root);
-        dt_free(root);
-    } else
-        printf("dtread_readfile() returned NULL\n");
-
-    return 0;
-}
-#endif
 
