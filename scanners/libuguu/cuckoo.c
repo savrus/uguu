@@ -11,17 +11,23 @@
 #include "cuckoo.h"
 #include "log.h"
 
-static uint32_t cuckoo_random()
+static uint32_t cuckoo_random(struct cuckoo_ctx *cu)
 {
-    static uint32_t seed = 0x9a319039U;
-    uint32_t ret = seed;
-    seed = (seed * 1103515245L + 12345L) & 0x7fffffff;
+    uint32_t ret = cu->seed;
+    cu->seed = (cu->seed * 1103515245L + 12345L) & 0x7fffffff;
     return ret;
 }
 
 static uint32_t cuckoo_index(uint32_t x, uint32_t b, unsigned int log)
 {
     return ((b * x) >> (32 - log)) * (log != 0);
+}
+
+static void cuckoo_set_seed(struct cuckoo_ctx *cu, uint32_t seed)
+{
+    cu->seed = seed;
+    cu->hash1 = (cuckoo_random(cu) << 1) | 1;
+    cu->hash2 = (cuckoo_random(cu) << 1) | 1;
 }
 
 struct cuckoo_ctx * cuckoo_alloc(unsigned int log)
@@ -48,8 +54,7 @@ struct cuckoo_ctx * cuckoo_alloc(unsigned int log)
         return NULL;
     }
     
-    cu->hash1 = (cuckoo_random() << 1) | 1;
-    cu->hash2 = (cuckoo_random() << 1) | 1;
+    cuckoo_set_seed(cu, 0x9a319039U);
     cu->size = size; 
     cu->log = log;
     return cu;
@@ -65,18 +70,7 @@ void cuckoo_free(struct cuckoo_ctx *cu)
 void * cuckoo_lookup(struct cuckoo_ctx *cu, uint32_t key)
 {
     uint32_t ind;
-
-#if 0
-    int i;
-    printf("Lookup key %u. cuckoo size: %zu\n", key, cu->size);
-    for (i=0; i < cu->size; i++)
-        printf("%u ", cu->table1[i].key);
-    printf("\n");
-    for (i=0; i < cu->size; i++)
-        printf("%u ", cu->table2[i].key);
-    printf("\n");
-#endif 
-
+    
     ind = cuckoo_index(key, cu->hash1, cu->log);
     if (cu->table1[ind].key == key)
         return cu->table1[ind].data;
@@ -92,7 +86,6 @@ static int cuckoo_present(struct cuckoo_ctx *cu, uint32_t key)
     uint32_t ind;
 
     ind = cuckoo_index(key, cu->hash1, cu->log);
-    //printf("present: ind = %d key= %d log=%d\n", ind, key, cu->log);
     if (cu->table1[ind].key == key)
         return 1;
     ind = cuckoo_index(key, cu->hash2, cu->log);
@@ -124,6 +117,7 @@ static int cuckoo_rehash(struct cuckoo_ctx *cu, unsigned int log)
 
     if ((cun = cuckoo_alloc(log)) == NULL)
         return 0;
+    cuckoo_set_seed(cun, cu->seed);
     if (!cuckoo_move(cu, cun)) {
         cuckoo_free(cun);
         return 0;
@@ -177,9 +171,6 @@ int cuckoo_insert(struct cuckoo_ctx *cu, uint32_t key, void *data)
         tn = tmp;
     }
 
-#if 0
-    LOG_ERR("insert failed: rehash!\n");
-#endif
     if (!cuckoo_rehash(cu, cu->log))
         return 0;
     return cuckoo_insert(cu, tn.key, tn.data);
