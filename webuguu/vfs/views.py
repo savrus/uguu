@@ -11,7 +11,7 @@ from django.core.urlresolvers import reverse
 import string
 import time
 import datetime
-from webuguu.common import connectdb, vfs_items_per_page, offset_prepare, protocol_prepare, known_protocols
+from webuguu.common import connectdb, vfs_items_per_page, offset_prepare, protocol_prepare, known_protocols, hostname_prepare
 
 
 def index(request):
@@ -238,8 +238,7 @@ def share(request, proto, hostname, port, path=""):
     cursor.execute(orders[order], {'t': tree_id, 'p': path_id, 'o': offset, 
                                    'l':vfs_items_per_page})
     # some additional variables for template
-    if hostaddr == None:
-        hostaddr = hostname
+    hostaddr = hostname_prepare(request, proto, hostname, hostaddr)
     if port != "0":
         hostname += ":" + port
         hostaddr += ":" + port
