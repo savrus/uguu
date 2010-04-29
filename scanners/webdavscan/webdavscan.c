@@ -99,7 +99,7 @@ int main(int argc, char **argv)
         dt_full(&wdwk_walker, &d, &curdir);
     else if (oldtree) {
         if ((oldfile = fopen(oldtree, "r")) == NULL) {
-            LOG_ERR("Can't open file %s\n", oldtree);
+            LOG_ERRNO("Can't open file %s\n", oldtree);
             exit(ESTAT_FAILURE);
         }
         dt_diff(oldfile, &wdwk_walker, &d, &curdir);
