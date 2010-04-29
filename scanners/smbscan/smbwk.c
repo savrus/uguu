@@ -26,7 +26,7 @@ static struct smbwk_urlpath * smbwk_urlpath_alloc()
 
     up = (struct smbwk_urlpath *) malloc(sizeof(struct smbwk_urlpath));
     if (up == NULL)
-        LOG_ERR("malloc() returned NULL\n");
+        LOG_ERRNO("malloc() returned NULL\n");
     return up;
 }
 
@@ -88,20 +88,20 @@ int smbwk_open(struct smbwk_dir *c, char *host, int skip_bucks)
     //smbc_setOptionUrlEncodeReaddirEntries(c->ctx, 1);
 
     if (smbc_init_context(c->ctx) != c->ctx) {
-        LOG_ERR("smbc_init_context() failed\n");
+        LOG_ERRNO("smbc_init_context() failed\n");
         buf_free(c->url);
         return -1;
     }
 
     if (smbc_init(smbwk_auth, 0) != 0) {
-        LOG_ERR("smbc_init() failed\n");
+        LOG_ERRNO("smbc_init() failed\n");
         buf_free(c->url);
         smbc_free_context(c->ctx, 1);
         return -1;
     }
 
     if ((c->fd = smbc_opendir(buf_string(c->url))) < 0) {
-        LOG_ERR("smbc_opendir() failed\n");
+        LOG_ERRNO("smbc_opendir() failed\n");
         c->fd_real = 0;
         buf_free(c->url);
         smbc_free_context(c->ctx, 1);
@@ -122,12 +122,12 @@ int smbwk_close(struct smbwk_dir *c)
     
     if (c->fd_real == 1)
         if (smbc_closedir(c->fd) < 0)
-            LOG_ERR("smbc_closedir() returned error. url: %s\n",
+            LOG_ERRNO("smbc_closedir() returned error. url: %s\n",
                 buf_string(c->url));
     c->fd_real = 0;
 
     if (smbc_free_context(c->ctx, 1) == 1) {
-        LOG_ERR("smbc_free_context() failed\n");
+        LOG_ERRNO("smbc_free_context() failed\n");
         ret = -1;
     }
 
@@ -221,7 +221,7 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
              * We track if fd points to an opened directory in fd_read
              * field of smbwk_dir structure */
             if ((fd = smbc_opendir(buf_string(c->url))) < 0) {
-                LOG_ERR("smbc_opendir() returned error. url: %s, go_type: %d\n",
+                LOG_ERRNO("smbc_opendir() returned error. url: %s, go_type: %d\n",
                     buf_string(c->url), type);
                 if (errno == ETIMEDOUT)
                     exit(ESTAT_NOCONNECT);
@@ -238,7 +238,7 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
    
     if (c->fd_real == 1)
         if (smbc_closedir(c->fd) < 0)
-            LOG_ERR("smbc_closedir() returned error. url: %s, go_type: %d\n",
+            LOG_ERRNO("smbc_closedir() returned error. url: %s, go_type: %d\n",
                 buf_string(c->url), type);
     
     c->fd = fd;
