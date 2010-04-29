@@ -32,7 +32,7 @@ static struct wdwk_urlpath * wdwk_urlpath_alloc()
     struct wdwk_urlpath *up;
     up = (struct wdwk_urlpath *) malloc(sizeof(struct wdwk_urlpath));
     if (up == NULL)
-        LOG_ERR("malloc() returned NULL\n");
+        LOG_ERRNO("malloc() returned NULL\n");
     return up;
 }
 
@@ -241,10 +241,11 @@ int wdwk_open(struct wdwk_dir *c, char *host, int port)
     stack_init(&c->ancestors);
 
     if (wdwk_fetch(c) != NE_OK) {
-        LOG_ERR("Fetch failed\n");
+        LOG_ERR("Fetch failed: %s\n", ne_get_error(c->sess));
         buf_free(c->url);
         free(c->host);
         ne_session_destroy(c->sess);
+        stack_rfree(&c->resources, wdwk_res_free);
         return -1;
     }
 
