@@ -19,7 +19,7 @@ static int buf_realloc(struct buf_str *bs, size_t size)
     
     c = (char *) realloc(bs->s, size * sizeof(char));
     if (c == NULL) {
-        LOG_ERR("realloc() returned NULL\n");
+        LOG_ERRNO("realloc() returned NULL\n");
         bs->error = 1;
         return 0;
     }
@@ -43,13 +43,13 @@ struct buf_str *buf_alloc()
 
     bs = (struct buf_str *) malloc(sizeof(struct buf_str));
     if (bs == NULL) {
-        LOG_ERR("malloc() returned NULL\n");
+        LOG_ERRNO("malloc() returned NULL\n");
         return NULL;
     }
 
     bs->s = (char *) malloc(BUF_SIZE_STEP * sizeof(char));
     if (bs->s == NULL) {
-        LOG_ERR("malloc() returned NULL\n");
+        LOG_ERRNO("malloc() returned NULL\n");
         free(bs);
         return NULL;
     }
