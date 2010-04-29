@@ -83,6 +83,7 @@ static void wdwk_res_free(struct stack *s)
 {
     struct wdwk_res *r;
     r = stack_data(s, struct wdwk_res, stack_res);
+    ne_free(r->name);
     ne_free(r);
 }
 
@@ -121,7 +122,7 @@ static int wdwk_startelm(void *userdata, int parent, const char *nspace, const c
     return id;
 }
 
-/* workaround for old libneon */
+/* workaround if a server forgets to urlencode some characters in names. */
 static int wdwk_path_compare(const char *e1, const char *e2)
 {
     char *u1, *u2;
@@ -271,13 +272,15 @@ struct dt_dentry * wdwk_readdir(void *curdir)
     r = stack_data(stack_pop(&c->resources), struct wdwk_res, stack_res);
 
     if ((d = dt_alloc()) == NULL) {
-        free(r);
+        ne_free(r->name);
+        ne_free(r);
         return NULL;
     }
     d->size = r->size;
-    d->name = r->name;
+    d->name = strdup(r->name);
     d->type = r->type;
-    free(r);
+    ne_free(r->name);
+    ne_free(r);
 
     return d;
 }
