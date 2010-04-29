@@ -149,6 +149,8 @@ static int smbwk_skip_bucks(int skip, char *name)
                 return 1;
             if (!strcasecmp(name, "admin$"))
                 return 1;
+            if (!strcasecmp(name, "print$"))
+                return 1;
     }
     return 0;
 }
