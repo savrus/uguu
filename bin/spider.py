@@ -20,6 +20,9 @@ import datetime
 import psycopg2.extensions
 from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr, share_save_path, share_save_str, quote_for_shell
 
+# if patch is longer than whole contents / patch_fallback, then fallback
+# to non-patching mode
+patch_fallback = 1.5
 
 # python 2.5 compitible shitcode
 def kill_process(process):
@@ -255,8 +258,8 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         log("Scanning %s failed (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
         return
-    if patchmode and (line_count_patch > (line_count - line_count_patch) / 2):
-        log("Patch is too long for %s. Fallback to non-patching mode", hoststr)
+    if patchmode and (line_count_patch > (line_count - line_count_patch) / patch_fallback):
+        log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (hoststr, line_count_patch, line_count - line_count_patch))
         patchmode = False
     db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
     scan_time = datetime.datetime.now() - start
