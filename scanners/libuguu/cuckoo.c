@@ -38,7 +38,7 @@ struct cuckoo_ctx * cuckoo_alloc(unsigned int log)
 
     cu = (struct cuckoo_ctx *) calloc(1, sizeof(struct cuckoo_ctx));
     if (cu == NULL) {
-        LOG_ERR("calloc() returned NULL\n");
+        LOG_ERRNO("calloc() returned NULL\n");
         return NULL;
     }
 
@@ -47,7 +47,7 @@ struct cuckoo_ctx * cuckoo_alloc(unsigned int log)
     cu->table1 = (struct cuckoo_tbl *) calloc(size, sizeof(struct cuckoo_tbl));
     cu->table2 = (struct cuckoo_tbl *) calloc(size, sizeof(struct cuckoo_tbl));
     if ((cu->table1 == NULL) || (cu->table2 == NULL)) {
-        LOG_ERR("calloc() returned NULL\n");
+        LOG_ERRNO("calloc() returned NULL\n");
         free(cu->table1);
         free(cu->table2);
         free(cu);
