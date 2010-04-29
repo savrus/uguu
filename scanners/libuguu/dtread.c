@@ -27,7 +27,7 @@ static struct dtread_data * dtread_data_alloc()
     struct dtread_data *dr;
     dr = (struct dtread_data *) calloc(1, sizeof(struct dtread_data));
     if (dr == NULL){
-        LOG_ERR("calloc() returned NULL\n");
+        LOG_ERRNO("calloc() returned NULL\n");
         return NULL;
     }
     if ((dr->de = dt_alloc()) == NULL){
@@ -115,7 +115,6 @@ static int dtread_readline(const char *line, struct cuckoo_ctx *cu, unsigned int
             if (id == 0) {
                 /* file */
                 if ((d = dt_alloc()) == NULL) {
-                    LOG_ERR("dt_alloc() returned NULL\n");
                     free(name);
                     return 0;
                 }
