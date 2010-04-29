@@ -203,7 +203,7 @@ static int dt_recursive_link(struct dt_dentry *d)
     unsigned int m = 0;
     
     if ((d->hash = (char*)malloc(UMD5_VALUE_SIZE*sizeof(char))) == NULL) {
-        LOG_ERR("malloc() returned NULL\n");
+        LOG_ERRNO("malloc() returned NULL\n");
         return 0;
     }
     
