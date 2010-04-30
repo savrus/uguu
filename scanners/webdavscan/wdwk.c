@@ -208,6 +208,7 @@ int wdwk_open(struct wdwk_dir *c, char *host, int port)
     c->sess = ne_session_create("http", c->host, c->port);
     if (c->sess == NULL) {
         LOG_ERR("ne_session_create returned NULL\n");
+        free(c->host);
         return -1;
     }
 
@@ -229,23 +230,29 @@ int wdwk_open(struct wdwk_dir *c, char *host, int port)
         return -1;
     }
 
-    if ((c->url = buf_alloc()) == NULL)
+    if ((c->url = buf_alloc()) == NULL) {
+        ne_session_destroy(c->sess);
+        free(c->host);
         return -1;
+    }
 
     buf_append(c->url, "/");
 
-    if (buf_error(c->url))
+    if (buf_error(c->url)) {
+        ne_session_destroy(c->sess);
+        free(c->host);
         return -1;
+    }
 
     stack_init(&c->resources);
     stack_init(&c->ancestors);
 
     if (wdwk_fetch(c) != NE_OK) {
         LOG_ERR("Fetch failed: %s\n", ne_get_error(c->sess));
-        buf_free(c->url);
-        free(c->host);
-        ne_session_destroy(c->sess);
         stack_rfree(&c->resources, wdwk_res_free);
+        buf_free(c->url);
+        ne_session_destroy(c->sess);
+        free(c->host);
         return -1;
     }
 
@@ -256,6 +263,7 @@ int wdwk_close(struct wdwk_dir *c)
 {
     stack_rfree(&c->ancestors, wdwk_urlpath_free);
     stack_rfree(&c->resources, wdwk_res_free);
+    buf_free(c->url);
     ne_session_destroy(c->sess);
     free(c->host);
     return 0;
