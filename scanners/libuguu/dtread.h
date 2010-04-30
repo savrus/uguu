@@ -21,12 +21,12 @@ struct dtread_data {
     struct dt_dentry *file_child;
 };
 
+/* reconstruct tree from file. Returns NULL on failure */
+struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid);
+
 #ifdef __cplusplus
 }
 #endif
-
-/* reconstruct tree from file. Returns NULL on failure */
-struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid);
 
 #endif /* DTREAD_H */
 

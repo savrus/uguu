@@ -11,16 +11,11 @@
 #include "dt.h"
 #include "buf.h"
 #include "cuckoo.h"
+#include "dtread.h"
 
 #ifdef _MSC_VER
 #define strdup _strdup
 #endif
-
-struct dtread_data {
-    struct dt_dentry *de;
-    struct dt_dentry *child;
-    struct dt_dentry *file_child;
-};
 
 static struct dtread_data * dtread_data_alloc()
 {
@@ -63,6 +58,7 @@ static int dtread_readline(const char *line, struct cuckoo_ctx *cu, unsigned int
                 return 0;
             }
             if (!cuckoo_insert(cu, dr->de->id, (void *) dr)) {
+                LOG_ERR("cuckoo_insert() failed at line %s\n", line);
                 dtread_data_free(dr);
                 return 0;
             }
