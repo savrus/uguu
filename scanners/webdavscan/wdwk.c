@@ -148,13 +148,6 @@ static void wdwk_result(void *userdata, const ne_uri *uri, const ne_prop_result_
         return;
     }
 
-    size = ne_propset_value(results, &wdwk_props[0]);
-
-    if (size == NULL) {
-        LOG_ERR("size element is NULL for %s\n", uri->path);
-        size = "0";
-    }
-
     p = ne_strdup(uri->path);
     if (ne_path_has_trailing_slash(p))
         p[strlen(p) - 1] = '\0';
@@ -166,8 +159,16 @@ static void wdwk_result(void *userdata, const ne_uri *uri, const ne_prop_result_
     r->name = ne_path_unescape(name);
     ne_free(p);
 
+    r->size = 0;
 
     if (r->type == DT_FILE) {
+        size = ne_propset_value(results, &wdwk_props[0]);
+
+        if (size == NULL) {
+            LOG_ERR("size element is NULL for non-collection %s\n", uri->path);
+            size = "0";
+        }
+
         r->size = strtoull(size, &p, 10);
         if (*p)
             r->size = 0;
