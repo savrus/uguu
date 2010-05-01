@@ -159,8 +159,6 @@ static void wdwk_result(void *userdata, const ne_uri *uri, const ne_prop_result_
     r->name = ne_path_unescape(name);
     ne_free(p);
 
-    r->size = 0;
-
     if (r->type == DT_FILE) {
         size = ne_propset_value(results, &wdwk_props[0]);
 
