@@ -90,7 +90,8 @@ class PsycoCache:
 class PathInfo:
     def __init__(self):
         self.tspath = ""
-        self.delta = 0;
+        self.delta = 0
+        self.modify = False
 
 def unicodize_line(line):
     try:
@@ -167,6 +168,7 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
         elif act == '*':
             qcache.stat_pmodify += 1
             paths_buffer[id] = PathInfo()
+            paths_buffer[id].modify = True
             paths_buffer[id].tspath = tsprepare(path)
     else:
         # 'file' type of line
@@ -197,15 +199,19 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
             type = filetypes_reverse.get(suf) if dirid == 0 else 'dir'
             if act == '+':
                 qcache.stat_fadd += 1
-                qcache.append("""
-                    UPDATE files SET pathfile_id = pathfile_id + 1
-                    WHERE tree_id = %(i)s AND treepath_id = %(p)s
-                        AND pathfile_id >= %(f)s
-                    """, {'i':tree, 'p':path, 'f':file});
-                qcache.append(fquery_append + fquery_values,
-                    {'i':tree, 'p':path, 'f':file, 'did':dirid, 'sz':size,
-                     'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path].tspath})
-                paths_buffer[path].delta += 1
+                if paths_buffer[path].modify:
+                    qcache.append("""
+                        UPDATE files SET pathfile_id = pathfile_id + 1
+                        WHERE tree_id = %(i)s AND treepath_id = %(p)s
+                            AND pathfile_id >= %(f)s
+                        """, {'i':tree, 'p':path, 'f':file})
+                    qcache.append(fquery_append + fquery_values,
+                        {'i':tree, 'p':path, 'f':file, 'did':dirid, 'sz':size,
+                         'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path].tspath})
+                    paths_buffer[path].delta += 1
+                else:
+                    qcache.fappend({'i':tree, 'p':path, 'f':file, 'did':dirid, 'sz':size,
+                         'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path].tspath})
             elif act == '-':
                 qcache.stat_fdelete += 1
                 qcache.append("""
