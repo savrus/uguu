@@ -164,10 +164,10 @@ def ddl_index(db):
         CREATE INDEX paths_path ON paths USING hash(path);
         CREATE INDEX files_id ON files (tree_id, treepath_id, pathfile_id);
         CREATE INDEX files_name ON files USING hash(lower(name));
-        CREATE INDEX files_tsname ON files USING gin(tsname);
+        CREATE INDEX files_tsname ON files USING gin(tsname) WITH (FASTUPDATE = OFF);
         CREATE INDEX files_type ON files (type);
         CREATE INDEX files_size ON files (size);
-        CREATE INDEX files_tsfullpath ON files USING gin((tspath || tsname));
+        CREATE INDEX files_tsfullpath ON files USING gin((tspath || tsname)) WITH (FASTUPDATE = OFF);
         CREATE INDEX shares_hostname ON shares USING hash(hostname);
         CREATE INDEX shares_network ON shares USING hash(network);
         CREATE INDEX shares_state ON shares USING hash(state);
