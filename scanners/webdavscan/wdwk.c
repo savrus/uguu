@@ -211,6 +211,9 @@ int wdwk_open(struct wdwk_dir *c, char *host, int port)
         return -1;
     }
 
+    ne_set_connect_timeout(c->sess, 5);
+    ne_set_read_timeout(c->sess, 30);
+
     ne_set_useragent(c->sess, "uguu webdavscan");
 
     ret = ne_options2(c->sess, "/", &caps);
