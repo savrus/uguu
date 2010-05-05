@@ -22,7 +22,7 @@ struct dtread_data {
 };
 
 /* reconstruct tree from file. Returns NULL on failure */
-struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid);
+struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid, char *md5buf);
 
 #ifdef __cplusplus
 }
