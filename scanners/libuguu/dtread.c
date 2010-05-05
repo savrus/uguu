@@ -12,6 +12,7 @@
 #include "buf.h"
 #include "cuckoo.h"
 #include "dtread.h"
+#include "umd5.h"
 
 #ifdef _MSC_VER
 #define strdup _strdup
@@ -162,14 +163,16 @@ static int dtread_readline(const char *line, struct cuckoo_ctx *cu, unsigned int
     return 1;
 }
 
-struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid)
+struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid, char *md5buf)
 {
     int c;
     char ch;
     struct buf_str *bs;
     struct cuckoo_ctx *cu;
+    struct umd5_ctx md5;
     struct dtread_data *dr;
     struct dt_dentry *root = NULL;
+
 
     LOG_ASSERT(file != NULL, "Bad arguments\n");
 
@@ -179,10 +182,14 @@ struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid)
     if ((cu = cuckoo_alloc(0)) == NULL)
         goto clear_bs;
 
+    umd5_init(&md5);
+
     while ((c = fgetc(file)) != EOF) {
         if (c == '\n') {
             if (buf_error(bs))
                 goto clear_cu;
+            umd5_update(&md5, buf_string(bs), buf_strlen(bs));
+            umd5_update(&md5, "\n", 1);
             if (!dtread_readline(buf_string(bs), cu, maxid))
                 goto clear_cu;
             buf_clear(bs);
@@ -205,6 +212,9 @@ struct dt_dentry * dtread_readfile(FILE *file, unsigned int *maxid)
     root = dr->de;
     cuckoo_delete(cu, 1);
     free(dr);
+    
+    umd5_finish(&md5);
+    umd5_value(&md5, md5buf);
 
 clear_cu:
     cuckoo_rfree(cu, dtread_data_free);

@@ -861,10 +861,22 @@ static int dt_go_sop_diff(struct dt_wctx *wc)
 
 }
 
+static void dt_print_md5(char *md5)
+{
+    int i;
+    
+    printf("* ");
+    for (i = 0; i < UMD5_VALUE_SIZE; i++)
+         printf("%02hhx", md5[i]);
+    printf("\n");
+}
+
 void dt_diff(FILE *file, struct dt_walker *wk, struct dt_dentry *root, void *curdir)
 {
     struct dt_wctx wc;
     struct dt_dentry *oldroot;
+    char md5[UMD5_VALUE_SIZE];
+
     wc.d                      = root;
     wc.wk                     = wk;
     wc.curdir                 = curdir;
@@ -883,13 +895,13 @@ void dt_diff(FILE *file, struct dt_walker *wk, struct dt_dentry *root, void *cur
         return;
     }
 
-    if ((oldroot = dtread_readfile(file, &wc.id)) == NULL) {
-        /* currently external program cannot distinguish empty patch
-         * from failed tree restore, so we have to abort here */
-        LOG_ASSERT(0, "Tree reconstruction failed");
-        //dt_reverse(wk, root, curdir);
+    if ((oldroot = dtread_readfile(file, &wc.id, md5)) == NULL) {
+        LOG_ERR("Tree reconstruction failed.\n");
+        dt_reverse(wk, root, curdir);
         return;
     }
+
+    dt_print_md5(md5);
 
     wc.od = oldroot;
     wc.id++;
