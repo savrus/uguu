@@ -23,7 +23,7 @@ from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait
 
 # if patch is longer than whole contents / patch_fallback, then fallback
 # to non-patching mode
-patch_fallback = 1.5
+patch_fallback = 1
 
 # python 2.5 compitible shitcode
 def kill_process(process):
@@ -101,50 +101,6 @@ def unicodize_line(line):
         log("Non utf-8 line occured: '%s'.", line)
         line = string.join([(lambda x: x if x in string.printable else "\\%#x" % ord(c))(c) for c in line], "")        
     return line
-
-def scan_line(cursor, tree, line, qcache, paths_buffer):
-    line = unicodize_line(line)
-    if line[0] == "0":
-        # 'path' type of line 
-        try:
-            l, id, path = string.split(s=line, sep=' ', maxsplit=2)
-        except:
-            l, id = string.split(s=line, sep=' ', maxsplit=2)
-            path = ""
-        id = int(id)
-        paths_buffer[id] = tsprepare(path)
-        qcache.append("INSERT INTO paths (tree_id, treepath_id, path) VALUES (%(t)s, %(id)s, %(p)s)",
-            {'t':tree, 'id':id, 'p':path})
-    else:
-        # 'file' type of line
-        try:
-            l, path, file, size, dirid, items, name = string.split(s=line, sep=' ', maxsplit=6)
-        except:
-            l, path, file, size, dirid, items = string.split(s=line, sep=' ', maxsplit=6)
-            name = ""
-        path = int(path)
-        file = int(file)
-        size = int(size)
-        dirid = int(dirid)
-        items = int(items)
-        if dirid > 0:
-            # if directory then update paths table
-            qcache.append("""
-                UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s
-                WHERE tree_id = %(t)s AND treepath_id = %(d)s
-                """, {'p':path, 'f':file, 'i':items, 'sz':size, 't':tree, 'd':dirid})
-            paths_buffer.pop(dirid)
-        if path == 0:
-            # if share root then it's size is the share size
-            qcache.totalsize = size
-        else:
-            # not share root
-            # save all info into the files table
-            suf = suffix(name)
-            type = filetypes_reverse.get(suf) if dirid == 0 else 'dir'
-            qcache.fappend({'i':tree, 'p':path, 'f':file, 'did':dirid,
-                'sz':size, 'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path]})
-
 
 def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
     line = unicodize_line(line)
@@ -296,7 +252,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, oldhash, command):
         for line in save:
             if line[0] in ('+', '-', '*'):
                 continue
-            scan_line(cursor, tree_id, line.strip('\n'), qcache, paths_buffer)
+            scan_line_patch(cursor, tree_id, "+ " + line.strip('\n'), qcache, paths_buffer)
     qcache.allcommit()
     try:
         save.seek(0)
