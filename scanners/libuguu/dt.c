@@ -178,7 +178,7 @@ static int dt_exceed_limit(unsigned int value, unsigned int limit, char *str, st
 {
     if (value > limit) {
         LOG_ERR("%s limit exceeded for directory '%s' (id %u). "
-                "Increase %s and recompile if you want to scan everything.",
+                "Increase %s and recompile if you want to scan everything.\n",
                 str, d->name, d->id, str);
         return 1;
     }           
