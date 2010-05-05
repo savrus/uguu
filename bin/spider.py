@@ -12,6 +12,7 @@ import string
 import re
 import socket
 import tempfile
+import hashlib
 import os
 import sys
 import traceback
@@ -229,7 +230,7 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s
                     """,  {'t': tree, 'p': path, 'f': file, 'sz': size})
 
-def scan_share(db, share_id, proto, host, port, tree_id, command):
+def scan_share(db, share_id, proto, host, port, tree_id, oldhash, command):
     cursor = db.cursor()
     hoststr = sharestr(proto, host, port)
     savepath = share_save_path(proto, host, port)
@@ -244,6 +245,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
     save = tempfile.TemporaryFile(bufsize=-1)
     line_count = 0
     line_count_patch = 0
+    hash = hashlib.md5()
     for line in data.stdout:
         line_count += 1
         if line[0] in ('+', '-', '*'):
@@ -254,6 +256,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
             data.wait()
             log("Scanning %s failed. Too many lines from scanner (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
             return
+        hash.update(line)
         save.write(line)
     if data.wait() != 0:
         # assume next_scan is far away from now and we do not have to
@@ -271,11 +274,18 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
     scan_time = datetime.datetime.now() - start
     start = datetime.datetime.now()
     if tree_id is None:
-        cursor.execute("INSERT INTO trees (share_id) VALUES (%(s)s) RETURNING tree_id", {'s':share_id})
+        cursor.execute("""
+            INSERT INTO trees (share_id, hash) VALUES (%(s)s, %(h)s)
+            RETURNING tree_id
+            """, {'s': share_id, 'h': hash.hexdigest()})
         tree_id = cursor.fetchone()['tree_id']
     qcache = PsycoCache(cursor)
     paths_buffer = dict()
     save.seek(0)
+    if patchmode and (oldhash == None or save.readline() != "* " + oldhash + "\n"):
+        save.seek(0)
+        patchmode = False
+        log("Awaited MD5 digest from scanner doesn't match the one from the database. Fallback to non-patching mode.")
     if patchmode:
         for line in save:
             if line[0] not in ('+', '-', '*'):
@@ -297,8 +307,9 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
         log("Failed to save contents of %s to file %s.", (hoststr, savepath))
     save.close()
     cursor.execute("""
-        UPDATE shares SET tree_id = %(t)s, last_scan = now()  WHERE share_id = %(s)s;
-        """, {'s': share_id, 't': tree_id})
+        UPDATE shares SET tree_id = %(t)s, last_scan = now() WHERE share_id = %(s)s;
+        UPDATE trees SET hash = %(h)s WHERE tree_id = %(t)s;
+        """, {'s': share_id, 't': tree_id, 'h': hash.hexdigest()})
     if qcache.totalsize >= 0:
         cursor.execute("""
             UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s;
@@ -325,15 +336,16 @@ if __name__ == "__main__":
     while True:
         db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         shares.execute("""
-            SELECT share_id, shares.tree_id, shares.protocol, hostname, port, scan_command
+            SELECT share_id, tree_id, hash, shares.protocol, hostname, port, scan_command
             FROM shares
-            LEFT JOIN scantypes ON shares.scantype_id = scantypes.scantype_id
+            LEFT JOIN scantypes USING (scantype_id)
+            LEFT JOIN trees USING (share_id, tree_id)
             WHERE state = 'online' AND (next_scan IS NULL OR next_scan < now())
             ORDER BY next_scan LIMIT 1
             """)
         if shares.rowcount == 0:
             break
-        id, tree_id, proto, host, port, command = shares.fetchone()
+        id, tree_id, hash, proto, host, port, command = shares.fetchone()
         shares.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
             WHERE share_id = %(s)s AND (next_scan IS NULL OR next_scan < now())
@@ -341,7 +353,7 @@ if __name__ == "__main__":
         if shares.statusmessage != 'UPDATE 1':
             continue
         try:
-            scan_share(db, id, proto, host, port, tree_id, command)
+            scan_share(db, id, proto, host, port, tree_id, hash, command)
         except:
             log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
             traceback.print_exc()
