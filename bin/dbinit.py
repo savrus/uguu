@@ -88,7 +88,8 @@ def ddl(db):
         );
         CREATE TABLE trees (
             tree_id SERIAL PRIMARY KEY,
-            share_id integer UNIQUE
+            share_id integer UNIQUE,
+            hash varchar(32)
         );
         CREATE TABLE shares (
             share_id SERIAL PRIMARY KEY,
