@@ -98,6 +98,7 @@ int main(int argc, char **argv)
     if (full)
         dt_full(&wdwk_walker, &d, &curdir);
     else if (oldtree) {
+#pragma warning(suppress: 4996)
         if ((oldfile = fopen(oldtree, "r")) == NULL) {
             LOG_ERRNO("Can't open file %s\n", oldtree);
             exit(ESTAT_FAILURE);
