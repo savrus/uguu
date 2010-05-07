@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libuguu.lib libneon.lib libexpatMD.lib Ws2_32.lib"
+				AdditionalDependencies="libuguuD.lib libneon.lib libexpatMD.lib Ws2_32.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				IgnoreDefaultLibraryNames="MSVCRT"

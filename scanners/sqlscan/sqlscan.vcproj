@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libuguu.lib libpq.lib"
+				AdditionalDependencies="libuguuD.lib libpq.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				GenerateDebugInformation="true"

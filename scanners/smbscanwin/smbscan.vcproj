@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libuguu.lib Mpr.lib Netapi32.lib"
+				AdditionalDependencies="libuguuD.lib Mpr.lib Netapi32.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)\libuguu&quot;"
 				GenerateDebugInformation="true"
