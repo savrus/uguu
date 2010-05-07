@@ -8,7 +8,11 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#define strtoull _strtoui64
+#else
 #include <unistd.h>
+#endif
 #include <string.h>
 #include <errno.h>
 
@@ -26,6 +30,10 @@
 #include "log.h"
 #include "stack.h"
 #include "buf.h"
+
+#ifdef _MSC_VER
+#define strdup _strdup
+#endif
 
 static struct wdwk_urlpath * wdwk_urlpath_alloc()
 {

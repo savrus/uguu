@@ -18,6 +18,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlscan", "sqlscan\sqlscan.
 		{B63B3B7C-100E-4BDE-BFCE-3B16A4580BB5} = {B63B3B7C-100E-4BDE-BFCE-3B16A4580BB5}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webdavscan", "webdavscan\webdavscan.vcproj", "{188F288C-D3E7-4B88-BEA2-3971D4F46183}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B63B3B7C-100E-4BDE-BFCE-3B16A4580BB5} = {B63B3B7C-100E-4BDE-BFCE-3B16A4580BB5}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -73,6 +78,18 @@ Global
 		{B83A9B5D-CA4C-48C7-B8C2-83C5DDCE6EBD}.Release|Win32.ActiveCfg = Release|Win32
 		{B83A9B5D-CA4C-48C7-B8C2-83C5DDCE6EBD}.ReleaseAll|Win32.ActiveCfg = Release|Win32
 		{B83A9B5D-CA4C-48C7-B8C2-83C5DDCE6EBD}.ReleaseAll|Win32.Build.0 = Release|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.Debug|Win32.ActiveCfg = Debug|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.Debug|Win32.Build.0 = Debug|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.DebugAll|Win32.ActiveCfg = Debug|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.DebugAll|Win32.Build.0 = Debug|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.Install|Win32.ActiveCfg = Install|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.Install|Win32.Build.0 = Install|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.InstallAll|Win32.ActiveCfg = Install|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.InstallAll|Win32.Build.0 = Install|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.Release|Win32.ActiveCfg = Release|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.Release|Win32.Build.0 = Release|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.ReleaseAll|Win32.ActiveCfg = Release|Win32
+		{188F288C-D3E7-4B88-BEA2-3971D4F46183}.ReleaseAll|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
