@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libuguu.lib libiconv.lib Ws2_32.lib"
+				AdditionalDependencies="libuguuD.lib libiconv.lib Ws2_32.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(ProjectDir)win&quot;;&quot;$(ProjectDir)..\libuguu&quot;"
 				GenerateDebugInformation="true"
