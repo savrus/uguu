@@ -17,8 +17,10 @@ syntax: glob
 ./scanners/ftpscan/ftpscan
 ./scanners/smbscan/smbscan
 ./scanners/sqlscan/sqlscan
+./scanners/webdavscan/webdavscan
 ./scanners/libuguu/libuguu.a
 ./scanners/libuguu/libuguu.lib
+./scanners/libuguu/libuguuD.lib
 *.exe
 ./bin/smbscan
 ./bin/ftpscan
