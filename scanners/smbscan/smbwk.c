@@ -86,6 +86,7 @@ int smbwk_open(struct smbwk_dir *c, char *host, int skip_bucks)
     c->ctx = smbc_new_context();
     smbc_option_set(c->ctx, "user", "guest");
     //smbc_setOptionUrlEncodeReaddirEntries(c->ctx, 1);
+    smbc_setOptionDebugToStderr(c->ctx, 1);
 
     if (smbc_init_context(c->ctx) != c->ctx) {
         LOG_ERRNO("smbc_init_context() failed\n");
