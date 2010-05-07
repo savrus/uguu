@@ -16,7 +16,7 @@ import collections
 import traceback
 import datetime
 import psycopg2.extensions
-from common import connectdb, log, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share
+from common import connectdb, log, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share, share_save_path
 from network import dns_cache, ns_domain, scan_all_hosts
 
 class Share(object):
@@ -252,7 +252,7 @@ Exclude = "if present, exclude hosts matching with this regexp"
             del self.__sections
             log("Errors in network \"%s\" configuration at lines: %s",
                              (self.__network, tuple(errors)))
-            raise UserWarning()
+            raise UserWarning
     def __addparam(self, data, match):
         def ParseParam(par):
             par = string.strip(par)
@@ -526,12 +526,12 @@ if __name__ == "__main__":
             traceback.print_exc()
 
     cursor = db.cursor()
-    cursor.execute("DELETE FROM shares WHERE last_lookup + interval %s < now() RETURNING tree_id",
+    cursor.execute("DELETE FROM shares WHERE last_lookup + interval %s < now() RETURNING protocol, hostname, port",
                         (wait_until_delete_share,))
-#    for tree in cursor.fetchall():
-#        try:
-#            cursor.execute("DELETE FROM trees WHERE tree_id = %s", (tree[0],))
-#        except:
-#            pass
+    for delrow in cursor.fetchall():
+        try:
+            os.unlink(share_save_path(delrow['protocol'], delrow['hostname'], delrow['port']))
+        except:
+            pass
     log("All network lookups finished (running time %s)", datetime.datetime.now() - start)
 
