@@ -192,7 +192,8 @@ def fill(db):
                ('ftp', 'ftpscan -c cp1251 -Rp', 0),
                ('ftp', 'ftpscan -c cp1251',     5),
                ('ftp', 'ftpscan -c cp1251 -Ma', 0),
-               ('ftp', 'ftpscan -c cp1251 -Mp', 1);
+               ('ftp', 'ftpscan -c cp1251 -Mp', 1),
+               ('http', 'webdavscan', 1);
         """, {'msu': """
 # retrieving computer's DNS records in official MSU network
 [StandardHosts]
