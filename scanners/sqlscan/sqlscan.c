@@ -35,7 +35,6 @@ static void usage(char *binname, int err)
 
 int main(int argc, char **argv)
 {
-    struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0};
     struct dt_dentry *probe;
     struct sqlwk_dir curdir;
     int full = 0;
@@ -146,9 +145,9 @@ int main(int argc, char **argv)
     }
 
     if (full)
-        dt_full(&sqlwk_walker, &d, &curdir);
+        dt_full(&sqlwk_walker, &curdir);
     else
-        dt_reverse(&sqlwk_walker, &d, &curdir);
+        dt_reverse(&sqlwk_walker, &curdir);
 
     sqlwk_close(&curdir);
 
