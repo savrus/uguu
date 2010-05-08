@@ -364,7 +364,6 @@ int main(int argc, char *argv[])
 	_CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF | _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
 #endif // _DEBUG
 
-    struct dt_dentry d = {DT_DIR, const_cast<char*>(""), 0, NULL, NULL, NULL, 0};
     CFtpControlEx curdir;
     bool full = false, lookup = false;
     char *host, passw[MAX_PASSWORD_LEN+2], *oldtree = NULL;
@@ -455,13 +454,13 @@ int main(int argc, char *argv[])
 				return ESTAT_FAILURE;
 		}
 		if (full)
-			dt_full(&walker, &d, &curdir);
+			dt_full(&walker, &curdir);
 		else if (oldtree) {
 			if (!oldfile.fopen(oldtree, "rt"))
 				usage(argv[0], ESTAT_FAILURE);
-			dt_diff(&oldfile, &walker, &d, &curdir);
+			dt_diff(&oldfile, &walker, &curdir);
 		} else
-			dt_reverse(&walker, &d, &curdir);
+			dt_reverse(&walker, &curdir);
 	} catch(const CFtpControl::NetDataError) {
 		return ESTAT_FAILURE;
 	} catch(const CFtpControl::NetworkError) {

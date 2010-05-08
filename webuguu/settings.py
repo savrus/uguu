@@ -66,7 +66,7 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'webuguu.urls'
 
 TEMPLATE_DIRS = (
-    "C:/temp/uguu/templates"
+    "/home/savrus/devel/uguu/templates"
 )
 
 INSTALLED_APPS = (

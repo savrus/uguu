@@ -16,6 +16,10 @@
 #include "estat.h"
 #include "log.h"
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)
+#endif
+
 static void usage(char *binname, int err)
 {
     fprintf(stderr, "Usage: %s [-l] [-f | -u oldtree] [-p##] host\n", binname);
