@@ -511,12 +511,22 @@ static int dt_go_sop_ds(struct dt_wctx *wc)
     return ret;
 }
 
-void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+void dt_full(struct dt_walker *wk, void *curdir)
 {
+    struct dt_dentry *root;
     struct dt_wctx wc;
 
-    if ((root == NULL) || (wk == NULL)) {
+    if (wk == NULL) {
         LOG_ERR("Bad arguments\n");
+        return;
+    }
+    
+    if ((root = dt_alloc()) == NULL)
+        return;
+    
+    if ((root->name = strdup("")) == NULL) {
+        LOG_ERR("strdup() returned NULL\n");
+        dt_free(root);
         return;
     }
 
@@ -543,15 +553,26 @@ void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     wc.go_sibling_or_parent   = dt_go_sop_ds,
 
     dt_walk(&wc);
+    dt_free(root);
 }
 
 
-void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+void dt_reverse(struct dt_walker *wk, void *curdir)
 {
+    struct dt_dentry *root;
     struct dt_wctx wc;
-
-    if ((root == NULL) || (wk == NULL)) {
+    
+    if (wk == NULL) {
         LOG_ERR("Bad arguments\n");
+        return;
+    }
+    
+    if ((root = dt_alloc()) == NULL)
+        return;
+    
+    if ((root->name = strdup("")) == NULL) {
+        LOG_ERR("strdup() returned NULL\n");
+        dt_free(root);
         return;
     }
 
@@ -570,6 +591,7 @@ void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir)
     wc.id                     = 1;
 
     dt_walk(&wc);
+    dt_free(root);
 }
 
 void dt_reverse_p(struct dt_dentry *root)
@@ -871,12 +893,22 @@ static void dt_print_md5(char *md5)
     printf("\n");
 }
 
-void dt_diff(FILE *file, struct dt_walker *wk, struct dt_dentry *root, void *curdir)
+void dt_diff(FILE *file, struct dt_walker *wk, void *curdir)
 {
+    struct dt_dentry *root;
     struct dt_wctx wc;
     struct dt_dentry *oldroot;
     char md5[UMD5_VALUE_SIZE];
 
+    if ((root = dt_alloc()) == NULL)
+        return;
+    
+    if ((root->name = strdup("")) == NULL) {
+        LOG_ERR("strdup() returned NULL\n");
+        dt_free(root);
+        return;
+    }
+    
     wc.d                      = root;
     wc.wk                     = wk;
     wc.curdir                 = curdir;
@@ -892,12 +924,14 @@ void dt_diff(FILE *file, struct dt_walker *wk, struct dt_dentry *root, void *cur
     
     if ((file == NULL) || (root == NULL) || (wk == NULL)) {
         LOG_ERR("Bad arguments\n");
+        dt_free(root);
         return;
     }
 
     if ((oldroot = dtread_readfile(file, &wc.id, md5)) == NULL) {
         LOG_ERR("Tree reconstruction failed.\n");
-        dt_reverse(wk, root, curdir);
+        dt_free(root);
+        dt_reverse(wk, curdir);
         return;
     }
 
@@ -910,5 +944,6 @@ void dt_diff(FILE *file, struct dt_walker *wk, struct dt_dentry *root, void *cur
 
     dt_rfree(oldroot);
     dt_reverse_p(root);
+    dt_free(root);
 }
 

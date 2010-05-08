@@ -28,7 +28,6 @@ static void usage(char *binname, int err)
 
 int main(int argc, char **argv)
 {
-    struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0};
     struct dt_dentry *probe;
     struct wdwk_dir curdir;
     int full = 0;
@@ -96,17 +95,16 @@ int main(int argc, char **argv)
     }
 
     if (full)
-        dt_full(&wdwk_walker, &d, &curdir);
+        dt_full(&wdwk_walker, &curdir);
     else if (oldtree) {
-#pragma warning(suppress: 4996)
         if ((oldfile = fopen(oldtree, "r")) == NULL) {
             LOG_ERRNO("Can't open file %s\n", oldtree);
             exit(ESTAT_FAILURE);
         }
-        dt_diff(oldfile, &wdwk_walker, &d, &curdir);
+        dt_diff(oldfile, &wdwk_walker, &curdir);
         fclose(oldfile);
     } else
-        dt_reverse(&wdwk_walker, &d, &curdir);
+        dt_reverse(&wdwk_walker, &curdir);
 
     wdwk_close(&curdir);
     ne_sock_exit();
