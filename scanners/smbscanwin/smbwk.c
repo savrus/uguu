@@ -170,6 +170,7 @@ static int smbwk_url_append(struct smbwk_dir *c, char *name)
         wname = (wchar_t *)_alloca(n * sizeof(wchar_t));
     } __except(EXCEPTION_EXECUTE_HANDLER) {
         LOG_ERRNO("_alloca() raised stack overflow.\n");
+        stack_pop(&c->ancestors);
         return 0;
     }
     MultiByteToWideChar(CP_UTF8, 0, name, -1, wname, n);
