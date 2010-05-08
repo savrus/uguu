@@ -10,7 +10,7 @@ import os
 import os.path
 import subprocess
 
-from common import connectdb, scanners_path, db_host, db_user, db_password, db_database
+from common import connectdb, scanners_path, db_host, db_user, db_password, db_database, share_save_str
 
 def dump_share(share):
     print "Dumping %(proto)s://%(host)s:%(port)s" \
