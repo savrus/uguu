@@ -37,7 +37,7 @@ static void usage(wchar_t *binname, int err)
 
 int wmain(int argc, wchar_t **argv)
 {
-    struct dt_dentry d = {DT_DIR, "", 0, NULL, NULL, NULL, 0}, *probe;
+    struct dt_dentry d = *probe;
     struct smbwk_dir curdir;
     int full = 0, lookup = 0;
     wchar_t *host, *user = L"Guest", wpass[MAX_PASSWORD_LEN+1] = L"", *oldtree = NULL;
@@ -114,16 +114,16 @@ int wmain(int argc, wchar_t **argv)
     }
     
     if (full)
-        dt_full(&smbwk_walker, &d, &curdir);
+        dt_full(&smbwk_walker, &curdir);
     else if (oldtree) {
         if (_wfopen_s(&oldfile, oldtree, L"rt") != 0) {
             LOG_ERRNO("Can't open file %S\n", oldtree);
             usage(argv[0], ESTAT_FAILURE);
         }
-        dt_diff(oldfile, &smbwk_walker, &d, &curdir);
+        dt_diff(oldfile, &smbwk_walker, &curdir);
         fclose(oldfile);
     } else
-        dt_reverse(&smbwk_walker, &d, &curdir);
+        dt_reverse(&smbwk_walker, &curdir);
 
     smbwk_close(&curdir);
 
