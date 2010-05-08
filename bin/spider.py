@@ -256,7 +256,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, oldhash, command):
     qcache.allcommit()
     try:
         save.seek(0)
-        file = open(savepath, 'w')
+        file = open(savepath, 'wb')
         shutil.copyfileobj(save, file)
         file.close()
     except:
