@@ -109,9 +109,9 @@ struct dt_wctx {
 };
 
 /* root must have it's type, name and size set */
-void dt_full(struct dt_walker *wk, struct dt_dentry *root, void *curdir);
-void dt_reverse(struct dt_walker *wk, struct dt_dentry *root, void *curdir);
-void dt_diff(FILE *file, struct dt_walker *wk, struct dt_dentry *root, void *curdir);
+void dt_full(struct dt_walker *wk, void *curdir);
+void dt_reverse(struct dt_walker *wk, void *curdir);
+void dt_diff(FILE *file, struct dt_walker *wk, void *curdir);
 
 /* walker should use the following function to allocate dt_dentry struct */
 struct dt_dentry * dt_alloc();
