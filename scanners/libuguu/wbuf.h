@@ -24,6 +24,7 @@
 #define buf_alloc       wbuf_alloc
 #define buf_chop        wbuf_chop
 #define buf_clear       wbuf_clear
+#define buf_expand      wbuf_expand
 #define buf_append      wbuf_append
 #define buf_appendn     wbuf_appendn
 #define buf_appendf     wbuf_appendf
@@ -64,6 +65,7 @@
 #undef buf_alloc
 #undef buf_chop
 #undef buf_clear
+#undef buf_expand
 #undef buf_append
 #undef buf_appendn
 #undef buf_appendf

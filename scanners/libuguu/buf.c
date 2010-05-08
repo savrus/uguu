@@ -80,6 +80,18 @@ void buf_clear(struct buf_str *bs)
     buf_chop(bs, 0);
 }
 
+char * buf_expand(struct buf_str *bs, size_t n)
+{
+    char * ret;
+    LOG_ASSERT(bs != NULL, "Bad arguments\n");
+
+    if (buf_grow(bs, n) == 0)
+        return NULL;
+    ret = bs->s + bs->length;
+    bs->length += n;
+    return ret;
+}
+
 size_t buf_append(struct buf_str *bs, const char *s)
 {
     size_t n;

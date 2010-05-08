@@ -10,17 +10,15 @@
 
 #include <Windows.h>
 #include "dt.h"
-
-/* we omit paths which length exceeds this. */
-#define SMBWK_PATH_MAX_LEN 1024
-/* assume most filenames don't exceed this. */
-#define SMBWK_FILENAME_LEN 256
+#include "stack.h"
+#include "wbuf.h"
 
 #define SMBWK_GROW_SHARELIST 4096
 
+/* walker context. */
 struct smbwk_dir {
-    wchar_t *url;
-    size_t url_len;
+    struct wbuf_str *url;
+    struct stack *ancestors;
     char *next_share;
     char *share_list;
     int subdir;
@@ -28,6 +26,13 @@ struct smbwk_dir {
     WIN32_FIND_DATA data;
 };
 
+/* type for element of the ancestors stack */
+struct smbwk_urlpath {
+    size_t urlpos;
+    struct stack parent;
+};
+
+/* specify what enum type to use and how to deal with hidden/admin shares */
 typedef enum {
 	ENUM_ALL = 0,
 	ENUM_SKIP_ADMIN,

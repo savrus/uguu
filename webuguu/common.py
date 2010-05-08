@@ -13,8 +13,8 @@ import psycopg2
 from psycopg2.extras import DictConnection
 db_host = "localhost"
 db_user = "postgres"
-db_password = ""
-db_database = "uguu"
+db_password = "1"
+db_database = "uguu1"
 def connectdb():
     return psycopg2.connect(
         host = db_host,
@@ -106,7 +106,7 @@ def protocol_prepare(request, protocol):
                 string.lower(request.META['HTTP_USER_AGENT']), re.UNICODE):
             return "file://///"
     return protocol + "://"
-
+             
 def hostname_prepare(request, protocol, hostname, hostaddr):
     if hostaddr == None:
         return hostname

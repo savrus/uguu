@@ -18,6 +18,8 @@
 #include "estat.h"
 #include "smbwk.h"
 #include "log.h"
+#include "wbuf.h"
+#include "stack.h"
 
 #define SHARELIST_TMP_DECLARE size_t listlen = 0, listsize = 0, itemlen
 #define SHARELIST_APPEND_WSTR(slist, wstr) \
@@ -60,7 +62,7 @@ static int smbwk_fillshares(struct smbwk_dir *c)
 	netenum.dwType = RESOURCETYPE_DISK;
 	netenum.dwDisplayType = RESOURCEDISPLAYTYPE_GENERIC;
 	netenum.dwUsage = RESOURCEUSAGE_CONTAINER;
-	netenum.lpRemoteName = c->url;
+	netenum.lpRemoteName = (LPWSTR)wbuf_string(c->url);
 	if ((res = WNetOpenEnum(RESOURCE_GLOBALNET, RESOURCETYPE_DISK, 0, &netenum, &hEnum)) != NO_ERROR) {
 		LOG_ERR("WNetOpenEnum failed (%d)\n", res);
 		return (ERROR_NO_NET_OR_BAD_PATH == res || ERROR_NO_NETWORK == res) ? ESTAT_NOCONNECT : ESTAT_FAILURE;
@@ -107,7 +109,7 @@ static int smbwk_fillallshares(struct smbwk_dir *c, int adm)
 	enum{BUF_SIZE = 16384};
 
 	do {
-		res = NetShareEnum(c->url + 2, 1, &buffer, BUF_SIZE, &resread, &rescount, &resh);
+		res = NetShareEnum((LPWSTR)wbuf_string(c->url) + 2, 1, &buffer, BUF_SIZE, &resread, &rescount, &resh);
 		if (NERR_Success != res && ERROR_MORE_DATA != res) {
 			LOG_ERR("NetShareEnum failed (%d)\n", res);
 			return NETWORK_LASTERROR(res) ? ESTAT_NOCONNECT : ESTAT_FAILURE;
@@ -131,49 +133,54 @@ static int smbwk_fillallshares(struct smbwk_dir *c, int adm)
 	return ESTAT_SUCCESS;
 }
 
-/* appends to null-terminated url string new file/dir
- * return 0 if name is too long, 1 otherwise */
-static int smbwk_url_append(wchar_t *url, size_t len, char *name)
+static struct smbwk_urlpath * smbwk_urlpath_alloc() 
 {
-    size_t n, nn;
+    struct smbwk_urlpath *up;
 
-    n = wcslen(url);
-    nn = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);
-	LOG_ASSERT(nn, "MultiByteToWideChar failed with string \"%s\"\n", name);
-    if (n + nn + 1 > len)
+    up = (struct smbwk_urlpath *) malloc(sizeof(struct smbwk_urlpath));
+    if (up == NULL)
+        LOG_ERRNO("malloc() returned NULL\n");
+    return up;
+}
+
+static void smbwk_urlpath_free(struct stack *s)
+{
+    struct smbwk_urlpath *up;
+
+    up = stack_data(s, struct smbwk_urlpath, parent);
+    free(up);
+}
+
+/* appends new file/dir to url
+ * return 0 if failed, 1 otherwise */
+static int smbwk_url_append(struct smbwk_dir *c, char *name)
+{
+    struct smbwk_urlpath *up;
+    size_t n;
+    wchar_t *ext;
+
+    if ((up = smbwk_urlpath_alloc()) == NULL)
         return 0;
-    url[n++] = L'\\';
-	MultiByteToWideChar(CP_UTF8, 0, name, -1, &url[n], nn);
+    up->urlpos = wbuf_strlen(c->url);
+    stack_push(&c->ancestors, &up->parent);
+
+    n = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);//wide name len + 1
+	LOG_ASSERT(n, "MultiByteToWideChar failed with string \"%s\"\n", name);
+    if ((ext = wbuf_expand(c->url, n)) == NULL || wbuf_error(c->url))
+        return 0;
+    *ext = L'\\';
+	MultiByteToWideChar(CP_UTF8, 0, name, -1, ext+1, n);
     return 1;
 }
 
-/* suspends the last file/dir from nll-terminated url string */
-static void smbwk_url_suspend(wchar_t *url)
+/* suspends the last file/dir from url string */
+static void smbwk_url_suspend(struct smbwk_dir *c)
 {
-    wchar_t *c;
-    if ((c = wcsrchr(url, L'\\')) != NULL)
-        *c = 0;
-}
+    struct smbwk_urlpath *up;
 
-/* undo the last suspend of file/dir from nll-terminated url string */
-static void smbwk_url_suspend_undo(wchar_t *url)
-{
-    int n = wcsnlen(url, SMBWK_PATH_MAX_LEN);
-    if (n < SMBWK_PATH_MAX_LEN - 1)
-        url[n] = L'\\';
-}
-
-/* reallocate null-terminated url string to have length new_len. new_len must exceed strlen(url) */
-/* returns 0 if failed, 1 otherwise */
-static int smbwk_url_realloc(wchar_t **url, size_t new_len)
-{
-    wchar_t *p = (wchar_t *) realloc(*url, new_len * sizeof(wchar_t));
-    if (p == NULL) {
-        LOG_ERR("realloc() returned NULL\n");
-        return 0;
-    }
-    *url = p;
-    return 1;
+    up = stack_data(stack_pop(&c->ancestors), struct smbwk_urlpath , parent);
+    wbuf_chop(c->url, up->urlpos);
+    free(up);
 }
 
 struct dt_dentry * smbwk_readdir(void *curdir)
@@ -188,15 +195,13 @@ struct dt_dentry * smbwk_readdir(void *curdir)
 			if (wcscmp(c->data.cFileName, L".") && wcscmp(c->data.cFileName, L"..") &&
 				(len = WideCharToMultiByte(CP_UTF8, 0, c->data.cFileName, -1, NULL, 0, NULL, NULL)) > 0) {
 				d = dt_alloc();
-				if (d == NULL) {
-					LOG_ERR("dt_alloc() returned NULL\n");
+				if (d == NULL) 
 					return NULL;
-				}
 				d->type = c->data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY ? DT_DIR : DT_FILE;
 				d->name = malloc(len);
 				if (d->name == NULL) {
+					LOG_ERRNO("malloc() returned NULL\n");
 					free(d);
-					LOG_ERR("malloc() returned NULL\n");
 					return NULL;
 				}
 				WideCharToMultiByte(CP_UTF8, 0, c->data.cFileName, -1, d->name, len, NULL, NULL);
@@ -206,15 +211,13 @@ struct dt_dentry * smbwk_readdir(void *curdir)
 				FindClose(c->find);
 				c->find = INVALID_HANDLE_VALUE;
 				if (ERROR_NO_MORE_FILES != GetLastError())
-					LOG_ERR("Enumeration failed for %S (%d)\n", c->url, GetLastError());
+					LOG_ERR("Enumeration failed for %S (%d)\n", wbuf_string(c->url), GetLastError());
 			}
 		}
 	} else if (name = smbwk_getshare(c)) {
 		d = dt_alloc();
-		if (d == NULL) {
-			LOG_ERR("dt_alloc() returned NULL\n");
+		if (d == NULL) 
 			return NULL;
-		}
 		d->type = DT_DIR;
 		d->name = name;
 		d->size = 0;
@@ -227,37 +230,38 @@ static int smbwk_go(dt_go type, char *name, void *curdir)
 {
     struct smbwk_dir *c = (struct smbwk_dir*) curdir;
     int res;
+    size_t newpathlen;
 
     switch (type) {
         case DT_GO_PARENT:
-            smbwk_url_suspend(c->url);
-			if (!--c->subdir)
-				SHARELIST_START_ENUM(*c);
+            smbwk_url_suspend(c);
+// 			if (!--c->subdir)
+// 				SHARELIST_START_ENUM(*c);
             break;
         case DT_GO_CHILD:
-            if (smbwk_url_append(c->url, SMBWK_PATH_MAX_LEN, name) == 0){
-                LOG_ERR("smbwk_url_append() returned error. url: %s, append: %s, go_type: %d\n",
-                        c->url, name, type);
+            if (smbwk_url_append(c, name) == 0){
+                LOG_ERR("smbwk_url_append() returned error. url: %S, append: %s, go_type: %d\n",
+                        wbuf_string(c->url), name, type);
                 return -1;
             }
 			c->subdir++;
             /* 'dir tree' engine won't request readdir afrer go_parent,
             * so we don't have to call FindFirstFile() in such a case. */
-            wcscat_s(c->url, c->url_len, L"\\*");//no need another checks or convertation from utf8
-            c->find = FindFirstFile(c->url, &c->data);
-            smbwk_url_suspend(c->url);
+            newpathlen = wbuf_strlen(c->url);
+            wbuf_append(c->url, L"\\*");
+            memset((void*)&c->data, 0, sizeof(c->data));
+            c->find = FindFirstFile(wbuf_string(c->url), &c->data);
+            wbuf_chop(c->url, newpathlen);
             if (INVALID_HANDLE_VALUE == c->find) {
-                LOG_ERR("Enumeration failed for %S (%d)\n", c->url, res = GetLastError());
+                LOG_ERR("Enumeration failed for %S (%d)\n", wbuf_string(c->url), res = GetLastError());
                 if (NETWORK_LASTERROR(res)) exit(ESTAT_NOCONNECT);
-                if (type == DT_GO_CHILD) {
-                    smbwk_url_suspend(c->url);
-                    c->subdir--;
-                }
+                smbwk_url_suspend(c);
+                c->subdir--;
                 return -1;
             }
             break;
         default:
-            LOG_ERR("unknown smbwk_go_type %d, url: %s\n", type, c->url);
+            LOG_ERR("unknown smbwk_go_type %d, url: %S\n", type, wbuf_string(c->url));
             return -1;
     }
    
@@ -273,22 +277,15 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
 {
 	NETRESOURCE conn;
 	int res;
-	c->url = (wchar_t *)malloc((SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN) * sizeof(wchar_t));
-	if(c->url == NULL) {
-		LOG_ERR("malloc() returned NULL\n");
+	if((c->url = wbuf_alloc()) == NULL) {
 		return ESTAT_FAILURE;
 	}
-	c->url_len = SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN;
-	if (wcsnlen(host, SMBWK_PATH_MAX_LEN) > SMBWK_PATH_MAX_LEN - 10) {
-		LOG_ERR("bad argument. host is too long\n");
-		free(c->url);
+	wbuf_appendf(c->url, L"\\\\%s", host);
+	if (wbuf_error(c->url)) 
 		return ESTAT_FAILURE;
-	}
-	wcscpy_s(c->url, SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN, L"\\\\");
-	wcscat_s(c->url, SMBWK_PATH_MAX_LEN + SMBWK_FILENAME_LEN, host);
 	memset(&conn, 0, sizeof(NETRESOURCE));
 	conn.dwDisplayType = RESOURCETYPE_DISK;
-	conn.lpRemoteName = c->url;
+	conn.lpRemoteName = (LPWSTR)wbuf_string(c->url);
 	c->share_list = NULL;
 	switch (res = WNetAddConnection2(&conn, password, username, 0)) {
 	case NO_ERROR:
@@ -297,11 +294,11 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
 	case ERROR_BAD_NET_NAME:
 	case ERROR_NO_NET_OR_BAD_PATH:
 	case ERROR_NO_NETWORK:
-		LOG_ERR("Network error or %S is down (%d)\n", c->url, res);
+		LOG_ERR("Network error or %S is down (%d)\n", wbuf_string(c->url), res);
 		smbwk_close(c);
 		return ESTAT_NOCONNECT;
 	default:
-		LOG_ERR("Cann\'t establish connection to %S as %S (%d)\n", c->url, username, res);
+		LOG_ERR("Cann\'t establish connection to %S as %S (%d)\n", wbuf_string(c->url), username, res);
 		smbwk_close(c);
 		return ESTAT_FAILURE;
 	}
@@ -316,15 +313,16 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
 	SHARELIST_START_ENUM(*c);
 	c->subdir = 0;
 	c->find = INVALID_HANDLE_VALUE;
+	stack_init(&c->ancestors);
     return ESTAT_SUCCESS;
 }
 
 int smbwk_close(struct smbwk_dir *c)
 {
-	WNetCancelConnection2(c->url, 0, TRUE);
-	if (c->share_list)
-		free(c->share_list);
-    free(c->url);
+	WNetCancelConnection2(wbuf_string(c->url), 0, TRUE);
+	free(c->share_list);
+    wbuf_free(c->url);
+    stack_rfree(&c->ancestors, smbwk_urlpath_free);
     return 1;
 }
 

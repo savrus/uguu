@@ -12,8 +12,8 @@ import psycopg2
 from psycopg2.extras import DictConnection
 db_host = "localhost"
 db_user = "postgres"
-db_password = ""
-db_database = "uguu"
+db_password = "1"
+db_database = "uguu1"
 def connectdb():
     """ returns psycopg2 connection to the server using settings from common.py """
     return psycopg2.connect(

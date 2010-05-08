@@ -33,6 +33,9 @@ void buf_chop(struct buf_str *bs, size_t len);
 /* clear buf_str */
 void buf_clear(struct buf_str *bs);
 
+/* prepare appending buffer */
+char * buf_expand(struct buf_str *bs, size_t n);
+
 /* append a string
  * returns 0 on failure, otherwise appended string length */
 size_t buf_append(struct buf_str *bs, const char *s);
