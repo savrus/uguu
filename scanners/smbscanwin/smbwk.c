@@ -157,19 +157,25 @@ static int smbwk_url_append(struct smbwk_dir *c, char *name)
 {
     struct smbwk_urlpath *up;
     size_t n;
-    wchar_t *ext;
+    wchar_t *wname;
 
     if ((up = smbwk_urlpath_alloc()) == NULL)
         return 0;
     up->urlpos = wbuf_strlen(c->url);
     stack_push(&c->ancestors, &up->parent);
 
-    n = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);//wide name len + 1
+    n = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);
 	LOG_ASSERT(n, "MultiByteToWideChar failed with string \"%s\"\n", name);
-    if ((ext = wbuf_expand(c->url, n)) == NULL || wbuf_error(c->url))
+    __try {
+        wname = (wchar_t *)_alloca(n * sizeof(wchar_t));
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        LOG_ERRNO("_alloca() raised stack overflow.\n");
         return 0;
-    *ext = L'\\';
-	MultiByteToWideChar(CP_UTF8, 0, name, -1, ext+1, n);
+    }
+    MultiByteToWideChar(CP_UTF8, 0, name, -1, wname, n);
+    wbuf_appendf(c->url, L"\\%s", wname);
+    if (wbuf_error(c->url))
+        return 0;
     return 1;
 }
 
