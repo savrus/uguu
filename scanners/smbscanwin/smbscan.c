@@ -37,7 +37,7 @@ static void usage(wchar_t *binname, int err)
 
 int wmain(int argc, wchar_t **argv)
 {
-    struct dt_dentry d = *probe;
+    struct dt_dentry *probe;
     struct smbwk_dir curdir;
     int full = 0, lookup = 0;
     wchar_t *host, *user = L"Guest", wpass[MAX_PASSWORD_LEN+1] = L"", *oldtree = NULL;
