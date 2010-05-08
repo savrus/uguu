@@ -867,7 +867,7 @@ static void dt_print_md5(char *md5)
     
     printf("* ");
     for (i = 0; i < UMD5_VALUE_SIZE; i++)
-         printf("%02hhx", md5[i]);
+         printf("%02x", (unsigned char)md5[i]);
     printf("\n");
 }
 
