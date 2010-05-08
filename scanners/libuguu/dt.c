@@ -17,6 +17,10 @@
 #include "umd5.h"
 #include "dtread.h"
 
+#ifdef _MSC_VER
+#define strdup _strdup
+#endif
+
 struct dt_dentry * dt_alloc()
 {
     struct dt_dentry *d;
