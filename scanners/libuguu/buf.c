@@ -33,7 +33,7 @@ static int buf_grow(struct buf_str *bs, size_t len)
     LOG_ASSERT(bs != NULL, "Bad arguments\n");
     
     if (bs->length + len >= bs->size)
-        return buf_realloc(bs, (bs->size + len + BUF_SIZE_STEP));
+        return buf_realloc(bs, (bs->length + len + BUF_SIZE_STEP));
     return 1;
 }
 
