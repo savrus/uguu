@@ -37,14 +37,14 @@ void dt_free(struct dt_dentry *d)
     free(d);
 }
 
-static void dt_init_root(struct dt_dentry *root, unsigned int *id)
+static void dt_init_root(struct dt_dentry *root)
 {
+    root->type = DT_DIR;
     root->parent = NULL;
     root->sibling = NULL;
     root->child = NULL;
     root->file_child = NULL;
     root->hash = NULL;
-    root->id = (*id)++;
 }
 
 int dt_compare(const void *dd1, const void *dd2)
@@ -409,7 +409,8 @@ static void dt_wctx_plug(struct dt_wctx *wc)
 
 static void dt_on_er_init(struct dt_wctx *wc)
 {
-    dt_init_root(wc->d, &wc->id);
+    dt_init_root(wc->d);
+    wc->d->id = (wc->id)++;
 }
 static void dt_on_er_print(struct dt_wctx *wc)
 {
@@ -786,11 +787,7 @@ static void dt_list_diff_childs(struct dt_wctx *wc, struct dt_dentry *d, struct 
 
 static void dt_on_er_diff(struct dt_wctx *wc)
 {
-    wc->d->parent = NULL;
-    wc->d->sibling = NULL;
-    wc->d->child = NULL;
-    wc->d->file_child = NULL;
-    wc->d->hash = NULL;
+    dt_init_root(wc->d);
     wc->d->id = wc->od->id;
 }
 
