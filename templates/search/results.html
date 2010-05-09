@@ -1,0 +1,25 @@
+{% extends "general.html" %}
+{% block htmltitle %}Search results for {{query}}{% endblock %}
+{% block htmlbody %}
+<div class="margintop" id="searchform">
+    {% include form %}
+</div>
+{% spaceless %}{% if sqlecho %}
+<div style="font-family: monospace; margin-top: 1em;">{{sqlcount}}</div>
+<div style="font-family: monospace; margin-top: 1em;">{{sqlquery}}</div>
+{% endif %}{% endspaceless %}
+<div class="margintop" id="searchresults">
+    <table class="files">
+        {% for r in results %}
+        <tr>
+            <td><span class="rownum">{{forloop.counter|add:offset}}.</span></td>
+            <td><span class="state" id="{{r.state}}">{{r.state}}</span></td>
+            <td><span class="filetype">{{r.type}}</span></td>
+            <td align="right"><span class="filesize">{{r.size|filesizeformat}}</span></td>
+            <td class="file"><a class="share" href="{{r.pathlink|iriencode}}">{{r.path}}</a>/<a class="share" href="{{r.filelink|iriencode}}">{{r.filename}}</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% include "gobar.html" %}
+{% endblock %}
