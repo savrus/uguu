@@ -10,7 +10,7 @@ Dumping
 First you need to install 'sqlscan' scanner to your 'bin' directory in
 the uguu tree. This could be done by typing 'make install' in the sqlscan
 directory.
-Second you need to create 'save' directory in your 'bin' directory and put
+Second you need to create 'dump' directory in your 'bin' directory and put
 'dump.py' in the 'bin' directory.
 Then dump filelists for all shares from your database by typing
 'python dump.py'
@@ -29,3 +29,11 @@ instead of executing a scanner as usual. Finally, execute SQL command:
 "UPDATE shares SET next_scan=last_scan + interval '12 hours' WHERE last_scan IS NOT NULL"
 and restore previously dropped indexes.
 
+
+Restoring saves
+
+For trees patching feature, saves of previous scans should contain exactly
+the same content which lies in database. After restoring database you should
+clear 'save' directory. But after that first scans will be done in non-patching mode.
+To avoid this, copy all content of 'dump' directory to 'save', copy 'updatehashes.py'
+to the bin directory and run 'python updatehashes.py'
