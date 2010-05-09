@@ -32,9 +32,9 @@ and restore previously dropped indexes.
 
 Restoring saves
 
-For trees patching feature, saves of previous scans which are lies in 'bin/save'
-directory should contain exactly the same content which lies in database. During
-database restore,'bin/save' will be automatically filled. But if some saves are
-damaged you could delete all them, dump database, copy all files from 'bin/dump'
-directory to 'bin/save', copy 'updatehashes.py' to the bin directory and run
+For trees patching feature, saves of previous scans in 'bin/save' directory
+should contain exactly the same content which lies in database. During database
+restore,'bin/save' will be automatically filled. But if some saves are damaged
+you could delete all them, dump database, copy all files from 'bin/dump'directory
+to 'bin/save', copy 'updatehashes.py' to the bin directory and run
 'python updatehashes.py' to update hashes in database.
