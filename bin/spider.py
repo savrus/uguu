@@ -19,7 +19,7 @@ import traceback
 import shutil
 import datetime
 import psycopg2.extensions
-from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr, share_save_path, share_save_str, quote_for_shell
+from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr, share_save_path, share_save_str, quote_for_shell, shares_save_dir
 
 # if patch is longer than whole contents / patch_fallback, then fallback
 # to non-patching mode
@@ -281,6 +281,13 @@ def scan_share(db, share_id, proto, host, port, tree_id, oldhash, command):
         log("Scanning %s succeded. Database updated in non-patching mode (scan time %s, update time %s).",
             (hoststr, scan_time, datetime.datetime.now() - start))
 
+def create_save():
+     if os.path.isdir(shares_save_dir):
+        return
+     if os.path.isfile(shares_save_dir):
+        raise NameError("%s should be a directory, not a file\n" % (shares_save_dir,))
+     log("%s directory doesn't exist, creating" % (shares_save_dir,))
+     os.mkdir(shares_save_dir)
 
 if __name__ == "__main__":
     try:
@@ -288,6 +295,7 @@ if __name__ == "__main__":
     except:
         print "Unable to connect to the database, exiting."
         sys.exit()
+    create_save()
     shares = db.cursor()
     while True:
         db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
