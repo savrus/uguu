@@ -221,7 +221,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, oldhash, command):
             UPDATE shares SET next_scan = now() + %(w)s
             WHERE share_id = %(s)s;
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
-        log("Scanning %s failed (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
+        log("Scanning %s failed with return code %s (elapsed time %s).", (hoststr, data.returncode, datetime.datetime.now() - start))
         return
     if patchmode and (line_count_patch > (line_count - line_count_patch) / patch_fallback):
         log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (hoststr, line_count_patch, line_count - line_count_patch))
