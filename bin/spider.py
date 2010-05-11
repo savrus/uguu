@@ -281,7 +281,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, oldhash, command):
         log("Scanning %s succeded. Database updated in non-patching mode (scan time %s, update time %s).",
             (hoststr, scan_time, datetime.datetime.now() - start))
 
-def create_save():
+def create_save_dir():
      if os.path.isdir(shares_save_dir):
         return
      if os.path.isfile(shares_save_dir):
@@ -295,7 +295,7 @@ if __name__ == "__main__":
     except:
         print "Unable to connect to the database, exiting."
         sys.exit()
-    create_save()
+    create_save_dir()
     shares = db.cursor()
     while True:
         db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
