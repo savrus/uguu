@@ -111,8 +111,8 @@ static int dtread_readline(const char *line, struct cuckoo_ctx *cu, unsigned int
 
             if (id == 0) {
                 /* file */
-                LOG_ASSERT( pid != 0, "File with parent id=0 (only root dir has parent id=0). Line %s\n",
-                    line);
+                LOG_ASSERT(pid != 0, "File with parent id=0 "
+                    "(only root dir has parent id=0). Line %s\n", line);
 
                 if ((d = dt_alloc()) == NULL) {
                     free(name);
