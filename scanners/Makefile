@@ -3,6 +3,7 @@ ALLDIRS = libuguu $(SCANDIRS)
 
 all: $(ALLDIRS)
 clean: $(ALLDIRS:%=%-clean)
+cleanall: $(SCANDIRS:%=%-cleanall) libuguu-clean
 install: $(SCANDIRS:%=%-install)
 
 $(ALLDIRS)::
@@ -10,6 +11,9 @@ $(ALLDIRS)::
 
 $(ALLDIRS:%=%-clean)::
 	$(MAKE) -C $(@:%-clean=%) clean
+
+$(SCANDIRS:%=%-cleanall)::
+	$(MAKE) -C $(@:%-cleanall=%) cleanall
 
 $(SCANDIRS:%=%-install)::
 	$(MAKE) -C $(@:%-install=%) install
