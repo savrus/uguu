@@ -125,7 +125,8 @@ static int smbwk_fillallshares(struct smbwk_dir *c, int adm)
 			default:
 				continue;
 			}
-			if (item->shi1_netname && *(item->shi1_netname))
+			if (item->shi1_netname && *(item->shi1_netname) && 
+				(adm || _wcsicmp(item->shi1_netname, L"print$")))
 				SHARELIST_APPEND_WSTR(c->share_list, item->shi1_netname);
 		}
 		NetApiBufferFree((void *)buffer);
