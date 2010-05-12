@@ -1,4 +1,5 @@
-SCANDIRS = smbscan ftpscan webdavscan sqlscan
+#SCANDIRS = smbscan ftpscan webdavscan sqlscan
+SCANDIRS = smbscan ftpscan webdavscan
 ALLDIRS = libuguu $(SCANDIRS)
 
 all: $(ALLDIRS)
