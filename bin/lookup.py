@@ -16,7 +16,7 @@ import collections
 import traceback
 import datetime
 import psycopg2.extensions
-from common import connectdb, log, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share, share_save_path
+from common import connectdb, log, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share, wait_until_delete_empty_share, share_save_path
 from network import dns_cache, ns_domain, scan_all_hosts
 
 class Share(object):
@@ -526,8 +526,12 @@ if __name__ == "__main__":
             traceback.print_exc()
 
     cursor = db.cursor()
-    cursor.execute("DELETE FROM shares WHERE last_lookup + interval %s < now() RETURNING protocol, hostname, port",
-                        (wait_until_delete_share,))
+    cursor.execute("""
+        DELETE FROM shares
+        WHERE ((size = 0) AND (last_lookup + interval %(tz)s < now())) OR
+            ((size != 0) AND (last_lookup + interval %(tnz)s < now()))
+        RETURNING protocol, hostname, port
+        """, {'tz': wait_until_delete_empty_share, 'tnz': wait_until_delete_share})
     for delrow in cursor.fetchall():
         try:
             os.unlink(share_save_path(delrow['protocol'], delrow['hostname'], delrow['port']))
