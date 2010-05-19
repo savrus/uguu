@@ -69,6 +69,13 @@ static struct dt_dentry * dt_list_sort(struct dt_dentry *d, size_t nmemb, unsign
     qsort (da, nmemb, sizeof(struct dt_dentry *), dt_compare);
     for (i = 1, dp = da[0], dp->fid = s++,
             dp->id = (id != NULL) ? (*id)++ : 0; i < nmemb; i++) {
+        if ((dp->type == DT_DIR) && (da[i]->type == DT_DIR)
+                && (!strcmp(dp->name, da[i]->name))) {
+            LOG_ERR("Directory name duplication detected: '%s', skipping.\n",
+                dp->name);
+            dt_free(da[i]);
+            continue;
+        }
         dp->sibling = da[i];
         dp = da[i];
         dp->id = (id != NULL) ? (*id)++ : 0;
