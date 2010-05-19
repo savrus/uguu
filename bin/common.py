@@ -127,6 +127,8 @@ wait_until_next_scan_failed = "2 hour"
 wait_until_next_lookup = "1 week"
 #time period to wait until delete old share
 wait_until_delete_share = "4 month"
+#time period to wait until delete old empty share (with size=0)
+wait_until_delete_empty_share = "1 month"
 
 
 # maximum number of lines to get from scanner
