@@ -39,7 +39,7 @@ int wmain(int argc, wchar_t **argv)
 {
     struct dt_dentry *probe;
     struct smbwk_dir curdir;
-    int full = 0, lookup = 0;
+    int full = 0, lookup = 0, close_conn;
     wchar_t *host, *user = L"Guest", wpass[MAX_PASSWORD_LEN+1] = L"", *oldtree = NULL;
     FILE *oldfile;
     enum_type etype = ENUM_ALL;
@@ -103,13 +103,13 @@ int wmain(int argc, wchar_t **argv)
         usage(argv[0], ESTAT_FAILURE);
     host = argv[i];
 
-    if ((i = smbwk_open(&curdir, host, user, wpass, etype)) != ESTAT_SUCCESS)
+    if ((i = smbwk_open(&curdir, host, user, wpass, etype, &close_conn)) != ESTAT_SUCCESS)
         return i;
 
     if (lookup) {
         if ((probe = smbwk_walker.readdir(&curdir)) != NULL)
             dt_free(probe);
-        smbwk_close(&curdir);
+        smbwk_close(&curdir, close_conn);
         return probe ? ESTAT_SUCCESS : ESTAT_FAILURE;
     }
     
@@ -125,7 +125,7 @@ int wmain(int argc, wchar_t **argv)
     } else
         dt_reverse(&smbwk_walker, &curdir);
 
-    smbwk_close(&curdir);
+    smbwk_close(&curdir, close_conn);
 
     return ESTAT_SUCCESS;
 }
