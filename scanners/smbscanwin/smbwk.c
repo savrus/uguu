@@ -281,7 +281,7 @@ struct dt_walker smbwk_walker = {
     smbwk_go,
 };
 
-int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *password, enum_type enum_hidden_shares)
+int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *password, enum_type enum_hidden_shares, int *wnet_cancel)
 {
 	NETRESOURCE conn;
 	int res;
@@ -295,19 +295,21 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
 	conn.dwDisplayType = RESOURCETYPE_DISK;
 	conn.lpRemoteName = (LPWSTR)wbuf_string(c->url);
 	c->share_list = NULL;
+	*wnet_cancel = 1;
 	switch (res = WNetAddConnection2(&conn, password, username, 0)) {
-	case NO_ERROR:
 	case ERROR_SESSION_CREDENTIAL_CONFLICT://already connected under other username, let's scan using it
+		wnet_cancel = 0;
+	case NO_ERROR:
 		break;
 	case ERROR_BAD_NET_NAME:
 	case ERROR_NO_NET_OR_BAD_PATH:
 	case ERROR_NO_NETWORK:
 		LOG_ERR("Network error or %S is down (%d)\n", wbuf_string(c->url), res);
-		smbwk_close(c);
+		smbwk_close(c, 0);
 		return ESTAT_NOCONNECT;
 	default:
 		LOG_ERR("Cann\'t establish connection to %S as %S (%d)\n", wbuf_string(c->url), username, res);
-		smbwk_close(c);
+		smbwk_close(c, 0);
 		return ESTAT_FAILURE;
 	}
 	if ((res = (
@@ -315,7 +317,7 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
 			(int(*)(struct smbwk_dir *, int))smbwk_fillshares :
 			smbwk_fillallshares
 		)(c, !(int)enum_hidden_shares)) != ESTAT_SUCCESS) {
-			smbwk_close(c);
+			smbwk_close(c, *wnet_cancel);
 			return res;
 	}
 	SHARELIST_START_ENUM(*c);
@@ -325,9 +327,10 @@ int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *p
     return ESTAT_SUCCESS;
 }
 
-int smbwk_close(struct smbwk_dir *c)
+int smbwk_close(struct smbwk_dir *c, int wnet_cancel)
 {
-	WNetCancelConnection2(wbuf_string(c->url), 0, TRUE);
+	if (wnet_cancel)
+		WNetCancelConnection2(wbuf_string(c->url), 0, TRUE);
 	free(c->share_list);
     wbuf_free(c->url);
     stack_rfree(&c->ancestors, smbwk_urlpath_free);
