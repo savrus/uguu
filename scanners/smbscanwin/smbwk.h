@@ -40,9 +40,9 @@ typedef enum {
 } enum_type;
 
 /* initialise the walker */
-int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *password, enum_type enum_hidden_shares);
+int smbwk_open(struct smbwk_dir *c, wchar_t *host, wchar_t *username, wchar_t *password, enum_type enum_hidden_shares, int *wnet_cancel);
 /* close the walker */
-int smbwk_close(struct smbwk_dir *c);
+int smbwk_close(struct smbwk_dir *c, int wnet_cancel);
 
 /* smb walker for 'dir tree' engine */
 extern struct dt_walker smbwk_walker;
