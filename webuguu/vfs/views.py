@@ -168,7 +168,7 @@ def share(request, proto, hostname, port, path=""):
             """, {'p': proto, 'h': hostname, 'port': port})
         try:
             share_id, tree_id, hostaddr, state, scantime, nexttime, changetime = cursor.fetchone()
-            url['share'] = [('s', id)] 
+            url['share'] = [('s', share_id)]  
         except:
             return render_to_response('vfs/error.html',
                 {'error':"Unknown share."})
