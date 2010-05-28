@@ -37,8 +37,5 @@ total items: {{ items }}, total size: <span class="filesize">{{ size|filesizefor
     <br>
     Last scanned {{scantime|timesince:now}} ago
     on {{scantime|date:"D d M Y G:i"}}.
-    <br>
-    Next scan won't happen for {{nextscantime|timeuntil:now}}
-    until {{nextscantime|date:"D d M Y G:i"}}
 </div>
 {% endblock %}

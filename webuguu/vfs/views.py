@@ -148,26 +148,26 @@ def share(request, proto, hostname, port, path=""):
     # detect share
     if share_id != 0:
         cursor.execute("""
-            SELECT tree_id, hostaddr, state, last_scan, next_scan, last_state_change
+            SELECT tree_id, hostaddr, state, last_scan, last_state_change
             FROM shares
             WHERE share_id = %(s)s AND protocol = %(pr)s
                 AND hostname = %(h)s AND port = %(p)s
             """, {'s':share_id, 'pr': proto, 'h': hostname, 'p': port})
         try:
-            tree_id, hostaddr, state, scantime, nexttime, changetime = cursor.fetchone()
+            tree_id, hostaddr, state, scantime, changetime = cursor.fetchone()
         except: 
             return HttpResponseRedirect(".")
     else:
         cursor.execute("""
             SELECT share_id, tree_id, hostaddr,
-                state, last_scan, next_scan, last_state_change
+                state, last_scan, last_state_change
             FROM shares
             WHERE protocol = %(p)s
                 AND hostname = %(h)s
                 AND port = %(port)s
             """, {'p': proto, 'h': hostname, 'port': port})
         try:
-            share_id, tree_id, hostaddr, state, scantime, nexttime, changetime = cursor.fetchone()
+            share_id, tree_id, hostaddr, state, scantime, changetime = cursor.fetchone()
             url['share'] = [('s', share_id)]  
         except:
             return render_to_response('vfs/error.html',
@@ -275,7 +275,6 @@ def share(request, proto, hostname, port, path=""):
          'state': state,
          'changetime': changetime,
          'scantime': scantime,
-         'nextscantime': nexttime,
          'gentime': time.time() - generation_started,
          'now': datetime.datetime.now(),
          })
