@@ -215,7 +215,7 @@ def share(request, proto, hostname, port, path=""):
     # get file list
     orders = {
         'size': """
-            SELECT treedir_id AS dirid, size, name
+            SELECT treedir_id AS dirid, created, size, name
             FROM files
             WHERE tree_id = %(t)s
                 AND treepath_id = %(p)s
@@ -224,7 +224,7 @@ def share(request, proto, hostname, port, path=""):
             LIMIT %(l)s;
             """,
         'name': """
-            SELECT treedir_id AS dirid, size, name
+            SELECT treedir_id AS dirid, created, size, name
             FROM files
             WHERE tree_id = %(t)s
                 AND treepath_id = %(p)s

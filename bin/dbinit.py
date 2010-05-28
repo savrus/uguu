@@ -132,6 +132,7 @@ def ddl(db):
             type filetype,
             tsname tsvector,
             tspath tsvector,
+            created timestamp DEFAULT now(),
             FOREIGN KEY (tree_id, treepath_id) REFERENCES paths
                 ON DELETE CASCADE
         );
