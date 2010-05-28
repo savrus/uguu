@@ -23,7 +23,7 @@ from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait
 
 # if patch is longer than whole contents / patch_fallback, then fallback
 # to non-patching mode
-patch_fallback = 1
+patch_fallback = 1.2
 
 # python 2.5 compitible shitcode
 def kill_process(process):
