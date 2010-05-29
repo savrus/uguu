@@ -350,7 +350,7 @@ static void usage(char *binname, int err)
     fprintf(stderr, "  -t###\tconnection timeout ### in seconds (default is %d)\n", DEF_TIMEOUT);
 	fprintf(stderr, "  -R#\tscan with LIST -R command, # = a|p for active or passive mode\n");
 	fprintf(stderr, "  -M#\tdisable quick scan, # = a|p for active or passive mode\n");
-	fprintf(stderr, "  -P\tfirst line (ends with newline char) in stdin is password");
+	fprintf(stderr, "  -P\tfirst line (ends with newline char) in stdin is password\n");
     fprintf(stderr, "  -h\tprint this help\n");
     exit(err);
 }
