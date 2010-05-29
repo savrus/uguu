@@ -34,7 +34,7 @@ struct bit_collect {
 
 // init and uninit bit collector structure routines
 void bc_init(struct bit_collect *bc);
-void bc_uninit(struct bit_collect *bc);
+void bc_fini(struct bit_collect *bc);
 
 // add a number to the bit collector structure
 void bc_set(struct bit_collect *bc, size_t number);

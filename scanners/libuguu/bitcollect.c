@@ -13,7 +13,7 @@
 #error Invalid defines in bitcollect.h
 #endif
 
-#define NO_CACHE (size_t)(-1)
+#define NO_CACHE ((size_t)(-1))
 #define _NO_ZERO ((BITVECTOR_EL)(-1))
 
 static size_t bitvector_align_size(size_t req_size)
@@ -94,6 +94,10 @@ static int bc_checksize(struct bit_collect *bc, size_t element)
 				bitvector_align_size(bitvector_segment(element, NULL)))
 				) ) {
 			bc->cached_segment = NO_CACHE;
+			/* don't need vectors after out of memory error */
+			free(bc->mvec);
+			free(bc->ivec);
+			bc->ivec = bc->mvec = NULL;
 			return 0;
 		}
 		bc->vec_size = element;
@@ -146,11 +150,12 @@ void bc_init(struct bit_collect *bc)
 	}
 }
 
-void bc_uninit(struct bit_collect *bc)
+void bc_fini(struct bit_collect *bc)
 {
 	LOG_ASSERT(bc != NULL, "Bad argument\n");
 	free(bc->mvec);
 	free(bc->ivec);
+	bc->ivec = bc->mvec = NULL;
 	bc->vec_size = 0;
 }
 
