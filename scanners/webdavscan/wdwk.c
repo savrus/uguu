@@ -220,7 +220,7 @@ int wdwk_open(struct wdwk_dir *c, char *host, int port)
     }
 
     ne_set_connect_timeout(c->sess, 10);
-    ne_set_read_timeout(c->sess, 30);
+    ne_set_read_timeout(c->sess, 60);
 
     ne_set_useragent(c->sess, "uguu webdavscan");
 
