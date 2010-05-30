@@ -31,6 +31,7 @@ ftpscan.o: ftpscan.cpp FtpSockLib.h $(LIBUGUU)
 	$(CXXCMD) -c ftpscan.cpp -o ftpscan.o
 
 install: $(NAME)
+	rm -f ../../bin/$(NAME)
 	cp $(NAME) ../../bin/
 
 clean:
