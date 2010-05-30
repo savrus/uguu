@@ -161,7 +161,7 @@ def ddl_prog(db):
             BEFORE UPDATE ON shares FOR EACH ROW
             EXECUTE PROCEDURE share_update();
         CREATE OR REPLACE FUNCTION share_insert()
-            RETURN trigger AS
+            RETURNS trigger AS
             $$BEGIN
                 INSERT INTO trees (share_id)
                 VALUES (NEW.share_id)
