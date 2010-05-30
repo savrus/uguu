@@ -267,9 +267,9 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
         log("Failed to save contents of %s to file %s.", (hoststr, savepath))
     save.close()
     cursor.execute("""
-        UPDATE shares SET last_scan = now() WHERE share_id = %(s)s;
+        UPDATE shares SET last_scan = now(), next_scan = now() + %(w)s WHERE share_id = %(s)s;
         UPDATE trees SET hash = %(h)s WHERE tree_id = %(t)s;
-        """, {'s': share_id, 't': tree_id, 'h': hash.hexdigest()})
+        """, {'s': share_id, 't': tree_id, 'h': hash.hexdigest(), 'w': wait_until_next_scan})
     if qcache.totalsize >= 0:
         cursor.execute("""
             UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s;
