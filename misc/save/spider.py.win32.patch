@@ -1,0 +1,40 @@
+diff -r 6951ed20952d bin/spider.py
+--- a/bin/spider.py     Mon Apr 26 12:22:34 2010 +0400
++++ b/bin/spider.py     Mon Apr 26 23:17:46 2010 +0400
+@@ -13,7 +13,9 @@
+ import socket
+ import tempfile
+ import os
++import os.path
+ import sys
++import subprocess
+ import traceback
+ import shutil
+ import datetime
+@@ -225,13 +227,12 @@
+     hoststr = sharestr(proto, host, port)
+     savepath = share_save_path(proto, host, port)
+     patchmode = tree_id != None and os.path.isfile(savepath)
+-    address = socket.gethostbyname(host)
++    address = host
+     log("Scanning %s (%s) ...", (hoststr, address))
+     start = datetime.datetime.now()
+-    if patchmode:
+-        data = run_scanner(command, address, proto, port, "-u " + quote_for_shell(savepath))
+-    else:
+-        data = run_scanner(command, address, proto, port)
++    patchmode = False
++    data = subprocess.Popen("type %(s)s" % {'s': os.path.join('dump', share_save_str(proto, host, port))},
++        shell = True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+     save = tempfile.TemporaryFile(bufsize=-1)
+     line_count = 0
+     line_count_patch = 0
+@@ -288,7 +289,7 @@
+         log("Failed to save contents of %s to file %s.", (hoststr, savepath))
+     save.close()
+     cursor.execute("""
+-        UPDATE shares SET tree_id = %(t)s, last_scan = now()  WHERE share_id = %(s)s;
++        UPDATE shares SET tree_id = %(t)s WHERE share_id = %(s)s;
+         """, {'s': share_id, 't': tree_id})
+     if qcache.totalsize >= 0:
+         cursor.execute("""

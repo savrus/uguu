@@ -1,0 +1,41 @@
+{% extends "general.html" %}
+{% block htmltitle %}{{protocol}}://{{urlhost}}{{urlpath}}{% endblock %}
+{% block htmlbody %}
+<div class="margintop" id="title">Contents of <a class="share" href="{{urlproto}}{{urladdr|iriencode}}{{urlpath}}">{{protocol}}://{{urlhost}}{{urlpath}}</a><br>
+total items: {{ items }}, total size: <span class="filesize">{{ size|filesizeformat }}</span></div>
+<div class="margintop">
+    <a class="share" href="../{{fastup|iriencode}}">go up</a>
+    <table class="files">
+        {% for f in files %}
+        <tr>
+            <td><span class="rownum">{{forloop.counter|add:offset}}.</span></td>
+            <td><span class="filetype">{% if f.dirid %} &lt;dir&gt; {% endif %}</span></td>
+            <td><span class="filetime">{{ f.created|date:"y-m-d G:i"}}</span></td> 
+            <td align="right"><span class="filesize">{{ f.size|filesizeformat }}</span></td> 
+            <td class="file">{% spaceless %}{% if f.dirid %}
+            <a class="share" href="{{f.name|urlencode}}/?p={{f.dirid}}&amp;s={{share_id}}"> {{f.name}} </a>{% else %}
+            <a class="share" href="{{urlproto}}{{urladdr|iriencode}}{{urlpath|urlencode}}/{{f.name|urlencode}}">{{f.name}}</a>{% endif %}</td>{% endspaceless %}
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<table><tr>
+    <td>
+        {% include "gobar.html" %}
+    </td>
+    <td>
+        {% include "orderbar.html" %}
+    </td>
+</tr></table>
+
+<div class="margintop" id="sharestatus">
+    <a class="share" href="{{urlproto}}{{urladdr}}">{{protocol}}://{{urlhost}}</a>
+    is <span class="state" id="{{state}}">{{state}}</span>
+    for {{changetime|timesince:now}}
+    since {{changetime|date:"D d M Y G:i"}}.
+    <br>
+    Last scanned {{scantime|timesince:now}} ago
+    on {{scantime|date:"D d M Y G:i"}}.
+</div>
+{% endblock %}
