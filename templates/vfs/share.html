@@ -10,7 +10,7 @@ total items: {{ items }}, total size: <span class="filesize">{{ size|filesizefor
         <tr>
             <td><span class="rownum">{{forloop.counter|add:offset}}.</span></td>
             <td><span class="filetype">{% if f.dirid %} &lt;dir&gt; {% endif %}</span></td>
-            <td><span class="filetime">{{ f.created|date:"y-m-d G:i"}}</span></td> 
+            <td><span class="filetime">{{ f.created|date:"d M Y G:i"}}</span></td> 
             <td align="right"><span class="filesize">{{ f.size|filesizeformat }}</span></td> 
             <td class="file">{% spaceless %}{% if f.dirid %}
             <a class="share" href="{{f.name|urlencode}}/?p={{f.dirid}}&amp;s={{share_id}}"> {{f.name}} </a>{% else %}
