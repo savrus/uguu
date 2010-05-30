@@ -28,8 +28,8 @@ def db_is_empty(db):
             """ % {'t': type_name}, required_names)
     return check('table', ['networks', 'scantypes', 'shares', 'paths', \
                            'files', 'trees']) and \
-           check('routine', ['share_state_change']) and \
-           check('trigger', ['share_stage_change_trigger']) and \
+           check('routine', ['share_update', 'share_insert']) and \
+           check('trigger', ['share_update_trigger', 'share_insert_trigger']) and \
            check('sequence', ['scantypes_scantype_id_seq', 'shares_id_seq', \
                               'trees_tree_id_seq', 'files_file_id_seq']) and \
            check_q("""
@@ -56,7 +56,7 @@ def drop(db):
         DROP TABLE IF EXISTS networks, scantypes, trees, shares,
             paths, files CASCADE;
         """)
-    safe_query(db, "DROP FUNCTION IF EXISTS share_state_change() CASCADE")
+    safe_query(db, "DROP FUNCTION IF EXISTS share_update(), share_insert() CASCADE")
     cursor.execute("""
         DROP TYPE IF EXISTS filetype, proto, availability CASCADE;
         DROP TEXT SEARCH CONFIGURATION IF EXISTS uguu CASCADE;
@@ -145,18 +145,37 @@ def ddl_prog(db):
     safe_query(db, "CREATE LANGUAGE 'plpgsql'")
     cursor = db.cursor()
     cursor.execute("""
-        CREATE OR REPLACE FUNCTION share_state_change()
+        CREATE OR REPLACE FUNCTION share_update()
             RETURNS trigger AS
             $$BEGIN
+                IF NEW.tree_id IS NULL THEN
+                    RAISE EXCEPTION 'tree_id cannot be NULL (share_id=%)', NEW.share_id;
+                END IF;
                 IF NEW.state != OLD.state THEN
                     NEW.last_state_change = 'now';
                 END IF;
                 RETURN NEW;
             END;$$
             LANGUAGE 'plpgsql' VOLATILE COST 100;
-        CREATE TRIGGER share_stage_change_trigger
+        CREATE TRIGGER share_update_trigger
             BEFORE UPDATE ON shares FOR EACH ROW
-            EXECUTE PROCEDURE share_state_change();
+            EXECUTE PROCEDURE share_update();
+        CREATE OR REPLACE FUNCTION share_insert()
+            RETURN trigger AS
+            $$BEGIN
+                INSERT INTO trees (share_id)
+                VALUES (NEW.share_id)
+                RETURNING tree_id
+                INTO STRICT NEW.tree_id;
+                UPDATE shares
+                SET tree_id=NEW.tree_id
+                WHERE share_id=NEW.share_id;
+                RETURN NEW;
+            END;$$
+            LANGUAGE 'plpgsql' VOLATILE COST 100;
+        CREATE TRIGGER share_insert_trigger
+            AFTER INSERT ON shares FOR EACH ROW
+            EXECUTE PROCEDURE share_insert();
 	""")
 
 

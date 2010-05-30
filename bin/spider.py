@@ -186,11 +186,22 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s
                     """,  {'t': tree, 'p': path, 'f': file, 'sz': size})
 
-def scan_share(db, share_id, proto, host, port, tree_id, oldhash, command):
+def scan_share(db, share_id, proto, host, port, tree_id, command):
+    db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
     cursor = db.cursor()
     hoststr = sharestr(proto, host, port)
+    try:
+        # asquire lock on the column from trees table
+        cursor.execute("SELECT hash FROM ONLY trees WHERE tree_id=%(t)s FOR UPDATE NOWAIT", {'t': tree_id})
+        oldhash = cursor.fetchone()['hash']
+    except:
+        # if other spider instance didn't complete scanning, do nothing
+        # side effect is backing-off the next scan
+        log("Scanning %s is running too long in another spider instance or database error.", (hoststr,))
+        db.rollback()
+        return
     savepath = share_save_path(proto, host, port)
-    patchmode = tree_id != None and os.path.isfile(savepath)
+    patchmode = oldhash != None and os.path.isfile(savepath)
     address = socket.gethostbyname(host)
     log("Scanning %s (%s) ...", (hoststr, address))
     start = datetime.datetime.now()
@@ -211,30 +222,23 @@ def scan_share(db, share_id, proto, host, port, tree_id, oldhash, command):
             data.stdout.close()
             data.wait()
             log("Scanning %s failed. Too many lines from scanner (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
+            db.rollback()
             return
         hash.update(line)
         save.write(line)
     if data.wait() != 0:
-        # assume next_scan is far away from now and we do not have to
-        # acquire lock on the shares table again
         cursor.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
             WHERE share_id = %(s)s;
             """, {'s':share_id, 'w': wait_until_next_scan_failed})
         log("Scanning %s failed with return code %s (elapsed time %s).", (hoststr, data.returncode, datetime.datetime.now() - start))
+        db.commit()
         return
     if patchmode and (line_count_patch > (line_count - line_count_patch) / patch_fallback):
         log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (hoststr, line_count_patch, line_count - line_count_patch))
         patchmode = False
-    db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
     scan_time = datetime.datetime.now() - start
     start = datetime.datetime.now()
-    if tree_id is None:
-        cursor.execute("""
-            INSERT INTO trees (share_id, hash) VALUES (%(s)s, %(h)s)
-            RETURNING tree_id
-            """, {'s': share_id, 'h': hash.hexdigest()})
-        tree_id = cursor.fetchone()['tree_id']
     qcache = PsycoCache(cursor)
     paths_buffer = dict()
     save.seek(0)
@@ -263,7 +267,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, oldhash, command):
         log("Failed to save contents of %s to file %s.", (hoststr, savepath))
     save.close()
     cursor.execute("""
-        UPDATE shares SET tree_id = %(t)s, last_scan = now() WHERE share_id = %(s)s;
+        UPDATE shares SET last_scan = now() WHERE share_id = %(s)s;
         UPDATE trees SET hash = %(h)s WHERE tree_id = %(t)s;
         """, {'s': share_id, 't': tree_id, 'h': hash.hexdigest()})
     if qcache.totalsize >= 0:
@@ -300,16 +304,15 @@ if __name__ == "__main__":
     while True:
         db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         shares.execute("""
-            SELECT share_id, tree_id, hash, shares.protocol, hostname, port, scan_command
+            SELECT share_id, tree_id, shares.protocol, hostname, port, scan_command
             FROM shares
             LEFT JOIN scantypes USING (scantype_id)
-            LEFT JOIN trees USING (share_id, tree_id)
             WHERE state = 'online' AND (next_scan IS NULL OR next_scan < now())
             ORDER BY next_scan LIMIT 1
             """)
         if shares.rowcount == 0:
             break
-        id, tree_id, hash, proto, host, port, command = shares.fetchone()
+        id, tree_id, proto, host, port, command = shares.fetchone()
         shares.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
             WHERE share_id = %(s)s AND (next_scan IS NULL OR next_scan < now())
@@ -317,7 +320,7 @@ if __name__ == "__main__":
         if shares.statusmessage != 'UPDATE 1':
             continue
         try:
-            scan_share(db, id, proto, host, port, tree_id, hash, command)
+            scan_share(db, id, proto, host, port, tree_id, command)
         except:
             log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
             traceback.print_exc()
