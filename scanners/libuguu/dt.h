@@ -32,17 +32,17 @@ typedef enum {
 #define DT_TYPE_ONCE    0x200
 
 struct dt_dentry {
-    dt_type type;
     char *name;
-    unsigned long long size;
+    char *hash;
     struct dt_dentry *parent;
     struct dt_dentry *sibling;
     struct dt_dentry *child;
     struct dt_dentry *file_child;
+    unsigned long long size;
     unsigned int id;
     unsigned int fid;
     unsigned int items;
-    char *hash;
+    dt_type type;
 };
 
 typedef enum {
