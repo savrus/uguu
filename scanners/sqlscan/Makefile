@@ -11,6 +11,7 @@ $(LIBUGUU):
 	$(MAKE) -C ../libuguu
 
 install: $(NAME)
+	rm -f ../../bin/$(NAME)
 	cp $(NAME) ../../bin/
 
 clean:
