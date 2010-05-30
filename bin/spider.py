@@ -308,7 +308,7 @@ if __name__ == "__main__":
             FROM shares
             LEFT JOIN scantypes USING (scantype_id)
             WHERE state = 'online' AND (next_scan IS NULL OR next_scan < now())
-            ORDER BY next_scan LIMIT 1
+            ORDER BY next_scan NULLS FIRST LIMIT 1
             """)
         if shares.rowcount == 0:
             break
