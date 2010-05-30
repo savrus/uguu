@@ -30,7 +30,7 @@ static void usage(wchar_t *binname, int err)
 	fprintf(stderr, "  -u ot\tdiff against an old tree\n");
 	fprintf(stderr, "  -a\tskip admin shares\n");
 	fprintf(stderr, "  -d\tskip shares with trailing dollar (hidden)\n");
-	fprintf(stderr, "  -P\tfirst line (ends with newline char) in stdin is utf8-encoded password");
+	fprintf(stderr, "  -P\tfirst line (ends with newline char) in stdin is utf8-encoded password\n");
 	fprintf(stderr, "  -h\tprint this help\n");
 	exit(err);
 }
