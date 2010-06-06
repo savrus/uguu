@@ -261,13 +261,15 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
             scan_line_patch(cursor, tree_id, "+ " + line.strip('\n'), qcache, paths_buffer)
     qcache.allcommit()
     try:
-        shutil.copyfile(savepath, savepath + ".old")
+        if os.path.isfile(savepath):
+            shutil.move(savepath, savepath + ".old")
         save.seek(0)
         file = open(savepath, 'wb')
         shutil.copyfileobj(save, file)
         file.close()
     except:
         log("Failed to save contents of %s to file %s.", (hoststr, savepath))
+        traceback.print_exc()
     save.close()
     cursor.execute("""
         UPDATE shares SET last_scan = now(), next_scan = now() + %(w)s WHERE share_id = %(s)s;
@@ -324,12 +326,6 @@ if __name__ == "__main__":
             continue
         try:
             scan_share(db, id, proto, host, port, tree_id, command)
-        except psycopg2.IntegrityError:
-            log("Scanning %s failed with an SQL integrity crash. Stop scanning this share for a year. Exception trace:", sharestr(proto, host, port))
-            traceback.print_exc()
-            db.rollback()
-            shares.execute("UPDATE shares SET next_scan = now() + '1 year' WHERE share_id = %(s)s", {'s':id})
-            db.commit()
         except:
             log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
             traceback.print_exc()
