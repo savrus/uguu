@@ -19,6 +19,7 @@ import sys
 import traceback
 import shutil
 import datetime
+import shutil
 import psycopg2.extensions
 from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr, share_save_path, share_save_str, quote_for_shell, shares_save_dir
 
@@ -260,6 +261,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
             scan_line_patch(cursor, tree_id, "+ " + line.strip('\n'), qcache, paths_buffer)
     qcache.allcommit()
     try:
+        shutil.copyfile(savepath, savepath + ".old")
         save.seek(0)
         file = open(savepath, 'wb')
         shutil.copyfileobj(save, file)
@@ -322,6 +324,12 @@ if __name__ == "__main__":
             continue
         try:
             scan_share(db, id, proto, host, port, tree_id, command)
+        except psycopg2.IntegrityError:
+            log("Scanning %s failed with an SQL integrity crash. Stop scanning this share for a year. Exception trace:", sharestr(proto, host, port))
+            traceback.print_exc()
+            db.rollback()
+            shares.execute("UPDATE shares SET next_scan = now() + '1 year' WHERE share_id = %(s)s", {'s':id})
+            db.commit()
         except:
             log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
             traceback.print_exc()
