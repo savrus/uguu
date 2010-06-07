@@ -333,6 +333,7 @@ if __name__ == "__main__":
         except psycopg2.IntegrityError:
             now = int(time.time())
             log("SQL Integrity violation while scanning %s. Rename old contents with suffix %s. Next scan to be in non-patching mode", (sharestr(proto, host, port), now))
+            traceback.print_exc()
             savepath = share_save_path(proto, host, port)
             if os.path.isfile(savepath):
                 shutil.move(savepath, savepath + "." + str(now))
