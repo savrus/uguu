@@ -329,17 +329,19 @@ if __name__ == "__main__":
             scan_share(db, id, proto, host, port, tree_id, command)
         except KeyboardInterrupt:
             log("Interrupted by user. Exiting")
+            db.rollback()
             sys.exit(0)
         except psycopg2.IntegrityError:
             now = int(time.time())
-            log("SQL Integrity violation while scanning %s. Rename old contents with suffix %s. Next scan to be in non-patching mode", (sharestr(proto, host, port), now))
-            traceback.print_exc()
             savepath = share_save_path(proto, host, port)
             if os.path.isfile(savepath):
                 shutil.move(savepath, savepath + "." + str(now))
             savepath += ".old"
             if os.path.isfile(savepath):
                 shutil.move(savepath, savepath + "." + str(now))
+            log("SQL Integrity violation while scanning %s. Rename old contents with suffix %s. Next scan to be in non-patching mode", (sharestr(proto, host, port), now))
+            traceback.print_exc()
+            db.rollback()
         except:
             log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
             traceback.print_exc()
