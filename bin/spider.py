@@ -19,6 +19,7 @@ import sys
 import traceback
 import shutil
 import datetime
+import time
 import shutil
 import psycopg2.extensions
 from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr, share_save_path, share_save_str, quote_for_shell, shares_save_dir
@@ -326,6 +327,18 @@ if __name__ == "__main__":
             continue
         try:
             scan_share(db, id, proto, host, port, tree_id, command)
+        except KeyboardInterrupt:
+            log("Interrupted by user. Exiting")
+            sys.exit(0)
+        except psycopg2.IntegrityError:
+            now = int(time.time())
+            log("SQL Integrity violation while scanning %s. Rename old contents with suffix %s. Next scan to be in non-patching mode", (sharestr(proto, host, port), now))
+            savepath = share_save_path(proto, host, port)
+            if os.path.isfile(savepath):
+                shutil.move(savepath, savepath + "." + str(now))
+            savepath += ".old"
+            if os.path.isfile(savepath):
+                shutil.move(savepath, savepath + "." + str(now))
         except:
             log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
             traceback.print_exc()
