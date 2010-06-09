@@ -720,9 +720,9 @@ static void dt_diff_add_tree(struct dt_wctx *pwc, struct dt_dentry *root)
     wc.d                      = root;
     wc.wk                     = pwc->wk;
     wc.curdir                 = pwc->curdir;
-    wc.on_enter_root          = dt_on_er_print;
+    wc.on_enter_root          = dt_wctx_plug;
+    wc.on_leave_root          = dt_wctx_plug;
     wc.on_enter               = dt_on_e_read_print;
-    wc.on_leave_root          = dt_on_lr_print;
     wc.on_leave               = dt_on_l_print;
     wc.go_child               = dt_go_c_walker;
     wc.go_sibling_or_parent   = dt_go_sop_walker;
@@ -733,10 +733,12 @@ static void dt_diff_add_tree(struct dt_wctx *pwc, struct dt_dentry *root)
 
     root->id = wc.id++;
 
+    dt_on_er_print(&wc);
     if (wc.wk->go(DT_GO_CHILD, root->name, wc.curdir) >= 0) {
         dt_walk(&wc);
         wc.wk->go(DT_GO_PARENT, NULL, wc.curdir);
     }
+    dt_on_lr_print(&wc);
 
     pwc->id = wc.id;
 }
