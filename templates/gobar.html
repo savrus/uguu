@@ -1,7 +1,7 @@
 {% if gobar.nontrivial %}
 <div class="margintop" id="gobar">
     <table class="gobar"><tr>
-        <td>Page {{gobar.first|add:1}} of {{gobar.last|add:1}}<td>
+        <td>Page {{gobar.self|add:1}} of {{gobar.last|add:1}}<td>
         <td><a class="gobar" href="{{fastself}}&amp;o={{gobar.first}}">first</a></td>
         {% if gobar.prev %}<td><a class="gobar" href="{{fastself}}&amp;o={{gobar.prev}}">prev</a></td>{% endif %}
         {% for g in gobar.before %}<td><a class="gobar" href="{{fastself}}&amp;o={{g}}">{{g|add:1}}</a></td>{% endfor %}
