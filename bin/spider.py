@@ -205,7 +205,12 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
         return
     savepath = share_save_path(proto, host, port)
     patchmode = oldhash != None and os.path.isfile(savepath)
-    address = socket.gethostbyname(host)
+    try:
+        address = socket.gethostbyname(host)
+    except:
+        log("Name resolution failed for %s.", (hoststr,))
+        db.rollback()
+        return
     log("Scanning %s (%s) ...", (hoststr, address))
     start = datetime.datetime.now()
     if patchmode:
