@@ -50,7 +50,11 @@ qopt_match = {
 class QueryParser:
     def size2byte(self, size):
         sizenotatios = {'b':1, 'k':2**10, 'm':2**20, 'g':2**30, 't':2**40,
-                        'kb':2**10, 'mb':2**20, 'gb':2**30, 'tb':2**40}
+                        'kb':2**10, 'mb':2**20, 'gb':2**30, 'tb':2**40,
+                        'byte':1, 'kbyte':2**10, 'mbyte':2**20,
+                        'gbyte':2**30, 'tbyte':2**40,
+                        'kilobyte':2**10, 'megabyte':2**20,
+                        'gigabyte':2**30, 'terabyte':2**40,}
         m =  re.match(r'(?u)(\d+(?:\.\d+)?)(\w+)', size, re.UNICODE)
         if m == None:
             self.error += "Bad size argument: '%s'.\n" % size
@@ -58,7 +62,10 @@ class QueryParser:
         m = m.groups()
         s = float(m[0])
         if m[1]:
-            s *= sizenotatios.get(string.lower(m[1]), 1)
+            if sizenotatios.get(string.lower(m[1])) == None:
+                self.error += "Bad size specifier: '%s'.\n" % m[1]
+                return 0
+            s *= sizenotatios[string.lower(m[1])]
         return int(s)
     def parse_option_match_full(self):
         pass
