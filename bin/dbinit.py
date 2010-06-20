@@ -28,7 +28,7 @@ def db_is_empty(db):
             """ % {'t': type_name}, required_names)
     return check('table', ['networks', 'scantypes', 'shares', 'paths', \
                            'files', 'trees']) and \
-           check('routine', ['share_update', 'share_insert']) and \
+           check('routine', ['share_update', 'share_insert', 'push_path_files']) and \
            check('trigger', ['share_update_trigger', 'share_insert_trigger']) and \
            check('sequence', ['scantypes_scantype_id_seq', 'shares_id_seq', \
                               'trees_tree_id_seq', 'files_file_id_seq']) and \
@@ -56,7 +56,10 @@ def drop(db):
         DROP TABLE IF EXISTS networks, scantypes, trees, shares,
             paths, files CASCADE;
         """)
-    safe_query(db, "DROP FUNCTION IF EXISTS share_update(), share_insert() CASCADE")
+    safe_query(db, """
+        DROP FUNCTION IF EXISTS share_update(), share_insert(),
+            push_path_files(integer, integer) CASCADE
+        """)
     cursor.execute("""
         DROP TYPE IF EXISTS filetype, proto, availability CASCADE;
         DROP TEXT SEARCH CONFIGURATION IF EXISTS uguu CASCADE;
@@ -176,7 +179,51 @@ def ddl_prog(db):
         CREATE TRIGGER share_insert_trigger
             AFTER INSERT ON shares FOR EACH ROW
             EXECUTE PROCEDURE share_insert();
-	""")
+        CREATE OR REPLACE FUNCTION push_path_files(tid integer, pid integer)
+            RETURNS void AS
+            $$DECLARE
+                newcurs NO SCROLL CURSOR FOR
+                    SELECT pathfile_id
+                    FROM newfiles
+                    WHERE treepath_id=pid
+                    ORDER BY pathfile_id;
+                newrec record;
+                oldrec record;
+                N integer := 0;
+            BEGIN
+                OPEN newcurs;
+                FETCH newcurs INTO newrec;
+                FOR oldrec IN
+                    SELECT file_id,pathfile_id
+                    FROM files
+                    WHERE tree_id=tid AND treepath_id=pid
+                    ORDER BY pathfile_id
+                LOOP
+                    WHILE newrec IS NOT NULL AND N = newrec.pathfile_id
+                    LOOP
+            	    FETCH newcurs INTO newrec;
+            	    N := N + 1;
+                    END LOOP;
+                    IF newrec IS NOT NULL AND N > newrec.pathfile_id
+                    THEN
+                        RAISE check_violation;
+                    END IF;
+                    IF NOT N = oldrec.pathfile_id
+                    THEN
+                        UPDATE files SET pathfile_id=N
+                        WHERE file_id=oldrec.file_id;
+                    END IF;
+                    N := N + 1;
+                END LOOP;
+                CLOSE newcurs;
+                INSERT INTO files
+                    SELECT * FROM newfiles
+                    WHERE treepath_id=pid;
+                DELETE FROM newfiles
+                WHERE treepath_id=pid;
+            END;$$
+            LANGUAGE 'plpgsql' VOLATILE COST 1000;
+	    """)
 
 
 def ddl_index(db):

@@ -56,7 +56,7 @@ def tsprepare(string):
                    '\\1\\2\\3\\4 \\1\\2 \\3\\4 \\2 \\4 ', relax, re.UNICODE)
     return relax
 
-fquery_append = "INSERT INTO files (tree_id, treepath_id, pathfile_id, treedir_id, size, name, type, tsname, tspath) VALUES "
+fquery_append = "INSERT INTO %sfiles (tree_id, treepath_id, pathfile_id, treedir_id, size, name, type, tsname, tspath) VALUES "
 fquery_values = "(%(i)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(n)s, %(t)s, to_tsvector('uguu', %(r)s), to_tsvector('uguu', %(rt)s))"
 
 class PsycoCache:
@@ -85,7 +85,7 @@ class PsycoCache:
             self.fcommit()
     def fcommit(self):
         if len(self.fquery) > 0:
-            self.query.append(fquery_append + string.join(self.fquery, ","))
+            self.query.append((fquery_append % '') + string.join(self.fquery, ","))
             self.fquery = []
         self.commit()
     def allcommit(self):
@@ -96,6 +96,8 @@ class PathInfo:
         self.tspath = ""
         self.delta = 0
         self.modify = False
+
+no_path = PathInfo()        
 
 def unicodize_line(line):
     try:
@@ -148,8 +150,8 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                 UPDATE paths SET parent_id = %(p)s, parentfile_id = %(f)s, items = %(i)s, size = %(sz)s
                 WHERE tree_id = %(t)s AND treepath_id = %(d)s
                 """, {'p':path, 'f':file, 'i':items, 'sz':size, 't':tree, 'd':dirid})
-            if act == '+':
-                paths_buffer.pop(dirid)
+            if paths_buffer.pop(dirid, no_path).modify:
+                qcache.append("SELECT push_path_files(%(t)s, %(d)s);", {'t': tree, 'd': dirid});
         if path == 0:
             # if share root then it's size is the share size
             qcache.totalsize = size
@@ -160,12 +162,7 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
             if act == '+':
                 qcache.stat_fadd += 1
                 if paths_buffer[path].modify:
-                    qcache.append("""
-                        UPDATE files SET pathfile_id = pathfile_id + 1
-                        WHERE tree_id = %(i)s AND treepath_id = %(p)s
-                            AND pathfile_id >= %(f)s
-                        """, {'i':tree, 'p':path, 'f':file})
-                    qcache.append(fquery_append + fquery_values,
+                    qcache.append((fquery_append % 'new') + fquery_values,
                         {'i':tree, 'p':path, 'f':file, 'did':dirid, 'sz':size,
                          'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path].tspath})
                     paths_buffer[path].delta += 1
@@ -177,17 +174,15 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                 qcache.append("""
                     DELETE FROM files
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s;
-                    UPDATE files SET pathfile_id = pathfile_id - 1
-                    WHERE tree_id = %(t)s AND treepath_id = %(p)s
-                        AND pathfile_id > %(f)s
-                    """, {'t': tree, 'p': path, 'f': file + paths_buffer[path].delta})
+                    """, {'t': tree, 'p': path, 'f': file})
                 paths_buffer[path].delta -= 1
             elif act == '*':
                 qcache.stat_fmodify += 1
                 qcache.append("""
                     UPDATE files SET size = %(sz)s
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s
-                    """,  {'t': tree, 'p': path, 'f': file, 'sz': size})
+                    """,  {'t': tree, 'p': path,
+                           'f': file - paths_buffer.get(path, no_path).delta, 'sz': size})
 
 def scan_share(db, share_id, proto, host, port, tree_id, command):
     db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
@@ -238,7 +233,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
         cursor.execute("""
             UPDATE shares SET next_scan = now() + %(w)s
             WHERE share_id = %(s)s;
-            """, {'s':share_id, 'w': wait_until_next_scan_failed})
+            """, {'s': share_id, 'w': wait_until_next_scan_failed})
         log("Scanning %s failed with return code %s (elapsed time %s).", (hoststr, data.returncode, datetime.datetime.now() - start))
         db.commit()
         return
@@ -255,6 +250,12 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
         patchmode = False
         log("Awaited MD5 digest from scanner doesn't match the one from the database. Fallback to non-patching mode.")
     if patchmode:
+        cursor.execute("""
+            CREATE TEMPORARY TABLE newfiles (
+                LIKE files INCLUDING DEFAULTS
+                ) ON COMMIT DROP;
+            CREATE INDEX newfiles_path ON newfiles(treepath_id);
+            """)
         for line in save:
             if line[0] not in ('+', '-', '*'):
                 break
