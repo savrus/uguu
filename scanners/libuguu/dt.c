@@ -660,7 +660,7 @@ static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_den
             if (odp->size != dp->size) {
                 dt_printdir_once(wc);
                 wc->prefix = "* ";
-                wc->call_file(wc, dp);
+                wc->call_file(wc, odp);
             }
             dp = dp->sibling;
             odp = odp->sibling;
