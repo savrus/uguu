@@ -660,6 +660,7 @@ static void dt_list_diff(struct dt_wctx *wc, struct dt_dentry **o, struct dt_den
             if (odp->size != dp->size) {
                 dt_printdir_once(wc);
                 wc->prefix = "* ";
+                odp->size = dp->size;
                 wc->call_file(wc, odp);
             }
             dp = dp->sibling;
@@ -812,6 +813,8 @@ static void dt_on_l_diff(struct dt_wctx *wc)
     dt_list_sum(wc->d, &wc->d->child);
     if((wc->d->size != wc->od->size) || (wc->d->items != wc->od->items)) {
         wc->prefix = "* ";
+        wc->od->size = wc->d->size;
+        wc->od->items = wc->d->items;
         wc->call_file(wc, wc->od);
     }
 }
