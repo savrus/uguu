@@ -257,7 +257,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
                 break
             scan_line_patch(cursor, tree_id, line.strip('\n'), qcache, paths_buffer)
         for (dirid, pinfo) in paths_buffer.iteritems():
-            if pinfo.modified:
+            if pinfo.modify:
                 qcache.append("SELECT push_path_files(%(t)s, %(d)s)", {'t': tree_id, 'd': dirid})
     else:
         cursor.execute("DELETE FROM paths WHERE tree_id = %(t)s", {'t':tree_id})
