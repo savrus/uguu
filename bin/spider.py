@@ -94,7 +94,6 @@ class PsycoCache:
 class PathInfo:
     def __init__(self):
         self.tspath = ""
-        self.delta = 0
         self.modify = False
 
 no_path = PathInfo()        
@@ -151,21 +150,20 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                 WHERE tree_id = %(t)s AND treepath_id = %(d)s
                 """, {'p':path, 'f':file, 'i':items, 'sz':size, 't':tree, 'd':dirid})
             if paths_buffer.pop(dirid, no_path).modify:
-                qcache.append("SELECT push_path_files(%(t)s, %(d)s);", {'t': tree, 'd': dirid});
+                qcache.append("SELECT push_path_files(%(t)s, %(d)s)", {'t': tree, 'd': dirid})
         if path == 0:
             # if share root then it's size is the share size
             qcache.totalsize = size
         else:
             # not share root
-            suf = suffix(name)
-            type = filetypes_reverse.get(suf) if dirid == 0 else 'dir'
             if act == '+':
+                suf = suffix(name)
+                type = filetypes_reverse.get(suf) if dirid == 0 else 'dir'
                 qcache.stat_fadd += 1
                 if paths_buffer[path].modify:
                     qcache.append((fquery_append % 'new') + fquery_values,
                         {'i':tree, 'p':path, 'f':file, 'did':dirid, 'sz':size,
                          'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path].tspath})
-                    paths_buffer[path].delta += 1
                 else:
                     qcache.fappend({'i':tree, 'p':path, 'f':file, 'did':dirid, 'sz':size,
                          'n':name, 't':type, 'r':tsprepare(name), 'rt':paths_buffer[path].tspath})
@@ -175,14 +173,12 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                     DELETE FROM files
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s;
                     """, {'t': tree, 'p': path, 'f': file})
-                paths_buffer[path].delta -= 1
             elif act == '*':
                 qcache.stat_fmodify += 1
                 qcache.append("""
                     UPDATE files SET size = %(sz)s
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s
-                    """,  {'t': tree, 'p': path,
-                           'f': file - paths_buffer.get(path, no_path).delta, 'sz': size})
+                    """,  {'t': tree, 'p': path, 'f': file, 'sz': size})
 
 def scan_share(db, share_id, proto, host, port, tree_id, command):
     db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
@@ -260,6 +256,9 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
             if line[0] not in ('+', '-', '*'):
                 break
             scan_line_patch(cursor, tree_id, line.strip('\n'), qcache, paths_buffer)
+        for (dirid, pinfo) in paths_buffer.iteritems():
+            if pinfo.modified:
+                qcache.append("SELECT push_path_files(%(t)s, %(d)s)", {'t': tree, 'd': path})
     else:
         cursor.execute("DELETE FROM paths WHERE tree_id = %(t)s", {'t':tree_id})
         for line in save:
