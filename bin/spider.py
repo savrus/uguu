@@ -248,7 +248,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
     if patchmode and (oldhash == None or save.readline() != "* " + oldhash + "\n"):
         save.seek(0)
         patchmode = False
-        log("Awaited MD5 digest from scanner doesn't match the one from the database. Fallback to non-patching mode.")
+        log("MD5 digest from scanner doesn't match the one from the database. Fallback to non-patching mode.")
     if patchmode:
         cursor.execute("""
             CREATE TEMPORARY TABLE newfiles (
