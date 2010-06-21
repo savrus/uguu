@@ -338,7 +338,8 @@ def grant_access(db, db_user, ReadOnly):
             ON SEQUENCE shares_share_id_seq, trees_tree_id_seq, files_file_id_seq
             TO %(u)s;
             GRANT EXECUTE
-            ON FUNCTION share_state_change()
+            ON FUNCTION share_insert(), share_update(),
+                push_path_files(integer, integer)
             TO %(u)s;
             """ % {'u': db_user})
 
