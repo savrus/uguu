@@ -12,17 +12,19 @@
 #include "sqlwk.h"
 #include "estat.h"
 #include "buf.h"
+#include "log.h"
 #include "getpass.h"
 
 #define MAX_PASSWORD_LENGTH 100
 
 static void usage(char *binname, int err)
 {
-    fprintf(stderr, "Usage: %s [-l] [-f] [-s protocol] [-p port] "
+    fprintf(stderr, "Usage: %s [-l] [-f||-u ot] [-s protocol] [-p port] "
         "[-dh db_host] [-dp db_port] [-du db_user] [-dd db_name] [-dP] "
         "host\n", binname);
     fprintf(stderr, "  -l\tlookup mode (detect if there is anything available)\n");
     fprintf(stderr, "  -f\tprint full paths (debug output)\n");
+	fprintf(stderr, "  -u ot\tdiff against an old tree\n");
     fprintf(stderr, "  -s\tspecify share protocol, default: \"smb\"\n");
     fprintf(stderr, "  -p\tspecify share port, default: 0\n");
     fprintf(stderr, "  -dh\tdatabase host\n");
@@ -50,6 +52,8 @@ int main(int argc, char **argv)
     struct buf_str *bs;
     int i;
     int ret;
+    char *oldtree = NULL;
+    FILE *oldfile;
     
     dbpass[0] = 0;
 
@@ -100,6 +104,12 @@ int main(int argc, char **argv)
                 if (i >= argc)
                     usage(argv[0], ESTAT_FAILURE);
                 break;
+            case 'u':
+                i++;
+                if (i >= argc)
+                    usage(argv[0], ESTAT_FAILURE);
+                oldtree = argv[i];
+                break;
             case 'h':
                 usage(argv[0], ESTAT_SUCCESS);
             default:
@@ -146,7 +156,14 @@ int main(int argc, char **argv)
 
     if (full)
         dt_full(&sqlwk_walker, &curdir);
-    else
+    else if (oldtree) {
+        if ((oldfile = fopen(oldtree, "rt")) == NULL) {
+            LOG_ERRNO("Can't open file %s\n", oldtree);
+            return ESTAT_FAILURE;
+        }
+        dt_diff(oldfile, &sqlwk_walker, &curdir);
+        fclose(oldfile);
+    } else
         dt_reverse(&sqlwk_walker, &curdir);
 
     sqlwk_close(&curdir);
