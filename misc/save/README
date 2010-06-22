@@ -10,8 +10,6 @@ Dumping
 First you need to install 'sqlscan' scanner to your 'bin' directory in
 the uguu tree. This could be done by typing 'make install' in the sqlscan
 directory.
-Second you need to create 'dump' directory in your 'bin' directory and put
-'dump.py' in the 'bin' directory.
 Then dump filelists for all shares from your database by typing
 'python dump.py'
 
@@ -38,3 +36,13 @@ restore,'bin/save' will be automatically filled. But if some saves are damaged
 you could delete all them, dump database, copy all files from 'bin/dump'directory
 to 'bin/save', copy 'updatehashes.py' to the bin directory and run
 'python updatehashes.py' to update hashes in database.
+
+
+Checking intergity
+
+Usually patching updates must result as non-patching ones accurately within
+directory ids and converted non-utf8 elements. But sometimes they could
+brake something (i.e. after using bad or mismatching versions of spider.py
+and low-level scanners). Dumping with patches could be used to find shares
+with broken trees. Make sure that 'dump' directory is empty or not present
+before dumping and add 'diff only' parameters to the dumping command.
