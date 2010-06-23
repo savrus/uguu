@@ -153,8 +153,6 @@ static bool safe_connect(SOCKET sock, struct sockaddr_in *sa, int _timeout)
 
 //class CFtpControl
 
-#define _throw_NE throw(CFtpControl::NetworkError)
-
 const char *CFtpControl::DefaultAnsiCP = NULL;
 
 CFtpControl::CFtpControl(): ServerIP(0), ServerPORT(FTP_PORT),
@@ -224,7 +222,7 @@ bool CFtpControl::tryconn(void)
   return false;
 }
 
-bool CFtpControl::Logon(void) _throw_NE
+bool CFtpControl::Logon(void)
 {
   int res;
   rawwritef("USER %s\r\n", login?login:"anonymous");
@@ -250,13 +248,13 @@ void CFtpControl::Quit(void)
   sock = INVALID_SOCKET;
 }
 
-void CFtpControl::Noop(void) _throw_NE
+void CFtpControl::Noop(void)
 {
   rawwrite("NOOP\r\n");
   skipresponse();
 }
 
-bool CFtpControl::ChDir(const char *dir) _throw_NE
+bool CFtpControl::ChDir(const char *dir)
 {
   LOG_ASSERT(dir, "Bad arguments\n");
   return rawwriteConvParam("CWD %s\r\n", dir) && skipresponse() == '2';
@@ -288,7 +286,7 @@ bool CFtpControl::SetConnCP(const char *cpId)
 #undef DROP_ICONV
 #undef INIT_ICONV
 
-void CFtpControl::TryUtf8() _throw_NE
+void CFtpControl::TryUtf8()
 {
   if( ICONV_ERROR != _from_utf8 || ICONV_ERROR != _to_utf8 )
     return;
@@ -314,7 +312,7 @@ void CFtpControl::TryUtf8() _throw_NE
   LOG_ASSERT(SetConnCP(DefaultAnsiCP), "CFtpControl::DefaultAnsiCP (%s) should be valid iconv codepage name (see iconv -l)\n", DefaultAnsiCP);
 }
 
-bool CFtpControl::FindFirstFile( const char *DirOrMask, FtpFindInfo &FindInfo, DTP_TYPE useDTP/* = NO_DTP*/ ) _throw_NE
+bool CFtpControl::FindFirstFile( const char *DirOrMask, FtpFindInfo &FindInfo, DTP_TYPE useDTP/* = NO_DTP*/ )
 {
   if( NO_DTP != useDTP ) {
 //     rawwrite("TYPE A\r\n");
@@ -392,7 +390,7 @@ void CFtpControl::FindClose( FtpFindInfo &FindInfo )
     free(FindInfo.ConvertBuff);
 }
 
-char CFtpControl::SendCmd(const char *cmd) _throw_NE
+char CFtpControl::SendCmd(const char *cmd)
 {
   char buf[VSPRINTF_BUFFER_SIZE];
   sprintf_s(buf, "%s\r\n", cmd);
@@ -400,7 +398,7 @@ char CFtpControl::SendCmd(const char *cmd) _throw_NE
   return skipresponse();
 }
 
-char CFtpControl::SendCmdf(const char *cmd, ...) _throw_NE
+char CFtpControl::SendCmdf(const char *cmd, ...)
 {
   char buf[VSPRINTF_BUFFER_SIZE], buff[VSPRINTF_BUFFER_SIZE];
   if( strlen(cmd) + 3 > VSPRINTF_BUFFER_SIZE )
@@ -414,7 +412,7 @@ char CFtpControl::SendCmdf(const char *cmd, ...) _throw_NE
   return skipresponse();
 }
 
-char CFtpControl::SendCmdResp( const char *cmd, CStrBuf &resp, int &r_len ) _throw_NE
+char CFtpControl::SendCmdResp( const char *cmd, CStrBuf &resp, int &r_len )
 {
   char buf[VSPRINTF_BUFFER_SIZE];
   if( strlen(cmd) + 3 > VSPRINTF_BUFFER_SIZE )
@@ -424,7 +422,7 @@ char CFtpControl::SendCmdResp( const char *cmd, CStrBuf &resp, int &r_len ) _thr
   return readresponse(resp, r_len);
 }
 
-bool CFtpControl::SendCmdConn(const char *cmd, bool Active) _throw_NE
+bool CFtpControl::SendCmdConn(const char *cmd, bool Active)
 {
   char buf[VSPRINTF_BUFFER_SIZE];
   if( strlen(cmd) + 3 > VSPRINTF_BUFFER_SIZE )
@@ -435,7 +433,7 @@ bool CFtpControl::SendCmdConn(const char *cmd, bool Active) _throw_NE
   return true;
 }
 
-bool CFtpControl::SendCmdConnf(const char *cmd, bool Active, ...) _throw_NE
+bool CFtpControl::SendCmdConnf(const char *cmd, bool Active, ...)
 {
   char buf[VSPRINTF_BUFFER_SIZE], buff[VSPRINTF_BUFFER_SIZE];
   if( strlen(cmd) + 3 > VSPRINTF_BUFFER_SIZE )
@@ -450,7 +448,7 @@ bool CFtpControl::SendCmdConnf(const char *cmd, bool Active, ...) _throw_NE
   return true;
 }
 
-void CFtpControl::AbortData(void) _throw_NE
+void CFtpControl::AbortData(void)
 {
   try {
     rawwrite("ABOR\r\n");
@@ -462,7 +460,7 @@ void CFtpControl::AbortData(void) _throw_NE
   CloseData(true);
 }
 
-void CFtpControl::SendData(const void *data, int dlen) _throw_NE
+void CFtpControl::SendData(const void *data, int dlen)
 {
   LOG_ASSERT(INVALID_SOCKET != dsock, "Invalid socket\n");
   int i, l = dlen;
@@ -479,7 +477,7 @@ void CFtpControl::SendData(const void *data, int dlen) _throw_NE
   while(1);
 }
 
-int CFtpControl::RecvData(void *buffer, int blen, bool waitAll/* = false*/) _throw_NE
+int CFtpControl::RecvData(void *buffer, int blen, bool waitAll/* = false*/)
 {
   if( INVALID_SOCKET == dsock )
     return 0;
@@ -530,7 +528,7 @@ const char *CFtpControl::GetLastResponse(void)
   return netbuff;
 }
 
-char CFtpControl::skipresponse(void) _throw_NE
+char CFtpControl::skipresponse(void)
 {
   int i, n = nb_nextcmd;
   char r_endf[4];
@@ -557,7 +555,7 @@ char CFtpControl::skipresponse(void) _throw_NE
   return r_endf[0];//return the high part of response code
 }
 
-char CFtpControl::readresponse( CStrBuf &resp, int &r_len ) _throw_NE
+char CFtpControl::readresponse( CStrBuf &resp, int &r_len )
 {
   int i, n = nb_nextcmd, m;
   char r_endf[4];
@@ -621,7 +619,7 @@ char CFtpControl::readresponse( CStrBuf &resp, int &r_len ) _throw_NE
   return r_endf[0];//return the high part of response code
 }
 
-void CFtpControl::readAllData(CStrBuf &data, int &d_len) _throw_NE
+void CFtpControl::readAllData(CStrBuf &data, int &d_len)
 {
   int len;
   d_len = 0;
@@ -633,7 +631,7 @@ void CFtpControl::readAllData(CStrBuf &data, int &d_len) _throw_NE
   d_len[data.buf()] = '\0';
 }
 
-void CFtpControl::sockwait(bool forread) _throw_NE
+void CFtpControl::sockwait(bool forread)
 {
   fd_set fds;
   timeval timeout;
@@ -652,7 +650,7 @@ void CFtpControl::sockwait(bool forread) _throw_NE
       forread ? "read" : "write");
 }
 
-void CFtpControl::dsockwait(bool forread) _throw_NE
+void CFtpControl::dsockwait(bool forread)
 {
   //should we also check control connection?
   fd_set fds;
@@ -672,7 +670,7 @@ void CFtpControl::dsockwait(bool forread) _throw_NE
       forread ? "read" : "write");
 }
 
-void CFtpControl::rawwrite(const char *str) _throw_NE
+void CFtpControl::rawwrite(const char *str)
 {
   LOG_ASSERT(INVALID_SOCKET != sock, "Invalid socket\n");
   int i, l = (int)strlen(str);
@@ -688,7 +686,7 @@ void CFtpControl::rawwrite(const char *str) _throw_NE
   while(1);
 }
 
-void CFtpControl::rawwritef(const char *str, ...) _throw_NE
+void CFtpControl::rawwritef(const char *str, ...)
 {
   char buf[VSPRINTF_BUFFER_SIZE];
   va_list args;
@@ -698,7 +696,7 @@ void CFtpControl::rawwritef(const char *str, ...) _throw_NE
   rawwrite(buf);
 }
 
-bool CFtpControl::rawwriteConvParam(const char *str, const char *param, DTP_TYPE initDTP/* = NO_DTP*/) _throw_NE
+bool CFtpControl::rawwriteConvParam(const char *str, const char *param, DTP_TYPE initDTP/* = NO_DTP*/)
 {
   char buf[VSPRINTF_BUFFER_SIZE+1];
   if( ICONV_ERROR != _from_utf8 ){
@@ -730,7 +728,7 @@ bool CFtpControl::rawwriteConvParam(const char *str, const char *param, DTP_TYPE
   return true;
 }
 
-int CFtpControl::rawread(int nb_start) _throw_NE
+int CFtpControl::rawread(int nb_start)
 {
   LOG_ASSERT(INVALID_SOCKET != sock, "Invalid socket\n");
   int i = __NB_SIZE - nb_start;
@@ -750,7 +748,7 @@ int CFtpControl::rawread(int nb_start) _throw_NE
   return (int)(p - netbuff);
 }
 
-bool CFtpControl::RawConnCmd(const char *str, bool Active) _throw_NE
+bool CFtpControl::RawConnCmd(const char *str, bool Active)
 {
   LOG_ASSERT(INVALID_SOCKET == dsock, "Previous connection not closed\n");
 
@@ -874,7 +872,7 @@ bool CFtpControl::RawConnCmd(const char *str, bool Active) _throw_NE
   return false;
 }
 
-bool CFtpControl::RawConnCmdf(const char *str, bool Active, ...) _throw_NE
+bool CFtpControl::RawConnCmdf(const char *str, bool Active, ...)
 {
   char buf[VSPRINTF_BUFFER_SIZE];
   va_list args;
