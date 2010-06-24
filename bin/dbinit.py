@@ -151,8 +151,8 @@ def ddl_prog(db):
         CREATE OR REPLACE FUNCTION share_update()
             RETURNS trigger AS
             $$BEGIN
-                IF NEW.tree_id IS NULL THEN
-                    RAISE EXCEPTION 'tree_id cannot be NULL (share_id=%)', NEW.share_id;
+                IF NEW.tree_id != OLD.tree_id AND OLD.tree_id IS NOT NULL THEN
+                    RAISE EXCEPTION 'tree_id cannot be changed (share_id=%)', NEW.share_id;
                 END IF;
                 IF NEW.state != OLD.state THEN
                     NEW.last_state_change = 'now';
