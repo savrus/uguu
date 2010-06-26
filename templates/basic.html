@@ -1,0 +1,50 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<HTML>
+   <HEAD>
+      <META http-equiv="Content-Type" content="text/html;charset=utf-8" />
+      <TITLE>{%block basictitle %}Uguu Search{% endblock %}</TITLE>
+      <LINK rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+      <STYLE type="text/css">
+          SPAN.filesize { font-size: small; white-space: nowrap; }
+          SPAN.filetime { font-size: small; white-space: nowrap; margin-right: 0.5em; }
+          SPAN.shareholder { font-weight: bold; }
+          SPAN.antipirate { color: red; }
+          SPAN.state#online { color: green; }
+          SPAN.state#offline { color: red; }
+          DIV.margintop { margin-top: 0.5em; }
+          DIV.margintop#sharestatus { margin-top: 1em; }
+          DIV.margintop#bottominfo { font-size: small; color: gray; }
+          DIV.margintop#netlist { margin-bottom: 1em; }
+          P.faqq { margin-bottom: 0; }
+          P.faqa { margin-top: 0; }
+          TD.file { padding-left: 1em; }
+          TD.netinfo { padding-left: 1em; }
+          TABLE.topinfo { font-size: small;
+                          border-spacing: 0;
+                          margin-bottom: 0; }
+          TABLE.topinfo TD { padding-right: 0.5em; vertical-align: top; }
+          TABLE.files TD { vertical-align: top; }
+          TABLE.gobar { border-spacing: 0;  }
+          TABLE.gobar TD { padding-left: 0.5em; }
+          A.solid:link { color: blue; text-decoration: none; }
+          A.solid:hover { color: blue; text-decoration: none; }
+          A.solid:visited { color: blue; text-decoration: none; }
+          A.solid:active { color: blue; text-decoration: none; }
+          A.share:link { text-decoration: none; }
+          A.share:hover { text-decoration: none; }
+          A.share:visited { text-decoration: none; }
+          A.share:active { text-decoration: none; }
+          A.gobar:link { color: blue; text-decoration: none; }
+          A.gobar:hover { color: blue; text-decoration: none; }
+          A.gobar:visited { color: blue; text-decoration: none; }
+          A.gobar:active { color: blue; text-decoration: none; }
+          BODY, HTML { height: 100%; margin-top: 0;
+                       margin-bottom:0; padding: 0; }
+      </STYLE>
+   </HEAD>
+   <BODY onload="document.f.q.focus();">
+       {% block basicbody %}
+       {% endblock %}
+   </BODY>
+</HTML>
