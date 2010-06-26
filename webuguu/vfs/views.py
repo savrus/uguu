@@ -110,6 +110,7 @@ def sharelist(request, column, name, is_this_host):
          'orderbar': orderbar,
          'info': listinfo,
          'gentime': time.time() - generation_started,
+         'offset': offset,
          })
 
 

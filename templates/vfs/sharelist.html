@@ -22,7 +22,7 @@ average size: <span class="filesize">{{info.avg|filesizeformat}}</span>
     {% block sharelist %}
     {% for s in shares %}
     <tr>
-        <td><span class="rownum">{{forloop.counter}}.</span></td>
+        <td><span class="rownum">{{forloop.counter|add:offset}}.</span></td>
         <td><span class="state" id="{{s.state}}">{{s.state}}</span></td>
         <td align="right"><span class="filesize">{{s.size|filesizeformat}}</span></td> 
         <td class="file"><a class="share" href = "{%url webuguu.vfs.views.share s.protocol, s.hostname, s.port %}?s={{s.share_id}}&amp;p=1"> {{s.protocol}}://{{s.hostname}}{% if s.port %}:{{s.port}}{% endif %}</a></td> 
