@@ -28,7 +28,8 @@ def db_is_empty(db):
             """ % {'t': type_name}, required_names)
     return check('table', ['networks', 'scantypes', 'shares', 'paths', \
                            'files', 'trees']) and \
-           check('routine', ['share_update', 'share_insert', 'push_path_files']) and \
+           check('routine', ['share_update', 'share_insert', 'push_path_files', \
+                             'path_goup']) and \
            check('trigger', ['share_update_trigger', 'share_insert_trigger']) and \
            check('sequence', ['scantypes_scantype_id_seq', 'shares_id_seq', \
                               'trees_tree_id_seq', 'files_file_id_seq']) and \
@@ -58,7 +59,8 @@ def drop(db):
         """)
     safe_query(db, """
         DROP FUNCTION IF EXISTS share_update(), share_insert(),
-            push_path_files(integer, integer) CASCADE
+            push_path_files(integer, integer),
+            path_goup(integer, integer, integer) CASCADE
         """)
     cursor.execute("""
         DROP TYPE IF EXISTS filetype, proto, availability CASCADE;
@@ -179,6 +181,33 @@ def ddl_prog(db):
         CREATE TRIGGER share_insert_trigger
             AFTER INSERT ON shares FOR EACH ROW
             EXECUTE PROCEDURE share_insert();
+        CREATE OR REPLACE FUNCTION path_goup(
+            tree integer, INOUT pathid integer,
+            levels integer, OUT pathoffset integer) AS
+            $$DECLARE
+                result RECORD;
+                lvl integer := levels - 1;
+            BEGIN
+                IF lvl < 0 THEN
+                    RAISE EXCEPTION 'invalid parameter';
+                END IF;
+                LOOP
+                    SELECT parent_id, parentfile_id
+                    FROM paths
+                    WHERE tree_id = tree AND treepath_id = pathid
+                    INTO STRICT result;
+                    pathid := result.parent_id;
+                    IF pathid = 0 THEN
+                        RAISE EXCEPTION 'too early root';
+                    END IF;
+                    IF lvl = 0 THEN
+                        pathoffset := result.parentfile_id;
+                        RETURN;
+                    END IF;
+                    lvl := lvl - 1;
+                END LOOP;
+            END;$$
+            LANGUAGE 'plpgsql' VOLATILE COST 500;
         CREATE OR REPLACE FUNCTION push_path_files(tid integer, pid integer)
             RETURNS void AS
             $$DECLARE
