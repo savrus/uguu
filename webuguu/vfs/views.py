@@ -7,20 +7,20 @@
 from django.http import HttpResponseRedirect
 from django.utils.http import urlencode
 from django.shortcuts import render_to_response
-from django.core.urlresolvers import reverse
-import string
+#from django.core.urlresolvers import reverse
+#import string
 import time
 import datetime
 from webuguu.common import connectdb, vfs_items_per_page, offset_prepare, protocol_prepare, known_protocols, hostname_prepare
 
 
 def index(request):
-    generation_started = time.time()
-    try:
-        db = connectdb()
-    except:
-        return render_to_response('vfs/error.html',
-            {'error':"Unable to connect to the database."})
+#    generation_started = time.time()
+#    try:
+#        db = connectdb()
+#    except:
+#        return render_to_response('vfs/error.html',
+#            {'error':"Unable to connect to the database."})
     return render_to_response('vfs/index.html')
 
 
