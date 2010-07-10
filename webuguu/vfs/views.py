@@ -138,10 +138,9 @@ def share(request, proto, hostname, port, path=""):
         path_id = int(request.GET.get('p', 0))
         page_offset = int(request.GET.get('o', 0))
         order = request.GET.get('order')
+        goup = int(request.GET.get('up', 0))
         url = dict()
         url['share'] = [('s', share_id)]
-        url['path'] = [('p', path_id)]
-        url['offset'] = [('o', page_offset)] if page_offset > 0 else []
         url['order'] = [('order', order)] if order != None else []
     except:
         return render_to_response('vfs/error.html',
@@ -177,6 +176,20 @@ def share(request, proto, hostname, port, path=""):
         return render_to_response('vfs/error.html',
             {'error':"Sorry, this share hasn't been scanned yet."})
     # detect path
+    if goup>0:
+        try:
+            cursor.execute("SELECT * FROM path_goup(%(t)s, %(p)s, %(l)s)",
+                           {'t': tree_id, 'p': path_id, 'l': goup})
+            path_id, page_offset = cursor.fetchone()
+            page_offset = page_offset / vfs_items_per_page
+            # update get to open the correct page  
+            request.GET = request.GET.copy()
+            request.GET.update({'o': page_offset})
+        except:
+            return render_to_response('vfs/error.html',
+                {'error':"Wrong parameters."})
+    url['path'] = [('p', path_id)]
+    url['offset'] = [('o', page_offset)] if page_offset > 0 else []
     if path_id != 0:
         redirect_url = "./?" + urlencode(dict(url['share'] + url['offset']))
         cursor.execute("""
