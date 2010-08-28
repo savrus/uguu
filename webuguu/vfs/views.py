@@ -44,6 +44,7 @@ def net(request):
                 avg(size) AS avg
                 FROM shares GROUP BY network
             ) AS nstat USING(network)
+            ORDER BY network
         """)
     return render_to_response('vfs/net.html', \
         {'networks': cursor.fetchall(),
