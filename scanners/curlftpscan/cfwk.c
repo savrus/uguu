@@ -4,6 +4,9 @@
  * Read the COPYING file in the root of the source tree.
  */
 
+/* strndup support */
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
