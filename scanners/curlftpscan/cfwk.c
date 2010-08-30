@@ -162,8 +162,8 @@ static size_t cfwk_curl_write(void *ptr, size_t size, size_t nmemb, void *userda
                           && c->ftpparse.name[1] == '.'))) {
                     if ((res = cfwk_res_alloc()) != NULL) {
                         res->name = cfwk_iconv(c, c->conv_from_server, c->ftpparse.name, c->ftpparse.namelen);
-                        res->type = c->ftpparse.flagtrycwd ? DT_DIR : DT_FILE;
-                        res->size = c->ftpparse.size;
+                        res->type = c->ftpparse.flagtrycwd && !c->ftpparse.flagtryretr ? DT_DIR : DT_FILE;
+                        res->size = !c->ftpparse.flagtrycwd ? c->ftpparse.size : 0;
                     }
                 }
             }
