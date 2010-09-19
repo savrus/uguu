@@ -13,7 +13,7 @@ total items: {{ items }}, total size: <span class="filesize">{{ size|filesizefor
             <td><span class="filetime">{{ f.created|date:"d M Y G:i"}}</span></td> 
             <td align="right"><span class="filesize">{{ f.size|filesizeformat }}</span></td> 
             <td class="file">{% spaceless %}{% if f.dirid %}
-            <a class="share" href="{{f.name|urlencode}}/?p={{f.dirid}}&amp;s={{share_id}}"> {{f.name}} </a>{% else %}
+            <a class="share" href="{{f.name|urlencode}}/?p={{f.dirid}}&amp;s={{share_id}}">{{f.name}}</a>{% else %}
             <a class="share" href="{{urlproto}}{{urladdr|iriencode}}{{urlpath|urlencode}}/{{f.name|urlencode}}">{{f.name}}</a>{% endif %}</td>{% endspaceless %}
         </tr>
         {% endfor %}
