@@ -23,6 +23,7 @@
  * 06-01-2010 Added iconv support
  * 25-02-2010 Added DTP support
  * 27-02-2010 Fixed skipping the second response
+ * 21-10-2010 Fixed one of the iconv result checks
  *
  *  Disclaimer for thouse who wants to criticize code:
  * This library was originally created when I had nearly no experiense in C++ and networking programming areas.
@@ -374,8 +375,21 @@ bool CFtpControl::FindNextFile( FtpFindInfo &FindInfo )
     iconv_cchar *src = FindInfo.Data.name;
     char *dst = FindInfo.ConvertBuff;
     size_t srclen = FindInfo.Data.namelen, dstlen = VSPRINTF_BUFFER_SIZE;
-    if( !iconv(_to_utf8, &src, &srclen, &dst, &dstlen) )
+    if( iconv(_to_utf8, &src, &srclen, &dst, &dstlen) == (size_t)(-1) ){
+      iconv(_to_utf8, NULL, NULL, NULL, NULL);
+      switch(errno){
+      case E2BIG:
+        LOG_ERR("String too long (%s)\n", FindInfo.Data.name);
+        break;
+      case EILSEQ:
+      case EINVAL:
+        LOG_ERR("Invalid or broken string (%s)\n", FindInfo.Data.name);
+        break;
+      default:
+        LOG_ASSERT(false, "Invalid errno value (%d)\n", errno);
+      }
       return FindNextFile(FindInfo);
+    }
     *dst = '\0';
     FindInfo.Data.name = FindInfo.ConvertBuff;
     //FindInfo.Data.namelen = strlen(FindInfo.ConvertBuff);
