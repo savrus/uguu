@@ -31,8 +31,8 @@ scanners_logging = True
 import time
 import sys
 def log(logstr, logparams = ()):
-   sys.stderr.write("[" + time.ctime() + "] " + (logstr % logparams) + "\n")
-   sys.stderr.flush()
+    sys.stderr.write("[" + time.ctime() + "] " + (logstr % logparams) + "\n")
+    sys.stderr.flush()
 
 def sharestr(proto, host, port=0):
     return "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
