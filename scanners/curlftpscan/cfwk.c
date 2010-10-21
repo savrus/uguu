@@ -132,13 +132,16 @@ static size_t cfwk_curl_write(void *ptr, size_t size, size_t nmemb, void *userda
     
     for (i = 0; i < size * nmemb; i++) {
         if (s[i] == '\n' || s[i] == 0) {
-            if (begin == i) {
-                begin++;
+            buf_appendn(c->tmpres, &s[begin], i - begin);
+            /* FIXME: handle on curl return.
+             * c->tmpres need to be reinitialized */
+            if (buf_error(c->tmpres))
+                return begin;
+
+            if (buf_strlen(c->tmpres) == 0) {
+                begin = i+1;
                 continue;
             }
-
-            if (buf_appendn(c->tmpres, &s[begin], i - begin) == 0)
-                return begin;
 
             if ((str = strdup(buf_string(c->tmpres))) == NULL) {
                 LOG_ERR("strdup() returned NULL\n");
@@ -159,8 +162,8 @@ static size_t cfwk_curl_write(void *ptr, size_t size, size_t nmemb, void *userda
                           && c->ftpparse.name[1] == '.'))) {
                     if ((res = cfwk_res_alloc()) != NULL) {
                         res->name = cfwk_iconv(c, c->conv_from_server, c->ftpparse.name, c->ftpparse.namelen);
-                        res->type = c->ftpparse.flagtrycwd ? DT_DIR : DT_FILE;
-                        res->size = c->ftpparse.size;
+                        res->type = c->ftpparse.flagtrycwd && !c->ftpparse.flagtryretr ? DT_DIR : DT_FILE;
+                        res->size = !c->ftpparse.flagtrycwd ? c->ftpparse.size : 0;
                     }
                 }
             }
@@ -355,7 +358,7 @@ static int cfwk_go(dt_go type, char *name, void *curdir)
             cfwk_url_suspend(c);
             break;
         case DT_GO_CHILD:
-            cname = cfwk_iconv(c, c->conv_from_server, name, strlen(name));
+            cname = cfwk_iconv(c, c->conv_to_server, name, strlen(name));
             if (cname == NULL)
                 return -1;
             if (cfwk_url_append(c, cname) == 0){

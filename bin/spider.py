@@ -34,7 +34,7 @@ def kill_process(process):
         if os.name == 'nt':
             subprocess.Popen("taskkill /F /T /PID %s >nul 2>nul"% process.pid, shell=True)
         else:
-            os.kill(process.pid, -9)
+            os.kill(process.pid, 9)
     else:
         process.kill()
 

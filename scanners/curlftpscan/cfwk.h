@@ -4,8 +4,8 @@
  * Read the COPYING file in the root of the source tree.
  */
 
-#ifndef WDWK_H
-#define WDWK_H
+#ifndef CFWK_H
+#define CFWK_H
 
 #include <curl/curl.h>
 #include <iconv.h>
@@ -18,7 +18,7 @@
 /* walker context. */
 struct cfwk_dir {
     CURL *curl;
-    char* port;
+    char *port;
     struct buf_str *url;
     struct stack *ancestors;
     struct stack *resources;
@@ -51,4 +51,4 @@ int cfwk_close(struct cfwk_dir *c);
 /* curl ftp walker for 'dir tree' engine */
 extern struct dt_walker cfwk_walker;
 
-#endif /* WDWK_H */
+#endif /* CFWK_H */
