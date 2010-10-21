@@ -214,7 +214,7 @@ def ddl_prog(db):
                 newcurs NO SCROLL CURSOR FOR
                     SELECT pathfile_id
                     FROM newfiles
-                    WHERE treepath_id=pid
+                    WHERE treepath_id = pid
                     ORDER BY pathfile_id;
                 newrec record;
                 oldrec record;
@@ -223,9 +223,9 @@ def ddl_prog(db):
                 OPEN newcurs;
                 FETCH newcurs INTO newrec;
                 FOR oldrec IN
-                    SELECT file_id,pathfile_id
+                    SELECT file_id, pathfile_id, treedir_id
                     FROM files
-                    WHERE tree_id=tid AND treepath_id=pid
+                    WHERE tree_id = tid AND treepath_id = pid
                     ORDER BY pathfile_id
                 LOOP
                     WHILE newrec IS NOT NULL AND N = newrec.pathfile_id
@@ -239,17 +239,22 @@ def ddl_prog(db):
                     END IF;
                     IF NOT N = oldrec.pathfile_id
                     THEN
-                        UPDATE files SET pathfile_id=N
-                        WHERE file_id=oldrec.file_id;
+                        UPDATE files SET pathfile_id = N
+                        WHERE file_id = oldrec.file_id;
+                        IF oldrec.treedir_id > 0
+                        THEN
+                            UPDATE paths SET parentfile_id = N
+                            WHERE tree_id = tid AND treepath_id = oldrec.treedir_id;
+                        END IF;
                     END IF;
                     N := N + 1;
                 END LOOP;
                 CLOSE newcurs;
                 INSERT INTO files
                     SELECT * FROM newfiles
-                    WHERE treepath_id=pid;
+                    WHERE treepath_id = pid;
                 DELETE FROM newfiles
-                WHERE treepath_id=pid;
+                WHERE treepath_id = pid;
             END;$$
             LANGUAGE 'plpgsql' VOLATILE COST 1000;
 	    """)
