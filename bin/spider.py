@@ -187,7 +187,7 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s
                     """,  {'t': tree, 'p': path, 'f': file, 'sz': size})
 
-class scan_share:
+class share_scanner:
     def __init__(self, db, share_id, tree_id, command):
         self.db = db
         self.share_id = share_id 
@@ -241,53 +241,57 @@ class scan_share:
         self.save = self.process.stdout
         self.err = self.process.stderr
     def check_finished(self):
-        if self.process.poll() is not None:
-            if self.scan_time is None:
-                self.scan_time = datetime.datetime.now() - self.start
-                if scanners_logging:
-                    log('Finished low-level scanner for %s, see log below', (self.hoststr,))
-                    shutil.copyfileobj(self.err, sys.stderr)
-                self.err.close()
-                if self.process.returncode != 0:
-                    try:
-                        self.cursor.execute("""
-                            UPDATE shares SET next_scan = now() + %(w)s
-                            WHERE share_id = %(s)s;
-                            """, {'s': self.share_id, 'w': wait_until_next_scan_failed})
-                        self.db.commit()
-                        log("Scanning %s failed with return code %s (elapsed time %s).", (self.hoststr, self.process.returncode, self.scan_time))
-                        raise UserWarning
-                    finally:
-                        self.unlock()
-                line_count = 0
-                line_count_patch = 0
-                hash = hashlib.md5()
-                self.save.seek(0)
-                for line in self.save:
-                    line_count += 1
-                    if line_count > max_lines_from_scanner:
-                        try:
-                            self.process.stdou.close()
-                            log("Scanning %s failed. Too many lines from scanner (elapsed time %s).", (self.hoststr, self.scan_time))
-                            self.db.rollback()
-                            raise UserWarning
-                        finally:
-                            self.unlock()                            
-                    if line[0] in ('+', '-', '*'):
-                        line_count_patch += 1
-                    hash.update(line)
-                self.save.seek(0)
-                self.scan_time = datetime.datetime.now() - self.start
-                if self.patchmode and (line_count_patch > (line_count - line_count_patch) / patch_fallback):
-                    log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (self.hoststr, line_count_patch, line_count - line_count_patch))
-                    self.patchmode = False
-                scanhash = self.save.readline()
-                if self.patchmode and (scanhash != "* " + self.oldhash + "\n"):
-                    self.save.seek(0)
-                    self.patchmode = False
-                    log("MD5 digest from scanner (%s) doesn't match the one from the database (%s) for %s. Fallback to non-patching mode.", (string.strip(scanhash[1:]), self.oldhash, self.hoststr))
-                self.oldhash = hash.hexdigest()
+        if self.scan_time is not None:
             return True
+        if self.process.poll() is None:
+            return False
+        self.scan_time = datetime.datetime.now() - self.start
+        if scanners_logging:
+            log('Finished low-level scanner for %s, see log below', (self.hoststr,))
+            shutil.copyfileobj(self.err, sys.stderr)
+        self.err.close()
+        if self.process.returncode != 0:
+            try:
+                self.cursor.execute("""
+                    UPDATE shares SET next_scan = now() + %(w)s
+                    WHERE share_id = %(s)s;
+                    """, {'s': self.share_id, 'w': wait_until_next_scan_failed})
+                self.db.commit()
+                log("Scanning %s failed with return code %s (elapsed time %s).", (self.hoststr, self.process.returncode, self.scan_time))
+                raise UserWarning
+            finally:
+                self.unlock()
+        del self.process
+        line_count = 0
+        line_count_patch = 0
+        hash = hashlib.md5()
+        self.save.seek(0)
+        for line in self.save:
+            line_count += 1
+            if line_count > max_lines_from_scanner:
+                try:
+                    self.process.stdou.close()
+                    log("Scanning %s failed. Too many lines from scanner (elapsed time %s).", (self.hoststr, self.scan_time))
+                    self.db.rollback()
+                    raise UserWarning
+                finally:
+                    self.unlock()                            
+            if line[0] in ('+', '-', '*'):
+                line_count_patch += 1
+            hash.update(line)
+        self.save.seek(0)
+        self.scan_time = datetime.datetime.now() - self.start
+        if self.patchmode and (line_count_patch > (line_count - line_count_patch) / patch_fallback):
+            log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (self.hoststr, line_count_patch, line_count - line_count_patch))
+            self.patchmode = False
+        if self.patchmode:
+            scanhash = self.save.readline()
+            if scanhash != "* " + self.oldhash + "\n":
+                self.save.seek(0)
+                self.patchmode = False
+                log("MD5 digest from scanner (%s) doesn't match the one from the database (%s) for %s. Fallback to non-patching mode.", (string.strip(scanhash[1:]), self.oldhash, self.hoststr))
+        self.oldhash = hash.hexdigest()
+        return True
     def update_db(self):
         try:
             self.start = datetime.datetime.now()
@@ -419,12 +423,12 @@ if __name__ == "__main__":
                     """, {'s':id, 'w': wait_until_next_scan})
                 if locker.statusmessage != 'UPDATE 1':
                     continue
-                share = scan_share(db_scan, id, tree_id, command)
+                scanner = share_scanner(db_scan, id, tree_id, command)
                 try:
-                    share.run(proto, host, port)
-                    scanners.append(share)
+                    scanner.run(proto, host, port)
+                    scanners.append(scanner)
                 except BaseException, e:
-                    share.handle_exception(e)
+                    scanner.handle_exception(e)
         if len(scanners) == 0:
             break
         updating_share = None
