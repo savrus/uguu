@@ -28,7 +28,7 @@ max_scanners = 2
 select_multiplier = 1.0
 
 # interval between low-level scanner subprocesses polling (in seconds)  
-wait_scanners_sleep = 10
+wait_scanners_sleep = 5
 
 # if patch is longer than whole contents / patch_fallback, then fallback
 # to non-patching mode
@@ -66,10 +66,10 @@ fquery_append = "INSERT INTO %sfiles (tree_id, treepath_id, pathfile_id, treedir
 fquery_values = "(%(i)s, %(p)s, %(f)s, %(did)s, %(sz)s, %(n)s, %(t)s, to_tsvector('uguu', %(r)s), to_tsvector('uguu', %(rt)s))"
 
 class PsycoCache:
-    def __init__(self, self.cursor):
+    def __init__(self, cursor):
         self.query = []
         self.fquery = []
-        self.self.cursor = self.cursor
+        self.cursor = cursor
         self.totalsize = -1
         self.stat_padd = 0
         self.stat_pdelete = 0
@@ -78,15 +78,15 @@ class PsycoCache:
         self.stat_fdelete = 0
         self.stat_fmodify = 0
     def append(self, q, vars):
-        self.query.append(self.self.cursor.mogrify(q, vars))
+        self.query.append(self.cursor.mogrify(q, vars))
         if len(self.query) > 1024:
             self.commit()
     def commit(self):
         if len(self.query) > 0:
-            self.self.cursor.execute(string.join(self.query,";"))
+            self.cursor.execute(string.join(self.query,";"))
             self.query = []
     def fappend(self, vars):
-        self.fquery.append(self.self.cursor.mogrify(fquery_values, vars))
+        self.fquery.append(self.cursor.mogrify(fquery_values, vars))
         if len(self.fquery) > 1024:
             self.fcommit()
     def fcommit(self):
@@ -112,7 +112,7 @@ def unicodize_line(line):
         line = string.join([(lambda x: x if x in string.printable else "\\%#x" % ord(c))(c) for c in line], "")        
     return line
 
-def scan_line_patch(self.cursor, tree, line, qcache, paths_buffer):
+def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
     line = unicodize_line(line)
     if line[2] == "0":
         # 'path' type of line 
@@ -198,6 +198,8 @@ class scan_share:
         self.savepath = None
         self.patchmode = None
         self.process = None
+        self.save = None
+        self.err = None
         self.start = None
         self.scan_time = None
     def unlock(self):
@@ -236,14 +238,16 @@ class scan_share:
             self.process = run_scanner(command, address, proto, port, "-u " + quote_for_shell(self.savepath))
         else:
             self.process = run_scanner(command, address, proto, port)
+        self.save = self.process.stdout
+        self.err = self.process.stderr
     def check_finished(self):
         if self.process.poll() is not None:
             if self.scan_time is None:
                 self.scan_time = datetime.datetime.now() - self.start
                 if scanners_logging:
                     log('Finished low-level scanner for %s, see log below', (self.hoststr,))
-                    shutil.copyfileobj(self.process.stderr, sys.stderr)
-                self.process.stderr.close()
+                    shutil.copyfileobj(self.err, sys.stderr)
+                self.err.close()
                 if self.process.returncode != 0:
                     try:
                         self.cursor.execute("""
@@ -258,8 +262,8 @@ class scan_share:
                 line_count = 0
                 line_count_patch = 0
                 hash = hashlib.md5()
-                self.process.stdout.seek(0)
-                for line in self.process.stdout:
+                self.save.seek(0)
+                for line in self.save:
                     line_count += 1
                     if line_count > max_lines_from_scanner:
                         try:
@@ -272,14 +276,14 @@ class scan_share:
                     if line[0] in ('+', '-', '*'):
                         line_count_patch += 1
                     hash.update(line)
-                self.process.stdout.seek(0)
+                self.save.seek(0)
                 self.scan_time = datetime.datetime.now() - self.start
                 if self.patchmode and (line_count_patch > (line_count - line_count_patch) / patch_fallback):
                     log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (self.hoststr, line_count_patch, line_count - line_count_patch))
                     self.patchmode = False
-                scanhash = self.process.stdout.readline()
+                scanhash = self.save.readline()
                 if self.patchmode and (scanhash != "* " + self.oldhash + "\n"):
-                    self.process.stdout.seek(0)
+                    self.save.seek(0)
                     self.patchmode = False
                     log("MD5 digest from scanner (%s) doesn't match the one from the database (%s) for %s. Fallback to non-patching mode.", (string.strip(scanhash[1:]), self.oldhash, self.hoststr))
                 self.oldhash = hash.hexdigest()
@@ -296,7 +300,7 @@ class scan_share:
                         ) ON COMMIT DROP;
                     CREATE INDEX newfiles_path ON newfiles(treepath_id);
                     """)
-                for line in self.process.stdout:
+                for line in self.save:
                     if line[0] not in ('+', '-', '*'):
                         break
                     scan_line_patch(self.cursor, self.tree_id, line.strip('\n'), qcache, paths_buffer)
@@ -305,7 +309,7 @@ class scan_share:
                         qcache.append("SELECT push_path_files(%(t)s, %(d)s)", {'t': self.tree_id, 'd': dirid})
             else:
                 self.cursor.execute("DELETE FROM paths WHERE tree_id = %(t)s", {'t': self.tree_id})
-                for line in self.process.stdout:
+                for line in self.save:
                     if line[0] in ('+', '-', '*'):
                         continue
                     scan_line_patch(self.cursor, self.tree_id, "+ " + line.strip('\n'), qcache, paths_buffer)
@@ -313,14 +317,14 @@ class scan_share:
             try:
                 if os.path.isfile(self.savepath):
                     shutil.move(self.savepath, self.savepath + ".old")
-                self.process.stdout.seek(0)
+                self.save.seek(0)
                 file = open(self.savepath, 'wb')
-                shutil.copyfileobj(self.process.stdout, file)
+                shutil.copyfileobj(self.save, file)
                 file.close()
             except:
                 log("Failed to save contents of %s to file %s.", (self.hoststr, self.savepath))
                 traceback.print_exc()
-            self.process.stdout.close()
+            self.save.close()
             self.cursor.execute("""
                 UPDATE shares SET last_scan = now(), next_scan = now() + %(w)s WHERE share_id = %(s)s;
                 UPDATE trees SET hash = %(h)s WHERE tree_id = %(t)s;

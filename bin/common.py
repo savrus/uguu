@@ -77,7 +77,7 @@ def run_scanner(cmd, ip, proto, port, ext = "", output = tempfile.TemporaryFile)
     else:
         cmdline = "%s -p%s %s %s" % (cmd, port, ext, ip)
     _stderr = None
-    if inspect.isclass(output):
+    if inspect.isfunction(output):
         _stderr = output()
         output = output(mode = 'w+t')
     if not scanners_logging:
@@ -86,6 +86,7 @@ def run_scanner(cmd, ip, proto, port, ext = "", output = tempfile.TemporaryFile)
                                stdout=output, stderr=_stderr,
                                universal_newlines=True)
     process.stdin.close()
+    process.stdout, process.stderr = output, _stderr
     return process
 
 
