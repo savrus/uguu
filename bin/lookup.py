@@ -52,7 +52,7 @@ class Share(object):
             log("Cann't discover scantype for %s:%s", (self.host, self.ProtoOrPort()))
         else:
             result = run_scanner(scantypes[self.proto][self.scantype],
-                                 self.nscache(self.host), self.proto, self.port, "-l").wait()
+                                 self.nscache(self.host), self.proto, self.port, "-l", None).wait()
             if result == 0:
                 return self.scantype
             elif result == 2:
