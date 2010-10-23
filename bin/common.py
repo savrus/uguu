@@ -30,8 +30,11 @@ scanners_logging = True
 #scripts logging routine
 import time
 import sys
-def log(logstr, logparams = ()):
-    sys.stderr.write("[" + time.ctime() + "] " + (logstr % logparams) + "\n")
+def log(logstr, logparams = (), thrid = None):
+    if thrid is None:
+        sys.stderr.write("[" + time.ctime() + "] " + (logstr % logparams) + "\n")
+    else:
+        sys.stderr.write("[" + time.ctime() + ("] [%03x] " % thrid) + (logstr % logparams) + "\n")
     sys.stderr.flush()
 
 def sharestr(proto, host, port=0):

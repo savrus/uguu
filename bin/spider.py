@@ -219,7 +219,7 @@ class share_scanner:
         except:
             # if other spider instance didn't complete scanning, do nothing
             # side effect is backing-off the next scan
-            log("Scanning %s is running too long in another spider instance or database error.", (self.hoststr,))
+            log("Scanning %s is running too long in another spider instance or database error.", (self.hoststr,), self.share_id)
             self.db.rollback()
             raise UserWarning
         self.patchmode = self.oldhash != None and os.path.isfile(self.savepath)
@@ -227,12 +227,12 @@ class share_scanner:
             address = socket.gethostbyname(host)
         except:
             try:
-                log("Name resolution failed for %s.", (self.hoststr,))
+                log("Name resolution failed for %s.", (self.hoststr,), self.share_id)
                 self.db.rollback()
             finally:
                 self.unlock()
                 raise UserWarning
-        log("Starting scanner for %s (%s) ...", (self.hoststr, address))
+        log("Starting scanner for %s (%s) ...", (self.hoststr, address), self.share_id)
         self.start = datetime.datetime.now()
         if self.patchmode:
             self.process = run_scanner(command, address, proto, port, "-u " + quote_for_shell(self.savepath))
@@ -247,7 +247,7 @@ class share_scanner:
             return False
         self.scan_time = datetime.datetime.now() - self.start
         if scanners_logging:
-            log('Finished low-level scanner for %s, see log below', (self.hoststr,))
+            log('Finished low-level scanner for %s, see log below', (self.hoststr,), self.share_id)
             shutil.copyfileobj(self.err, sys.stderr)
         self.err.close()
         if self.process.returncode != 0:
@@ -257,7 +257,7 @@ class share_scanner:
                     WHERE share_id = %(s)s;
                     """, {'s': self.share_id, 'w': wait_until_next_scan_failed})
                 self.db.commit()
-                log("Scanning %s failed with return code %s (elapsed time %s).", (self.hoststr, self.process.returncode, self.scan_time))
+                log("Scanning %s failed with return code %s (elapsed time %s).", (self.hoststr, self.process.returncode, self.scan_time), self.share_id)
                 raise UserWarning
             finally:
                 self.unlock()
@@ -271,7 +271,7 @@ class share_scanner:
             if line_count > max_lines_from_scanner:
                 try:
                     self.process.stdou.close()
-                    log("Scanning %s failed. Too many lines from scanner (elapsed time %s).", (self.hoststr, self.scan_time))
+                    log("Scanning %s failed. Too many lines from scanner (elapsed time %s).", (self.hoststr, self.scan_time), self.share_id)
                     self.db.rollback()
                     raise UserWarning
                 finally:
@@ -282,14 +282,14 @@ class share_scanner:
         self.save.seek(0)
         self.scan_time = datetime.datetime.now() - self.start
         if self.patchmode and (line_count_patch > (line_count - line_count_patch) / patch_fallback):
-            log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (self.hoststr, line_count_patch, line_count - line_count_patch))
+            log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (self.hoststr, line_count_patch, line_count - line_count_patch), self.share_id)
             self.patchmode = False
         if self.patchmode:
             scanhash = self.save.readline()
             if scanhash != "* " + self.oldhash + "\n":
                 self.save.seek(0)
                 self.patchmode = False
-                log("MD5 digest from scanner (%s) doesn't match the one from the database (%s) for %s. Fallback to non-patching mode.", (string.strip(scanhash[1:]), self.oldhash, self.hoststr))
+                log("MD5 digest from scanner (%s) doesn't match the one from the database (%s) for %s. Fallback to non-patching mode.", (string.strip(scanhash[1:]), self.oldhash, self.hoststr), self.share_id)
         self.oldhash = hash.hexdigest()
         return True
     def update_db(self):
@@ -326,7 +326,7 @@ class share_scanner:
                 shutil.copyfileobj(self.save, file)
                 file.close()
             except:
-                log("Failed to save contents of %s to file %s.", (self.hoststr, self.savepath))
+                log("Failed to save contents of %s to file %s.", (self.hoststr, self.savepath), self.share_id)
                 traceback.print_exc()
             self.save.close()
             self.cursor.execute("""
@@ -343,10 +343,10 @@ class share_scanner:
                 added = qcache.stat_padd + qcache.stat_fadd
                 modified = qcache.stat_fmodify
                 log("Scanning %s succeded. Database updated in patching mode: delete %s, add %s, modify %s (scan time %s, update time %s).",
-                    (self.hoststr, str(deleted), str(added), str(modified), self.scan_time, datetime.datetime.now() - self.start))
+                    (self.hoststr, str(deleted), str(added), str(modified), self.scan_time, datetime.datetime.now() - self.start), self.share_id)
             else:
                 log("Scanning %s succeded. Database updated in non-patching mode (scan time %s, update time %s).",
-                    (self.hoststr, self.scan_time, datetime.datetime.now() - self.start))
+                    (self.hoststr, self.scan_time, datetime.datetime.now() - self.start), self.share_id)
         finally:
             self.unlock()
     def handle_exception(self, exc):
@@ -357,7 +357,7 @@ class share_scanner:
         elif isinstance(exc, psycopg2.IntegrityError):
             try:
                 now = int(time.time())
-                log("SQL Integrity violation while scanning %s. Rename old contents with suffix %s. Next scan to be in non-patching mode", (self.hoststr, now))
+                log("SQL Integrity violation while scanning %s. Rename old contents with suffix %s. Next scan to be in non-patching mode", (self.hoststr, now), self.share_id)
                 traceback.print_exc()
                 self.db.rollback()
             finally:
@@ -371,7 +371,7 @@ class share_scanner:
             pass
         elif isinstance(exc, Exception):
             try:
-                log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", (self.hoststr,))
+                log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", (self.hoststr,), self.share_id)
                 traceback.print_exc()
                 self.db.rollback()
             finally:
