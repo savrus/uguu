@@ -6,12 +6,7 @@
 # Read the COPYING file in the root of the source tree.
 #
 
-import psycopg2
 import sys
-import socket
-import subprocess
-import string
-import re
 import datetime
 import psycopg2.extensions
 from network import dns_cache, scan_all_hosts
