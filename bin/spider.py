@@ -7,12 +7,9 @@
 # Read the COPYING file in the root of the source tree.
 #
 
-import psycopg2
-import sys
 import string
 import re
 import socket
-import tempfile
 import hashlib
 import os
 import sys
