@@ -60,9 +60,16 @@ def quote_for_shell(str):
 #locale for scanners output
 scanners_locale = "utf-8"
 #path where scanners are, with trailing slash
-import subprocess
 scanners_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-def run_scanner(cmd, ip, proto, port, ext = ""):
+
+import subprocess
+import tempfile
+import inspect
+if os.name == 'nt':
+    null_file = 'nul'
+else:
+    null_file = '/dev/null'
+def run_scanner(cmd, ip, proto, port, ext = "", output = tempfile.TemporaryFile):
     """ executes scanner, returns subprocess.Popen object """
     cmd = os.path.join(scanners_path, cmd)
     if port == 0:
@@ -70,10 +77,13 @@ def run_scanner(cmd, ip, proto, port, ext = ""):
     else:
         cmdline = "%s -p%s %s %s" % (cmd, port, ext, ip)
     _stderr = None
+    if inspect.isclass(output):
+        _stderr = output()
+        output = output(mode = 'w+t')
     if not scanners_logging:
-        _stderr = subprocess.PIPE
+        cmdline += " 2> " + null_file    
     process = subprocess.Popen(cmdline, shell=True, stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE, stderr=_stderr,
+                               stdout=output, stderr=_stderr,
                                universal_newlines=True)
     process.stdin.close()
     return process
