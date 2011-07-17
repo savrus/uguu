@@ -133,6 +133,6 @@ wait_until_delete_empty_share = "1 month"
 
 # maximum number of lines to get from scanner
 # required by spider.py
-max_lines_from_scanner = 1000000
+max_lines_from_scanner = 4000000
 
 
