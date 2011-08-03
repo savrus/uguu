@@ -6,7 +6,9 @@
 # Read the COPYING file in the root of the source tree.
 #
 
+import psycopg2
 import sys
+import socket
 import string
 import re
 import os
@@ -50,7 +52,7 @@ class Share(object):
             log("Cann't discover scantype for %s:%s", (self.host, self.ProtoOrPort()))
         else:
             result = run_scanner(scantypes[self.proto][self.scantype],
-                                 self.nscache(self.host), self.proto, self.port, "-l", None).wait()
+                                 self.nscache(self.host), self.proto, self.port, "-l").wait()
             if result == 0:
                 return self.scantype
             elif result == 2:

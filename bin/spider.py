@@ -7,28 +7,22 @@
 # Read the COPYING file in the root of the source tree.
 #
 
+import psycopg2
+import sys
 import string
 import re
 import socket
+import tempfile
 import hashlib
 import os
 import sys
 import traceback
+import shutil
 import datetime
 import time
 import shutil
-import subprocess
 import psycopg2.extensions
-from common import connectdb, log, scanners_locale, run_scanner, scanners_logging, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr, share_save_path, quote_for_shell, shares_save_dir
-
-# max low-level scanner subprocesses count
-# to start the required number of scanners (N), spider will query N*select_multiplier shares,
-# so set select_multiplier between 1 and max spider process count to minimize excessive queries and non-required selected data  
-max_scanners = 2
-select_multiplier = 1.0
-
-# interval between low-level scanner subprocesses polling (in seconds)  
-wait_scanners_sleep = 5
+from common import connectdb, log, scanners_locale, run_scanner, filetypes, wait_until_next_scan, wait_until_next_scan_failed, max_lines_from_scanner, sharestr, share_save_path, share_save_str, quote_for_shell, shares_save_dir
 
 # if patch is longer than whole contents / patch_fallback, then fallback
 # to non-patching mode
@@ -121,7 +115,6 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
         except:
             act, l, id = string.split(s=line, sep=' ', maxsplit=3)
             path = ""
-        del l
         id = int(id)
         if act == '+':
             qcache.stat_padd += 1
@@ -187,264 +180,175 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s
                     """,  {'t': tree, 'p': path, 'f': file, 'sz': size})
 
-class share_scanner:
-    def __init__(self, db, share_id, tree_id, command):
-        self.db = db
-        self.share_id = share_id 
-        self.tree_id = tree_id
-        self.cursor = self.db.cursor()
-        self.oldhash = None
-        self.hoststr = None
-        self.savepath = None
-        self.patchmode = None
-        self.process = None
-        self.save = None
-        self.err = None
-        self.start = None
-        self.scan_time = None
-    def unlock(self):
-        # release advisory lock
-        # Attention: be careful, don't skip this!!!
-        self.cursor.execute("SELECT pg_advisory_unlock(%s)", (self.tree_id,)) 
-    def run(self, proto, host, port):
-        self.hoststr = sharestr(proto, host, port)
-        self.savepath = share_save_path(proto, host, port)
-        try:
-            # asquire advisory lock for tree_id, column locking couldn't be used because another share's update will release locking
-            self.cursor.execute("SELECT pg_try_advisory_lock(tree_id) as locked, hash FROM ONLY trees WHERE tree_id=%(t)s", {'t': tree_id})
-            row = self.cursor.fetchone()
-            if not row['locked']:
-                raise UserWarning
-            self.oldhash = row['hash']
-        except:
-            # if other spider instance didn't complete scanning, do nothing
-            # side effect is backing-off the next scan
-            log("Scanning %s is running too long in another spider instance or database error.", (self.hoststr,), self.share_id)
-            self.db.rollback()
-            raise UserWarning
-        self.patchmode = self.oldhash != None and os.path.isfile(self.savepath)
-        try:
-            address = socket.gethostbyname(host)
-        except:
-            try:
-                log("Name resolution failed for %s.", (self.hoststr,), self.share_id)
-                self.db.rollback()
-            finally:
-                self.unlock()
-                raise UserWarning
-        log("Starting scanner for %s (%s) ...", (self.hoststr, address), self.share_id)
-        self.start = datetime.datetime.now()
-        if self.patchmode:
-            self.process = run_scanner(command, address, proto, port, "-u " + quote_for_shell(self.savepath))
-        else:
-            self.process = run_scanner(command, address, proto, port)
-        self.save = self.process.stdout
-        self.err = self.process.stderr
-    def check_finished(self):
-        if self.scan_time is not None:
-            return True
-        if self.process.poll() is None:
-            return False
-        self.scan_time = datetime.datetime.now() - self.start
-        if scanners_logging:
-            log('Finished low-level scanner for %s, see log below', (self.hoststr,), self.share_id)
-            shutil.copyfileobj(self.err, sys.stderr)
-        self.err.close()
-        if self.process.returncode != 0:
-            try:
-                self.cursor.execute("""
-                    UPDATE shares SET next_scan = now() + %(w)s
-                    WHERE share_id = %(s)s;
-                    """, {'s': self.share_id, 'w': wait_until_next_scan_failed})
-                self.db.commit()
-                log("Scanning %s failed with return code %s (elapsed time %s).", (self.hoststr, self.process.returncode, self.scan_time), self.share_id)
-                raise UserWarning
-            finally:
-                self.unlock()
-        del self.process
-        line_count = 0
-        line_count_patch = 0
-        hash = hashlib.md5()
-        self.save.seek(0)
-        for line in self.save:
-            line_count += 1
-            if line_count > max_lines_from_scanner:
-                try:
-                    self.process.stdou.close()
-                    log("Scanning %s failed. Too many lines from scanner (elapsed time %s).", (self.hoststr, self.scan_time), self.share_id)
-                    self.db.rollback()
-                    raise UserWarning
-                finally:
-                    self.unlock()                            
+def scan_share(db, share_id, proto, host, port, tree_id, command):
+    db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
+    cursor = db.cursor()
+    hoststr = sharestr(proto, host, port)
+    try:
+        # asquire lock on the column from trees table
+        cursor.execute("SELECT hash FROM ONLY trees WHERE tree_id=%(t)s FOR UPDATE NOWAIT", {'t': tree_id})
+        oldhash = cursor.fetchone()['hash']
+    except:
+        # if other spider instance didn't complete scanning, do nothing
+        # side effect is backing-off the next scan
+        log("Scanning %s is running too long in another spider instance or database error.", (hoststr,))
+        db.rollback()
+        return
+    savepath = share_save_path(proto, host, port)
+    patchmode = oldhash != None and os.path.isfile(savepath)
+    try:
+        address = socket.gethostbyname(host)
+    except:
+        log("Name resolution failed for %s.", (hoststr,))
+        db.rollback()
+        return
+    log("Scanning %s (%s) ...", (hoststr, address))
+    start = datetime.datetime.now()
+    if patchmode:
+        data = run_scanner(command, address, proto, port, "-u " + quote_for_shell(savepath))
+    else:
+        data = run_scanner(command, address, proto, port)
+    save = tempfile.TemporaryFile(bufsize=-1)
+    line_count = 0
+    line_count_patch = 0
+    hash = hashlib.md5()
+    for line in data.stdout:
+        line_count += 1
+        if line[0] in ('+', '-', '*'):
+            line_count_patch += 1
+        if line_count > max_lines_from_scanner:
+            kill_process(data)
+            data.stdout.close()
+            data.wait()
+            log("Scanning %s failed. Too many lines from scanner (elapsed time %s).", (hoststr, datetime.datetime.now() - start))
+            db.rollback()
+            return
+        hash.update(line)
+        save.write(line)
+    if data.wait() != 0:
+        cursor.execute("""
+            UPDATE shares SET next_scan = now() + %(w)s
+            WHERE share_id = %(s)s;
+            """, {'s': share_id, 'w': wait_until_next_scan_failed})
+        log("Scanning %s failed with return code %s (elapsed time %s).", (hoststr, data.returncode, datetime.datetime.now() - start))
+        db.commit()
+        return
+    if patchmode and (line_count_patch > (line_count - line_count_patch) / patch_fallback):
+        log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (hoststr, line_count_patch, line_count - line_count_patch))
+        patchmode = False
+    scan_time = datetime.datetime.now() - start
+    start = datetime.datetime.now()
+    qcache = PsycoCache(cursor)
+    paths_buffer = dict()
+    save.seek(0)
+    if patchmode and (oldhash == None or save.readline() != "* " + oldhash + "\n"):
+        save.seek(0)
+        patchmode = False
+        log("MD5 digest from scanner doesn't match the one from the database. Fallback to non-patching mode.")
+    if patchmode:
+        cursor.execute("""
+            CREATE TEMPORARY TABLE newfiles (
+                LIKE files INCLUDING DEFAULTS
+                ) ON COMMIT DROP;
+            CREATE INDEX newfiles_path ON newfiles(treepath_id);
+            """)
+        for line in save:
+            if line[0] not in ('+', '-', '*'):
+                break
+            scan_line_patch(cursor, tree_id, line.strip('\n'), qcache, paths_buffer)
+        for (dirid, pinfo) in paths_buffer.iteritems():
+            if pinfo.modify:
+                qcache.append("SELECT push_path_files(%(t)s, %(d)s)", {'t': tree_id, 'd': dirid})
+    else:
+        cursor.execute("DELETE FROM paths WHERE tree_id = %(t)s", {'t':tree_id})
+        for line in save:
             if line[0] in ('+', '-', '*'):
-                line_count_patch += 1
-            hash.update(line)
-        self.save.seek(0)
-        self.scan_time = datetime.datetime.now() - self.start
-        if self.patchmode and (line_count_patch > (line_count - line_count_patch) / patch_fallback):
-            log("Patch is too long for %s (patch %s, non-patch %s). Fallback to non-patching mode", (self.hoststr, line_count_patch, line_count - line_count_patch), self.share_id)
-            self.patchmode = False
-        if self.patchmode:
-            scanhash = self.save.readline()
-            if scanhash != "* " + self.oldhash + "\n":
-                self.save.seek(0)
-                self.patchmode = False
-                log("MD5 digest from scanner (%s) doesn't match the one from the database (%s) for %s. Fallback to non-patching mode.", (string.strip(scanhash[1:]), self.oldhash, self.hoststr), self.share_id)
-        self.oldhash = hash.hexdigest()
-        return True
-    def update_db(self):
-        try:
-            self.start = datetime.datetime.now()
-            qcache = PsycoCache(self.cursor)
-            paths_buffer = dict()
-            if self.patchmode:
-                self.cursor.execute("""
-                    CREATE TEMPORARY TABLE newfiles (
-                        LIKE files INCLUDING DEFAULTS
-                        ) ON COMMIT DROP;
-                    CREATE INDEX newfiles_path ON newfiles(treepath_id);
-                    """)
-                for line in self.save:
-                    if line[0] not in ('+', '-', '*'):
-                        break
-                    scan_line_patch(self.cursor, self.tree_id, line.strip('\n'), qcache, paths_buffer)
-                for (dirid, pinfo) in paths_buffer.iteritems():
-                    if pinfo.modify:
-                        qcache.append("SELECT push_path_files(%(t)s, %(d)s)", {'t': self.tree_id, 'd': dirid})
-            else:
-                self.cursor.execute("DELETE FROM paths WHERE tree_id = %(t)s", {'t': self.tree_id})
-                for line in self.save:
-                    if line[0] in ('+', '-', '*'):
-                        continue
-                    scan_line_patch(self.cursor, self.tree_id, "+ " + line.strip('\n'), qcache, paths_buffer)
-            qcache.allcommit()
-            try:
-                if os.path.isfile(self.savepath):
-                    shutil.move(self.savepath, self.savepath + ".old")
-                self.save.seek(0)
-                file = open(self.savepath, 'wb')
-                shutil.copyfileobj(self.save, file)
-                file.close()
-            except:
-                log("Failed to save contents of %s to file %s.", (self.hoststr, self.savepath), self.share_id)
-                traceback.print_exc()
-            self.save.close()
-            self.cursor.execute("""
-                UPDATE shares SET last_scan = now(), next_scan = now() + %(w)s WHERE share_id = %(s)s;
-                UPDATE trees SET hash = %(h)s WHERE tree_id = %(t)s;
-                """, {'s': self.share_id, 't': self.tree_id, 'h': self.oldhash, 'w': wait_until_next_scan})
-            if qcache.totalsize >= 0:
-                self.cursor.execute("""
-                    UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s;
-                    """, {'s': self.share_id, 'sz': qcache.totalsize})
-            self.db.commit()
-            if self.patchmode:
-                deleted = qcache.stat_pdelete + qcache.stat_fdelete
-                added = qcache.stat_padd + qcache.stat_fadd
-                modified = qcache.stat_fmodify
-                log("Scanning %s succeded. Database updated in patching mode: delete %s, add %s, modify %s (scan time %s, update time %s).",
-                    (self.hoststr, str(deleted), str(added), str(modified), self.scan_time, datetime.datetime.now() - self.start), self.share_id)
-            else:
-                log("Scanning %s succeded. Database updated in non-patching mode (scan time %s, update time %s).",
-                    (self.hoststr, self.scan_time, datetime.datetime.now() - self.start), self.share_id)
-        finally:
-            self.unlock()
-    def handle_exception(self, exc):
-        if isinstance(exc, KeyboardInterrupt):
-            log("Interrupted by user. Exiting")
-            self.db.rollback()
-            sys.exit(0)
-        elif isinstance(exc, psycopg2.IntegrityError):
-            try:
-                now = int(time.time())
-                log("SQL Integrity violation while scanning %s. Rename old contents with suffix %s. Next scan to be in non-patching mode", (self.hoststr, now), self.share_id)
-                traceback.print_exc()
-                self.db.rollback()
-            finally:
-                self.unlock()
-            if os.path.isfile(self.savepath):
-                shutil.move(self.savepath, self.savepath + "." + str(now))
-            self.savepath += ".old"
-            if os.path.isfile(self.savepath):
-                shutil.move(self.savepath, self.savepath + "." + str(now))
-        elif isinstance(exc, UserWarning):
-            pass
-        elif isinstance(exc, Exception):
-            try:
-                log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", (self.hoststr,), self.share_id)
-                traceback.print_exc()
-                self.db.rollback()
-            finally:
-                self.unlock()
-        else:
-            raise
+                continue
+            scan_line_patch(cursor, tree_id, "+ " + line.strip('\n'), qcache, paths_buffer)
+    qcache.allcommit()
+    try:
+        if os.path.isfile(savepath):
+            shutil.move(savepath, savepath + ".old")
+        save.seek(0)
+        file = open(savepath, 'wb')
+        shutil.copyfileobj(save, file)
+        file.close()
+    except:
+        log("Failed to save contents of %s to file %s.", (hoststr, savepath))
+        traceback.print_exc()
+    save.close()
+    cursor.execute("""
+        UPDATE shares SET last_scan = now(), next_scan = now() + %(w)s WHERE share_id = %(s)s;
+        UPDATE trees SET hash = %(h)s WHERE tree_id = %(t)s;
+        """, {'s': share_id, 't': tree_id, 'h': hash.hexdigest(), 'w': wait_until_next_scan})
+    if qcache.totalsize >= 0:
+        cursor.execute("""
+            UPDATE shares SET size = %(sz)s WHERE share_id = %(s)s;
+            """, {'s':share_id, 'sz': qcache.totalsize})
+    db.commit()
+    if patchmode:
+        deleted = qcache.stat_pdelete + qcache.stat_fdelete
+        added = qcache.stat_padd + qcache.stat_fadd
+        modified = qcache.stat_fmodify
+        log("Scanning %s succeded. Database updated in patching mode: delete %s, add %s, modify %s (scan time %s, update time %s).",
+            (hoststr, str(deleted), str(added), str(modified), scan_time, datetime.datetime.now() - start))
+    else:
+        log("Scanning %s succeded. Database updated in non-patching mode (scan time %s, update time %s).",
+            (hoststr, scan_time, datetime.datetime.now() - start))
 
 def create_save_dir():
-    if os.path.isdir(shares_save_dir):
+     if os.path.isdir(shares_save_dir):
         return
-    if os.path.isfile(shares_save_dir):
-        raise NameError, "%s should be a directory, not a file\n" % shares_save_dir
-    log("%s directory doesn't exist, creating" % shares_save_dir)
-    os.mkdir(shares_save_dir)
-    
-
+     if os.path.isfile(shares_save_dir):
+        raise NameError("%s should be a directory, not a file\n" % (shares_save_dir,))
+     log("%s directory doesn't exist, creating" % (shares_save_dir,))
+     os.mkdir(shares_save_dir)
 
 if __name__ == "__main__":
     try:
-        db_scan = connectdb()
-        db_select = connectdb()
+        db = connectdb()
     except:
         print "Unable to connect to the database, exiting."
         sys.exit()
     create_save_dir()
-    db_scan.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
-    db_select.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-    shares = db_select.cursor()
-    locker = db_select.cursor()
-    scanners = list()
+    shares = db.cursor()
     while True:
-        while len(scanners) < max_scanners:
-            shares.execute("""
-                SELECT share_id, tree_id, shares.protocol, hostname, port, scan_command
-                FROM shares
-                LEFT JOIN scantypes USING (scantype_id)
-                WHERE state = 'online' AND (next_scan IS NULL OR next_scan < now()) %s
-                ORDER BY next_scan NULLS FIRST LIMIT %%(limit)s
-                """ % ('AND share_id not in %(queued)s' if len(scanners) > 0 else ''), {
-                    'limit': int(select_multiplier * (max_scanners - len(scanners))),
-                    'queued': tuple(s.share_id for s in scanners)
-                    })
-            if shares.rowcount == 0:
-                break
-            for id, tree_id, proto, host, port, command in shares:
-                locker.execute("""
-                    UPDATE shares SET next_scan = now() + %(w)s
-                    WHERE share_id = %(s)s AND (next_scan IS NULL OR next_scan < now())
-                    """, {'s':id, 'w': wait_until_next_scan})
-                if locker.statusmessage != 'UPDATE 1':
-                    continue
-                scanner = share_scanner(db_scan, id, tree_id, command)
-                try:
-                    scanner.run(proto, host, port)
-                    scanners.append(scanner)
-                except BaseException, e:
-                    scanner.handle_exception(e)
-        if len(scanners) == 0:
+        db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+        shares.execute("""
+            SELECT share_id, tree_id, shares.protocol, hostname, port, scan_command
+            FROM shares
+            LEFT JOIN scantypes USING (scantype_id)
+            WHERE state = 'online' AND (next_scan IS NULL OR next_scan < now())
+            ORDER BY next_scan NULLS FIRST LIMIT 1
+            """)
+        if shares.rowcount == 0:
             break
-        updating_share = None
-        for scanner in tuple(scanners):
-            try:
-                if scanner.check_finished() and updating_share is None:
-                    updating_share = scanner
-            except BaseException, e:
-                scanner.handle_exception(e)
-                scanners.remove(scanner)
-        if updating_share is not None:
-            try:
-                updating_share.update_db()
-            except BaseException, e:
-                updating_share.handle_exception(e)
-            scanners.remove(updating_share)
-        elif len(scanners) == max_scanners:
-            time.sleep(wait_scanners_sleep)
+        id, tree_id, proto, host, port, command = shares.fetchone()
+        shares.execute("""
+            UPDATE shares SET next_scan = now() + %(w)s
+            WHERE share_id = %(s)s AND (next_scan IS NULL OR next_scan < now())
+            """, {'s':id, 'w': wait_until_next_scan})
+        if shares.statusmessage != 'UPDATE 1':
+            continue
+        try:
+            scan_share(db, id, proto, host, port, tree_id, command)
+        except KeyboardInterrupt:
+            log("Interrupted by user. Exiting")
+            db.rollback()
+            sys.exit(0)
+        except psycopg2.IntegrityError:
+            now = int(time.time())
+            log("SQL Integrity violation while scanning %s. Rename old contents with suffix %s. Next scan to be in non-patching mode", (sharestr(proto, host, port), now))
+            traceback.print_exc()
+            db.rollback()
+            savepath = share_save_path(proto, host, port)
+            if os.path.isfile(savepath):
+                shutil.move(savepath, savepath + "." + str(now))
+            savepath += ".old"
+            if os.path.isfile(savepath):
+                shutil.move(savepath, savepath + "." + str(now))
+        except:
+            log("Scanning %s failed with a crash. Something unexpected happened. Exception trace:", sharestr(proto, host, port))
+            traceback.print_exc()
+            db.rollback()
 
