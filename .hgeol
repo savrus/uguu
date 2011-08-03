@@ -1,0 +1,15 @@
+[patterns]
+**.py = native
+**.vcproj = CRLF
+**.sln = CRLF
+**.txt = native
+Makefile = LF
+**.ico = BIN
+**.patch = native
+**.cpp = native
+**.c = native
+**.h = native
+**.lib = BIN
+
+[repository]
+native = LF
