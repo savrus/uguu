@@ -6,6 +6,7 @@
 # Read the COPYING file in the root of the source tree.
 #
 
+import psycopg2
 import sys
 import common
 import getpass

@@ -30,11 +30,8 @@ scanners_logging = True
 #scripts logging routine
 import time
 import sys
-def log(logstr, logparams = (), thrid = None):
-    if thrid is None:
-        sys.stderr.write("[" + time.ctime() + "] " + (logstr % logparams) + "\n")
-    else:
-        sys.stderr.write("[" + time.ctime() + ("] [%03x] " % thrid) + (logstr % logparams) + "\n")
+def log(logstr, logparams = ()):
+    sys.stderr.write("[" + time.ctime() + "] " + (logstr % logparams) + "\n")
     sys.stderr.flush()
 
 def sharestr(proto, host, port=0):
@@ -63,16 +60,9 @@ def quote_for_shell(str):
 #locale for scanners output
 scanners_locale = "utf-8"
 #path where scanners are, with trailing slash
-scanners_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-
 import subprocess
-import tempfile
-import inspect
-if os.name == 'nt':
-    null_file = 'nul'
-else:
-    null_file = '/dev/null'
-def run_scanner(cmd, ip, proto, port, ext = "", output = tempfile.TemporaryFile):
+scanners_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+def run_scanner(cmd, ip, proto, port, ext = ""):
     """ executes scanner, returns subprocess.Popen object """
     cmd = os.path.join(scanners_path, cmd)
     if port == 0:
@@ -80,16 +70,12 @@ def run_scanner(cmd, ip, proto, port, ext = "", output = tempfile.TemporaryFile)
     else:
         cmdline = "%s -p%s %s %s" % (cmd, port, ext, ip)
     _stderr = None
-    if inspect.isfunction(output):
-        _stderr = output()
-        output = output(mode = 'w+t')
     if not scanners_logging:
-        cmdline += " 2> " + null_file    
+        _stderr = subprocess.PIPE
     process = subprocess.Popen(cmdline, shell=True, stdin=subprocess.PIPE,
-                               stdout=output, stderr=_stderr,
+                               stdout=subprocess.PIPE, stderr=_stderr,
                                universal_newlines=True)
     process.stdin.close()
-    process.stdout, process.stderr = output, _stderr
     return process
 
 
@@ -147,6 +133,6 @@ wait_until_delete_empty_share = "1 month"
 
 # maximum number of lines to get from scanner
 # required by spider.py
-max_lines_from_scanner = 1000000
+max_lines_from_scanner = 4000000
 
 
