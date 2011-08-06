@@ -30,17 +30,17 @@ known_filetypes = ('dir', 'video', 'audio', 'archive', 'cdimage', 'exe', 'lib',
 # types selectable by user search. 'type:' value corresponds to filetypes
 # table in bin/common.py with single exception for 'type:dir'
 usertypes = (
-    {'value':'',                        'text':'All'},
-    {'value':'type:video min:300Mb',    'text':'Films'},
-    {'value':'type:video max:400Mb',    'text':'Clips'},
-    {'value':'type:audio',              'text':'Audio'},
-    {'value':'type:archive',            'text':'Archives'},
-    {'value':'type:cdimage',            'text':'CD/DVD Images'},
-    {'value':'type:exe,script',         'text':'Executables'},
-    {'value':'type:exe,lib',            'text':'Binary'},
-    {'value':'type:image',              'text':'Images'},
-    {'value':'type:document',           'text':'Documents'},
-    {'value':'type:dir',                'text':'Directories'}
+    {'value':'', 'text':'All'},
+    {'value':'type:video min:300Mb', 'text':'Films'},
+    {'value':'type:video max:400Mb', 'text':'Clips'},
+    {'value':'type:audio', 'text':'Audio'},
+    {'value':'type:archive', 'text':'Archives'},
+    {'value':'type:cdimage', 'text':'CD/DVD Images'},
+    {'value':'type:exe,script', 'text':'Executables'},
+    {'value':'type:exe,lib', 'text':'Binary'},
+    {'value':'type:image', 'text':'Images'},
+    {'value':'type:document', 'text':'Documents'},
+    {'value':'type:dir', 'text':'Directories'}
 )
 
 
@@ -94,7 +94,7 @@ def generate_go_bar(items, offset):
 
 def offset_prepare(request, items, items_per_page):
     page_offset = int(request.GET.get('o', 0))
-    page_offset = max(0, min((items - 1)/ items_per_page, page_offset))
+    page_offset = max(0, min((items - 1) / items_per_page, page_offset))
     offset = page_offset * items_per_page
     gobar = generate_go_bar(items, page_offset)
     return offset, gobar
@@ -106,7 +106,7 @@ def protocol_prepare(request, protocol):
                 string.lower(request.META['HTTP_USER_AGENT']), re.UNICODE):
             return "file://///"
     return protocol + "://"
-             
+
 def hostname_prepare(request, protocol, hostname, hostaddr):
     if hostaddr == None:
         return hostname

@@ -32,14 +32,14 @@ patch_fallback = 0.8
 def kill_process(process):
     if sys.version_info[:2] < (2, 6):
         if os.name == 'nt':
-            subprocess.Popen("taskkill /F /T /PID %s >nul 2>nul"% process.pid, shell=True)
+            subprocess.Popen("taskkill /F /T /PID %s >nul 2>nul" % process.pid, shell = True)
         else:
             os.kill(process.pid, 9)
     else:
         process.kill()
 
 
-filetypes_reverse = dict([(x,y) for y in filetypes.keys()
+filetypes_reverse = dict([(x, y) for y in filetypes.keys()
                                 for x in filetypes[y]])
 
 def suffix(filename):
@@ -77,7 +77,7 @@ class PsycoCache:
             self.commit()
     def commit(self):
         if len(self.query) > 0:
-            self.cursor.execute(string.join(self.query,";"))
+            self.cursor.execute(string.join(self.query, ";"))
             self.query = []
     def fappend(self, vars):
         self.fquery.append(self.cursor.mogrify(fquery_values, vars))
@@ -96,14 +96,14 @@ class PathInfo:
         self.tspath = ""
         self.modify = False
 
-no_path = PathInfo()        
+no_path = PathInfo()
 
 def unicodize_line(line):
     try:
         line = unicode(line, scanners_locale)
     except:
         log("Non utf-8 line occured: '%s'.", line)
-        line = string.join([(lambda x: x if x in string.printable else "\\%#x" % ord(c))(c) for c in line], "")        
+        line = string.join([(lambda x: x if x in string.printable else "\\%#x" % ord(c))(c) for c in line], "")
     return line
 
 def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
@@ -111,9 +111,9 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
     if line[2] == "0":
         # 'path' type of line 
         try:
-            act, l, id, path = string.split(s=line, sep=' ', maxsplit=3)
+            act, l, id, path = string.split(s = line, sep = ' ', maxsplit = 3)
         except:
-            act, l, id = string.split(s=line, sep=' ', maxsplit=3)
+            act, l, id = string.split(s = line, sep = ' ', maxsplit = 3)
             path = ""
         id = int(id)
         if act == '+':
@@ -134,9 +134,9 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
     else:
         # 'file' type of line
         try:
-            act, l, path, file, size, dirid, items, name = string.split(s=line, sep=' ', maxsplit=7)
+            act, l, path, file, size, dirid, items, name = string.split(s = line, sep = ' ', maxsplit = 7)
         except:
-            act, l, path, file, size, dirid, items = string.split(s=line, sep=' ', maxsplit=7)
+            act, l, path, file, size, dirid, items = string.split(s = line, sep = ' ', maxsplit = 7)
             name = ""
         path = int(path)
         file = int(file)
@@ -178,7 +178,7 @@ def scan_line_patch(cursor, tree, line, qcache, paths_buffer):
                 qcache.append("""
                     UPDATE files SET size = %(sz)s
                     WHERE tree_id = %(t)s AND treepath_id = %(p)s AND pathfile_id = %(f)s
-                    """,  {'t': tree, 'p': path, 'f': file, 'sz': size})
+                    """, {'t': tree, 'p': path, 'f': file, 'sz': size})
 
 def scan_share(db, share_id, proto, host, port, tree_id, command):
     db.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
@@ -208,7 +208,7 @@ def scan_share(db, share_id, proto, host, port, tree_id, command):
         data = run_scanner(command, address, proto, port, "-u " + quote_for_shell(savepath))
     else:
         data = run_scanner(command, address, proto, port)
-    save = tempfile.TemporaryFile(bufsize=-1)
+    save = tempfile.TemporaryFile(bufsize = -1)
     line_count = 0
     line_count_patch = 0
     hash = hashlib.md5()

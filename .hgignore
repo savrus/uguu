@@ -11,6 +11,9 @@ syntax: glob
 *.sln.cache
 *.suo
 *.vcproj.*.user
+.project
+.pydevproject
+.settings
 ./scanners/*/Debug
 ./scanners/*/Release
 ./scanners/*/Install

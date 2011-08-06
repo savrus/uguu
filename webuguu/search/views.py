@@ -49,13 +49,13 @@ qopt_match = {
 
 class QueryParser:
     def size2byte(self, size):
-        sizenotatios = {'b':1, 'k':2**10, 'm':2**20, 'g':2**30, 't':2**40,
-                        'kb':2**10, 'mb':2**20, 'gb':2**30, 'tb':2**40,
-                        'byte':1, 'kbyte':2**10, 'mbyte':2**20,
-                        'gbyte':2**30, 'tbyte':2**40,
-                        'kilobyte':2**10, 'megabyte':2**20,
-                        'gigabyte':2**30, 'terabyte':2**40,}
-        m =  re.match(r'(?u)(\d+(?:\.\d+)?)(\w+)', size, re.UNICODE)
+        sizenotatios = {'b':1, 'k':2 ** 10, 'm':2 ** 20, 'g':2 ** 30, 't':2 ** 40,
+                        'kb':2 ** 10, 'mb':2 ** 20, 'gb':2 ** 30, 'tb':2 ** 40,
+                        'byte':1, 'kbyte':2 ** 10, 'mbyte':2 ** 20,
+                        'gbyte':2 ** 30, 'tbyte':2 ** 40,
+                        'kilobyte':2 ** 10, 'megabyte':2 ** 20,
+                        'gigabyte':2 ** 30, 'terabyte':2 ** 40, }
+        m = re.match(r'(?u)(\d+(?:\.\d+)?)(\w+)', size, re.UNICODE)
         if m == None:
             self.error += "Bad size argument: '%s'.\n" % size
             return 0
@@ -191,7 +191,7 @@ class QueryParser:
                 option = w[0].encode("ascii")
                 arg = w[1][1:]
                 if arg != "":
-                    qext[option](option,arg)
+                    qext[option](option, arg)
                     qext[option] = self.parse_option_onlyonce_plug
                 else:
                     self.error += "No arguments for query option '%s'.\n" % w[0]
@@ -294,11 +294,11 @@ def do_search(request, index, searchform):
         viewargs = [row['protocol'], row['hostname'], row['port']]
         if utfpath != u"":
             viewargs.append(utfpath)
-        vfs = reverse('webuguu.vfs.views.share', args=viewargs)
+        vfs = reverse('webuguu.vfs.views.share', args = viewargs)
         vfs_offset = int(row['fileid']) / vfs_items_per_page
         newrow['pathlink'] = vfs + "?" + urlencode(dict(
             [('s', row['share_id']), ('p', row['path_id'])] +
-            ([('o', vfs_offset)] if vfs_offset > 0 else []) ))
+            ([('o', vfs_offset)] if vfs_offset > 0 else [])))
         newrow['filename'] = utffile
         if row['dirid'] > 0:
             newrow['type'] = "<dir>"
@@ -334,7 +334,7 @@ def do_search(request, index, searchform):
             title = u"Search Results",
             link = reverse('webuguu.search.views.search'),
             description = u"Results of a query: " + query,
-            language=u"en")
+            language = u"en")
         curdescs = []
         curname = ""
         for file in result:
@@ -355,7 +355,7 @@ def do_search(request, index, searchform):
         return render_to_response('search/error.html',
             {'form': searchform, 'types': types, 'query': query,
              'error':"Unsupported output."})
-        
+
 
 def search(request):
     return do_search(request, "search/index.html", "search/searchform.html")

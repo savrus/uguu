@@ -99,8 +99,8 @@ def ns_domain(domain, rtype = "A", dns = ""):
     """list rtype NS records from domain using provided or default dns,
 returns dict with hostnames as keys"""
     hosts = subprocess.Popen(nsls_cmd % {'d': domain, 't': rtype, 's': dns},
-                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             shell=True)
+                             stdin = subprocess.PIPE, stdout = subprocess.PIPE,
+                             shell = True)
     re_host = re.compile(nsls_entry % rtype)
     res = dict()
     hosts.stdin.close()
@@ -116,8 +116,8 @@ returns dict with hostnames as keys"""
     return res
 
 def ipv4_to_int(ip):
-    l = map(int,string.split(ip, '.'))
-    return l[3] + l[2] * 2**8 + l[1] * 2**16 + l[0] * 2**24
+    l = map(int, string.split(ip, '.'))
+    return l[3] + l[2] * 2 ** 8 + l[1] * 2 ** 16 + l[0] * 2 ** 24
 
 def int_to_ipv4(i):
     d = i & 0xff

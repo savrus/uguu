@@ -19,7 +19,7 @@ def db_is_empty(db):
         for line in cursor.fetchall():
             if line[0] in required_names:
                 return False
-        return True    
+        return True
     def check(type_name, required_names):
         return check_q("""
             SELECT %(t)s_name
@@ -230,8 +230,8 @@ def ddl_prog(db):
                 LOOP
                     WHILE newrec IS NOT NULL AND N = newrec.pathfile_id
                     LOOP
-            	    FETCH newcurs INTO newrec;
-            	    N := N + 1;
+                    FETCH newcurs INTO newrec;
+                    N := N + 1;
                     END LOOP;
                     IF newrec IS NOT NULL AND N > newrec.pathfile_id
                     THEN

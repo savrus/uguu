@@ -76,7 +76,7 @@ def sharelist(request, column, name, is_this_host):
         FROM shares WHERE %s = %%(n)s
         """ % column, {'n': name})
     try:
-        listinfo  = cursor.fetchone()
+        listinfo = cursor.fetchone()
         items = listinfo['items']
         if items == 0:
             raise
@@ -101,7 +101,7 @@ def sharelist(request, column, name, is_this_host):
     orderbar = dict()
     orderbar['nontrivial'] = (cursor.rowcount > 1)
     orderbar['order'] = "./?"
-    orderbar['orders'] = [{'n': k, 's': k==order} for k in orders.keys()]
+    orderbar['orders'] = [{'n': k, 's': k == order} for k in orders.keys()]
     return render_to_response("vfs/sharelist.html", \
         {'name': name,
          'ishost': is_this_host,
@@ -123,7 +123,7 @@ def host(request, proto, hostname):
     return sharelist(request, "hostname", hostname, 1)
 
 
-def share(request, proto, hostname, port, path=""):
+def share(request, proto, hostname, port, path = ""):
     generation_started = time.time()
     try:
         db = connectdb()
@@ -156,7 +156,7 @@ def share(request, proto, hostname, port, path=""):
             """, {'s':share_id, 'pr': proto, 'h': hostname, 'p': port})
         try:
             tree_id, hostaddr, state, scantime, changetime = cursor.fetchone()
-        except: 
+        except:
             return HttpResponseRedirect(".")
     else:
         cursor.execute("""
@@ -169,7 +169,7 @@ def share(request, proto, hostname, port, path=""):
             """, {'p': proto, 'h': hostname, 'port': port})
         try:
             share_id, tree_id, hostaddr, state, scantime, changetime = cursor.fetchone()
-            url['share'] = [('s', share_id)]  
+            url['share'] = [('s', share_id)]
         except:
             return render_to_response('vfs/error.html',
                 {'error':"Unknown share."})
@@ -177,7 +177,7 @@ def share(request, proto, hostname, port, path=""):
         return render_to_response('vfs/error.html',
             {'error':"Sorry, this share hasn't been scanned yet."})
     # detect path
-    if goup>0:
+    if goup > 0:
         try:
             cursor.execute("SELECT * FROM path_goup(%(t)s, %(p)s, %(l)s)",
                            {'t': tree_id, 'p': path_id, 'l': goup})
@@ -202,7 +202,7 @@ def share(request, proto, hostname, port, path=""):
             dbpath, parent_id, parentfile_id, items, size = cursor.fetchone()
             if path != unicode(dbpath, "utf-8"):
                 return HttpResponseRedirect(redirect_url)
-        except: 
+        except:
             return HttpResponseRedirect(redirect_url)
     else:
         cursor.execute("""
@@ -250,7 +250,7 @@ def share(request, proto, hostname, port, path=""):
     }
     if not orders.get(order):
         order = 'name'
-    cursor.execute(orders[order], {'t': tree_id, 'p': path_id, 'o': offset, 
+    cursor.execute(orders[order], {'t': tree_id, 'p': path_id, 'o': offset,
                                    'l':vfs_items_per_page})
     # some additional variables for template
     hostaddr = hostname_prepare(request, proto, hostname, hostaddr)
@@ -264,14 +264,14 @@ def share(request, proto, hostname, port, path=""):
         uplink_offset = int(parentfile_id) / vfs_items_per_page
         fastuplink = "?" + urlencode(dict(
             url['share'] + [('p', parent_id)] +
-            ([('o', uplink_offset)] if uplink_offset > 0 else []) ))
+            ([('o', uplink_offset)] if uplink_offset > 0 else [])))
     else:
         fastuplink = ""
     fastselflink = "./?" + urlencode(dict(url['share'] + url['path'] + url['order']))
     orderbar = dict()
     orderbar['nontrivial'] = (cursor.rowcount > 1)
     orderbar['order'] = "./?" + urlencode(dict(url['share'] + url['path']))
-    orderbar['orders'] = [{'n': k, 's': k==order} for k in orders.keys()]
+    orderbar['orders'] = [{'n': k, 's': k == order} for k in orders.keys()]
     return render_to_response('vfs/share.html', \
         {'files': cursor.fetchall(),
          'protocol': proto,
