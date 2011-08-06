@@ -27,7 +27,7 @@ def index(request):
 def net(request):
     generation_started = time.time()
     try:
-        db = connectdb()
+        db = connectdb("vfs")
     except:
         return render_to_response('vfs/error.html',
             {'error':"Unable to connect to the database."})
@@ -54,7 +54,7 @@ def net(request):
 def sharelist(request, column, name, is_this_host):
     generation_started = time.time()
     try:
-        db = connectdb()
+        db = connectdb("vfs")
     except:
         return render_to_response('vfs/error.html',
             {'error':"Unable to connect to the database."})
@@ -126,7 +126,7 @@ def host(request, proto, hostname):
 def share(request, proto, hostname, port, path = ""):
     generation_started = time.time()
     try:
-        db = connectdb()
+        db = connectdb("vfs")
     except:
         return render_to_response('vfs/error.html',
             {'error':"Unable to connect to the database."})

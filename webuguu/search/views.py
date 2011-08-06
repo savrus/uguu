@@ -239,7 +239,7 @@ def do_search(request, index, searchform):
         nt['selected'] = 'selected="selected"' if nt['value'] == type else ""
         types.append(nt)
     try:
-        db = connectdb()
+        db = connectdb("search")
     except:
         return render_to_response('search/error.html',
             {'form': searchform, 'types': types, 'query': query,
