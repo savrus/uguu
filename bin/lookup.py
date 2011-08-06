@@ -20,7 +20,7 @@ from common import connectdb, log, default_ports, run_scanner, wait_until_next_l
 from network import dns_cache, ns_domain, scan_all_hosts
 
 class Share(object):
-    def __init__(self, host, proto, port=0, scantype=None, _id=None):
+    def __init__(self, host, proto, port = 0, scantype = None, _id = None):
         self.id = _id
         self.host = host
         self.proto = proto
@@ -156,7 +156,7 @@ returns permissions to add shares
                         hostname, hostaddr, port, state)
                     VALUES (%(st)s, %(net)s, %(proto)s, %(host)s, inet %(addr)s, %(port)s, 'online')
                     """, {'st': share.scantype, 'net': self.__network, 'proto': share.proto,
-                          'host': share.host, 'addr': share.Addr(),'port': share.port})
+                          'host': share.host, 'addr': share.Addr(), 'port': share.port})
                 try:
                     os.unlink(share_save_path(share.proto, share.host, share.port))
                 except:
@@ -230,7 +230,7 @@ Exclude = "if present, exclude hosts matching with this regexp"
                     if len(secdata) == 0:
                         section = match.group(1)
                     else:
-                        errors.add(LN-1)
+                        errors.add(LN - 1)
                 else:
                     self.__sections.append((section, secdata))
                     section = match.group(1)
@@ -387,7 +387,7 @@ class DNSZoneListing(object):
             nstype = self['Type']
         valid = ('A', 'AAAA', 'ANY', 'CNAME', 'PTR')
         if nstype not in valid:
-            print 'Invalid or missing option Type (valid are %s)' % (valid, )
+            print 'Invalid or missing option Type (valid are %s)' % (valid,)
             raise UserWarning
         self.default = None
         nszone = self['Zone']
@@ -451,7 +451,7 @@ class DNSZoneToCache(Lookup, DNSZoneListing):
 #TODO: more engines
 
 #####################################
-        
+
 if __name__ == "__main__":
     if len(sys.argv) < 2 or len(sys.argv) > 3 or 'help' in sys.argv or '-h' in sys.argv:
         print 'Usage %s [help|confighelp|showengines|showscantypes|shownetworks|showconfig [networkname]|runall|runnet networkname]' % sys.argv[0]
@@ -459,14 +459,14 @@ if __name__ == "__main__":
     if 'confighelp' in sys.argv:
         print ParseConfig.__doc__
         sys.exit()
-        
+
     lookup_engines = dict([(cl.__name__, cl) for cl in Lookup.__subclasses__()])
     if 'showengines' in sys.argv:
         print 'Known lookup engines:'
         for eng in sorted(lookup_engines.keys()):
             print '%s\t%s' % (eng, lookup_engines[eng].__doc__)
         sys.exit()
-        
+
     try:
         db = connectdb()
     except:

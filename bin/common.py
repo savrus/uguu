@@ -17,11 +17,11 @@ db_database = "uguu"
 def connectdb():
     """ returns psycopg2 connection to the server using settings from common.py """
     return psycopg2.connect(
-    	host = db_host,
-    	user = db_user,
-    	password = db_password,
-    	database = db_database,
-    	connection_factory = DictConnection)
+        host = db_host,
+        user = db_user,
+        password = db_password,
+        database = db_database,
+        connection_factory = DictConnection)
 
 # Logging options
 # required by all scripts
@@ -34,10 +34,10 @@ def log(logstr, logparams = ()):
     sys.stderr.write("[" + time.ctime() + "] " + (logstr % logparams) + "\n")
     sys.stderr.flush()
 
-def sharestr(proto, host, port=0):
+def sharestr(proto, host, port = 0):
     return "%s://%s%s" % (proto, host, ":" + str(port) if port != 0 else "")
 
-def share_save_str(proto, host, port=0):
+def share_save_str(proto, host, port = 0):
     return "%s_%s_%s" % (proto, host, port)
 
 import os.path
@@ -50,7 +50,7 @@ import os.path
 shares_save_dir = 'save'
 shares_save_dir = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), shares_save_dir)
 
-def share_save_path(proto, host, port=0):
+def share_save_path(proto, host, port = 0):
     return os.path.join(shares_save_dir, share_save_str(proto, host, port))
 
 import string
@@ -72,9 +72,9 @@ def run_scanner(cmd, ip, proto, port, ext = ""):
     _stderr = None
     if not scanners_logging:
         _stderr = subprocess.PIPE
-    process = subprocess.Popen(cmdline, shell=True, stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE, stderr=_stderr,
-                               universal_newlines=True)
+    process = subprocess.Popen(cmdline, shell = True, stdin = subprocess.PIPE,
+                               stdout = subprocess.PIPE, stderr = _stderr,
+                               universal_newlines = True)
     process.stdin.close()
     return process
 

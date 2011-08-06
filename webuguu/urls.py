@@ -4,6 +4,7 @@ from django.conf.urls.defaults import *
 # from django.contrib import admin
 # admin.autodiscover()
 
+
 urlpatterns = patterns('',
     (r'^$',         include('webuguu.search.urls')),
     (r'^search/',   include('webuguu.search.urls')),

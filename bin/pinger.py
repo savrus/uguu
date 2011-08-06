@@ -24,7 +24,7 @@ def get_names_list(ips):
     res = set()
     for ip in ips:
         if ip is not None:
-            res|=nscache(None, ip)
+            res |= nscache(None, ip)
     return res
 
 def check_online_shares(hostlist, port):
@@ -48,7 +48,7 @@ def set_shares_state(cursor, hostlist, state):
 def update_shares_state(db, selwhere, port):
     cursor = db.cursor()
     cursor.execute("SELECT share_id, hostname FROM shares WHERE %s" % selwhere)
-    itemdict = dict((row['hostname'], [row['share_id'],  nscache(row['hostname'])]) for row in cursor.fetchall())
+    itemdict = dict((row['hostname'], [row['share_id'], nscache(row['hostname'])]) for row in cursor.fetchall())
     if len(itemdict) == 0:
         return 0, 0
     online, offline = check_online_shares(itemdict.keys(), port)
@@ -78,7 +78,7 @@ class list_adapter(object):
     def getquoted(self):
         return str(self)
 class None_adapter(object):
-    def __init__(self,obj):
+    def __init__(self, obj):
         pass
     def __str__(self):
         return 'NULL'
