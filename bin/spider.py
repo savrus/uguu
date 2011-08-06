@@ -306,9 +306,9 @@ def create_save_dir():
 
 if __name__ == "__main__":
     try:
-        db = connectdb()
+        db = connectdb("spider")
     except:
-        print "Unable to connect to the database, exiting."
+        log("Unable to connect to the database, exiting.")
         sys.exit()
     create_save_dir()
     shares = db.cursor()

@@ -468,7 +468,7 @@ if __name__ == "__main__":
         sys.exit()
 
     try:
-        db = connectdb()
+        db = connectdb("lookup")
     except:
         print "I am unable to connect to the database, exiting."
         sys.exit(1)

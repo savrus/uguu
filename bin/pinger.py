@@ -90,7 +90,7 @@ psycopg2.extensions.register_adapter(type(None), None_adapter)
 
 if __name__ == "__main__":
     try:
-        db = connectdb()
+        db = connectdb("pinger")
     except:
         print "I am unable to connect to the database, exiting."
         sys.exit()

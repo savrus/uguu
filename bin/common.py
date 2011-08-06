@@ -12,16 +12,21 @@ import psycopg2
 from psycopg2.extras import DictConnection
 db_host = "localhost"
 db_user = "postgres"
-db_password = ""
+db_password = "r_sql_K^33psql"
 db_database = "uguu"
-def connectdb():
+db_setapp = True # should be false for PostgreSQL version prior to 9
+def connectdb(app):
     """ returns psycopg2 connection to the server using settings from common.py """
-    return psycopg2.connect(
+    conn = psycopg2.connect(
         host = db_host,
         user = db_user,
         password = db_password,
         database = db_database,
         connection_factory = DictConnection)
+    if db_setapp:
+        conn.cursor().execute("set application_name = %(app)s",
+                              {'app': "Uguu search script" if app is None else app + " (uguu script)"})
+    return conn
 
 # Logging options
 # required by all scripts

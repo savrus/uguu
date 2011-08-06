@@ -15,13 +15,18 @@ db_host = "localhost"
 db_user = "postgres"
 db_password = ""
 db_database = "uguu"
-def connectdb():
-    return psycopg2.connect(
+db_setapp = True # should be false for PostgreSQL version prior to 9
+def connectdb(app):
+    conn = psycopg2.connect(
         host = db_host,
         user = db_user,
         password = db_password,
         database = db_database,
         connection_factory = DictConnection)
+    if db_setapp:
+        conn.cursor().execute("set application_name = %(app)s",
+                              {'app': "Uguu search web" if app is None else app + " (uguu web)"})
+    return conn
 
 # this must be the same as in bin/common.py
 known_protocols = ('smb', 'ftp', 'http')
