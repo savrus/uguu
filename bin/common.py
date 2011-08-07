@@ -12,7 +12,7 @@ import psycopg2
 from psycopg2.extras import DictConnection
 db_host = "localhost"
 db_user = "postgres"
-db_password = "r_sql_K^33psql"
+db_password = ""
 db_database = "uguu"
 db_setapp = True # should be false for PostgreSQL version prior to 9
 def connectdb(app):
