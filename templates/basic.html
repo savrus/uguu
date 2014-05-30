@@ -43,6 +43,8 @@
           BODY, HTML { height: 100%; margin-top: 0;
                        margin-bottom:0; padding: 0; }
       </STYLE>
+      {% block basichead %}
+      {% endblock %}
    </HEAD>
    <BODY onload="document.f.q.focus();">
        {% block basicbody %}
