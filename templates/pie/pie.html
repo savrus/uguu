@@ -1,0 +1,44 @@
+{% extends "general.html" %}
+{% block htmltitle %}Network Statistics{% endblock %}
+{% block basichead %}
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+      google.load("visualization", "1", {packages:["corechart"]});
+      google.setOnLoadCallback(drawChart);
+      function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+          ['Share',  'Size']{% for s in shares %},
+	      ['{{s.hostname}}', {{s.size}}]{% endfor %}
+        ]);
+
+        var options = {
+          title: 'MSU Dorms Network Shares',
+	  tooltip:{text:'percentage'}
+        };
+
+        var chart = new google.visualization.PieChart(document.getElementById('chart_div'));
+        chart.draw(data, options);
+      }
+      google.setOnLoadCallback(drawOnlineChart);
+      function drawOnlineChart() {
+        var data = google.visualization.arrayToDataTable([
+          ['Share',  'Size']{% for s in shares_online %},
+	      ['{{s.hostname}}', {{s.size}}]{% endfor %}
+        ]);
+
+        var options = {
+          title: 'MSU Dorms Network Shares (Online)',
+	  tooltip:{text:'percentage'}
+        };
+
+        var chart = new google.visualization.PieChart(document.getElementById('chart_online_div'));
+        chart.draw(data, options);
+      }
+    </script>
+
+
+{% endblock %}
+{% block htmlbody %}
+    <div id="chart_div" style="width: 900px; height: 500px;"></div>
+    <div id="chart_online_div" style="width: 900px; height: 500px;"></div>
+{% endblock %}
