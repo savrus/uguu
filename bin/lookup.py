@@ -17,7 +17,7 @@ import traceback
 import datetime
 import psycopg2.extensions
 from common import connectdb, log, default_ports, run_scanner, wait_until_next_lookup, wait_until_delete_share, wait_until_delete_empty_share, share_save_path
-from network import dns_cache, ns_domain, scan_all_hosts
+from network import dns_cache, ns_domain, scan_all_hosts, get_host_list
 
 class Share(object):
     def __init__(self, host, proto, port = 0, scantype = None, _id = None):
@@ -447,6 +447,17 @@ class DNSZoneToCache(Lookup, DNSZoneListing):
         suffix = self['Suffix']
         for (key, val) in self.Listing(nstype = 'A'):
             self.nscache(key + suffix, val)
+
+class ManualIPRanges(Lookup):
+    """ Add whole subnets from 'list' to lookup. """
+    def __call__(self):
+        self.default = tuple()
+        netlist = self['list']
+        if type(netlist) is str:
+            netlist = (netlist,)
+        for net in netlist:
+            for host in get_host_list(net):
+                self.AddServer(host)
 
 #TODO: more engines
 
