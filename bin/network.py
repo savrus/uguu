@@ -127,27 +127,35 @@ def int_to_ipv4(i):
     return "%s.%s.%s.%s" % (a, b, c, d)
 
 
-def scan_by_range(ip_range, port):
-    if string.find(ip_range, '-') == -1:
-        return scan_hosts([(ip_range, port)])
-    ip_range = string.split(ip_range, '-')
-    [low, high] = map(ipv4_to_int, ip_range)
-    hosts = [(int_to_ipv4(x), port) for x in range(low, high + 1)]
-    return scan_all_hosts(hosts)
+def get_host_list(net, port = None):
+    def from_range(ip_range):
+        ip_range = string.split(ip_range, '-')
+        low, high = map(ipv4_to_int, ip_range)
+        return [int_to_ipv4(x) for x in range(low, high + 1)]
 
-def scan_by_mask(ip_range, port):
-    if string.find(ip_range, '/') == -1:
-        return scan_hosts([(ip_range, port)])
-    ip_range = string.split(ip_range, '/')
-    low = ipv4_to_int(ip_range[0])
-    mask = int(ip_range[1])
-    if mask > 32:
-        return []
-    ipmask = (0xffffffff << (32 - mask)) & 0xffffffff
-    low = low & ipmask
-    high = low + (1 << (32 - mask))
-    hosts = [(int_to_ipv4(x), port) for x in range(low, high)]
-    return scan_all_hosts(hosts)
+    def from_mask(ip_range):
+        ip_range = string.split(ip_range, '/')
+        low = ipv4_to_int(ip_range[0])
+        mask = int(ip_range[1])
+        if mask > 32:
+            return []
+        ipmask = (0xffffffff << (32 - mask)) & 0xffffffff
+        low = low & ipmask
+        high = low + (1 << (32 - mask))
+        return [int_to_ipv4(x) for x in range(low, high)]
+
+    if string.find(net, '-') != -1:
+        hosts = from_range(net)
+    elif string.find(net, '/') != -1:
+        hosts = from_mask(net)
+    else:
+        hosts = [net]
+    if port is not None:
+        hosts = [(host, port) for host in hosts]	
+    return hosts   
+
+def scan_net(net, port):
+    return scan_all_hosts(get_host_list(net, port))
 
 def scan_host(ip, port):
     return scan_hosts([(ip, port)])
@@ -161,12 +169,7 @@ if __name__ == "__main__":
     if sys.argv[1] == "scan":
         [net, port] = sys.argv[2:4]
         port = int(port)
-        if string.find(net, '-') != -1:
-            uph = scan_by_range(net, port)
-        elif string.find(net, '/') != -1:
-            uph = scan_by_mask(net, port)
-        else:
-            uph = scan_host(net, port)
+        uph = scan_net(net, port)
         for (host, port) in uph:
             print "Host %s:%s appers to be up" % (host, port)
     elif sys.argv[1] == "list":
